@@ -24947,3 +24947,6 @@
 2024-12-20 Fred Gleason <fredg@paravelsystems.com>
 	* Added code at the 275=>276 schema transition in rddbmgr(8) to
 	clean up corrupted meta-tables.
+2025-01-23 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in 'RDPam' that could cause a segfault when processing
+	an authentication.
