@@ -24950,3 +24950,7 @@
 2025-01-23 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in 'RDPam' that could cause a segfault when processing
 	an authentication.
+2025-01-24 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in the WebGet service that caused uploads to fail when
+	using an Apache package with 'PrivateTmp=true' set in it's Systemd
+	service definition.
