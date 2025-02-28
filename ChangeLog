@@ -24957,3 +24957,5 @@
 2025-02-27 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed bugs in schema conversion 296=>297 that could cause SQL
 	errors.
+2025-02-28 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the package version to 4.3.0int7.
