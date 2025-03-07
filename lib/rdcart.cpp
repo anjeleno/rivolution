@@ -1118,11 +1118,16 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
       segue_total+=(q->value(1).toInt()-q->value(3).toInt()) * weight;
     }
     hook_total+=(q->value(14).toUInt()-q->value(13).toUInt()) * weight;
-    if(min_talk_len>q->value(18).toUInt()-q->value(17).toUInt()) {
-      min_talk_len=q->value(18).toUInt()-q->value(17).toUInt();
-    }
-    if(max_talk_len<q->value(18).toUInt()-q->value(17).toUInt()) {
-      max_talk_len=q->value(18).toUInt()-q->value(17).toUInt();
+    if((q->value(17).toInt()>=0)&&(q->value(18).toInt()>=0)) {
+      int talk_len=q->value(18).toInt()-q->value(17).toInt();
+      if(talk_len>=0) {
+	if(min_talk_len>talk_len) {
+	  min_talk_len=talk_len;
+	}
+	if(max_talk_len<talk_len) {
+	  max_talk_len=talk_len;
+	}
+      }
     }
     weight_total += weight;
   }
@@ -1142,12 +1147,11 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
       setForcedLength(0);
     }
   }
-  //
-  // FIXME: CART.MINIMUM_TALK_LENGTH is an unsigned int in the DB, yet we
-  //        sometime try to assign -1. Why?
-  //
   if((min_talk_len<0)||(min_talk_len==LLONG_MAX)) {
     min_talk_len=0;
+  }
+  if((max_talk_len<0)||(max_talk_len==LLONG_MAX)) {
+    max_talk_len=0;
   }
   setMinimumTalkLength(min_talk_len);
   setMaximumTalkLength(max_talk_len);

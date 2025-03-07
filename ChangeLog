@@ -24959,3 +24959,6 @@
 	errors.
 2025-02-28 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the package version to 4.3.0int7.
+2025-03-07 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in 'RDCart::updateLength()' that could cause SQL
+	errors.
