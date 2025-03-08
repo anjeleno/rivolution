@@ -58,6 +58,7 @@ MainObject::MainObject(QObject *parent)
   db_check_orphaned_carts=false;
   db_check_orphaned_cuts=false;
   db_check_orphaned_tracks=false;
+  db_check_orphaned_tables=false;
   db_check_strings=false;
   db_check_log_line_ids=false;
 
@@ -89,6 +90,18 @@ MainObject::MainObject(QObject *parent)
   //
   RDCmdSwitch *cmd=new RDCmdSwitch("rddbmgr",RDDBMGR_USAGE);
   for(unsigned i=0;i<cmd->keys();i++) {
+#ifdef RDDBMGR_ENABLE_ANALYZE
+    if(cmd->key(i)=="--analyze") {
+      MainObject::Command command=MainObject::AnalyzeCommand;
+      if((db_command!=MainObject::NoCommand)&&
+	 (db_command!=MainObject::CheckCommand)) {
+	fprintf(stderr,"rddbmgr: exactly one command must be specified\n");
+	exit(1);
+      }
+      db_command=command;
+      cmd->setProcessed(i,true);
+    }
+#endif  // RDDBMGR_ENABLE_ANALYZE
     if(cmd->key(i)=="--check") {
       MainObject::Command command=MainObject::CheckCommand;
       if((db_command!=MainObject::NoCommand)&&
@@ -236,6 +249,11 @@ MainObject::MainObject(QObject *parent)
       db_check_orphaned_tracks=true;
       cmd->setProcessed(i,true);
     }
+    if(cmd->key(i)=="--orphaned-tables") {
+      db_check_all=false;
+      db_check_orphaned_tables=true;
+      cmd->setProcessed(i,true);
+    }
     if(cmd->key(i)=="--check-strings") {
       db_check_all=false;
       db_check_strings=true;
@@ -334,9 +352,9 @@ MainObject::MainObject(QObject *parent)
   //
   // Resolve Target Schema
   //
-  int schema=GetCurrentSchema();
-  if(schema>RD_VERSION_DATABASE) {
-    fprintf(stderr,"rddbmgr: unknown current schema [%d]\n",schema);
+  db_current_schema=GetCurrentSchema();
+  if(db_current_schema>RD_VERSION_DATABASE) {
+    fprintf(stderr,"rddbmgr: unknown current schema [%d]\n",db_current_schema);
     exit(1);
   }
   if(set_schema>0) {
@@ -348,7 +366,7 @@ MainObject::MainObject(QObject *parent)
   else {
     if(set_version.isEmpty()) {
       set_schema=RD_VERSION_DATABASE;
-      if(set_schema<schema) {
+      if(set_schema<db_current_schema) {
 	fprintf(stderr,"rddbmgr: reversion implied, you must explicitly specify the target schema\n");
 	exit(1);
       }
@@ -367,6 +385,10 @@ MainObject::MainObject(QObject *parent)
   //
   QString err_msg;
   switch(db_command) {
+  case MainObject::AnalyzeCommand:
+    ok=Analyze(db_current_schema,&err_msg);
+    break;
+
   case MainObject::CheckCommand:
     ok=Check(&err_msg);
     break;

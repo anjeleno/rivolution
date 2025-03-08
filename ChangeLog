@@ -24962,3 +24962,5 @@
 2025-03-07 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in 'RDCart::updateLength()' that could cause SQL
 	errors.
+2025-03-07 Fred Gleason <fredg@paravelsystems.com>
+	* Added a check for orphaned database tables in rddbmgr(8).

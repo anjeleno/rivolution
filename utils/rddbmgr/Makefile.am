@@ -1,6 +1,6 @@
 ## Makefile.am
 ##
-##   (C) Copyright 2018-2022 Fred Gleason <fredg@paravelsystems.com>
+##   (C) Copyright 2018-2025 Fred Gleason <fredg@paravelsystems.com>
 ##
 ##   This program is free software; you can redistribute it and/or modify
 ##   it under the terms of the GNU General Public License version 2 as
@@ -27,7 +27,8 @@ moc_%.cpp:	%.h
 
 sbin_PROGRAMS = rddbmgr
 
-dist_rddbmgr_SOURCES = check.cpp\
+dist_rddbmgr_SOURCES = analyze.cpp\
+                       check.cpp\
                        create.cpp\
                        modify.cpp\
                        printstatus.cpp\

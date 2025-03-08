@@ -64,6 +64,15 @@ bool MainObject::Check(QString *err_msg)
   }
 
   //
+  // Check for Orphaned Tables
+  //
+  if(db_check_all||db_check_orphaned_tables) {
+    printf("Checking DB tables...\n");
+    CheckOrphanedTables();
+    printf("done.\n\n");
+  }
+
+  //
   // Check for Orphaned Voice Tracks
   //
   if(db_check_all||db_check_orphaned_tracks) {
@@ -867,6 +876,465 @@ void MainObject::CheckOrphanedAudio() const
       }
     }
   }
+}
+
+
+void MainObject::CheckOrphanedTables() const
+{
+  QStringList missing;
+  QStringList extra;
+  QStringList canonical=GetCanonicalTables(db_current_schema);
+
+  if(canonical.size()==0) {
+    printf("  Unsupported schema for analysis, skipping\n");
+    return;
+  }  
+  if(!CheckTableNames(canonical,missing,extra)) {
+    for(int i=0;i<missing.size();i++) {
+      printf("  WARNING: missing table \"%s\"\n",
+	     missing.at(i).toUtf8().constData());
+    }
+    for(int i=0;i<extra.size();i++) {
+      printf("  Found orphaned table \"%s\". Remove (y/N)?",
+	     extra.at(i).toUtf8().constData());
+      if(UserResponse()) {
+	DropTable(extra.at(i));
+      }
+    }
+  }
+}
+
+
+bool MainObject::CheckTableNames(const QStringList &canonical,
+				 QStringList &missing,QStringList &extra) const
+{
+  //
+  // Get Existing Tables
+  //
+  QStringList existing;
+  QString sql=QString("show tables");
+  RDSqlQuery *q=new RDSqlQuery(sql);
+  while(q->next()) {
+    existing.push_back(q->value(0).toString());
+  }
+  delete q;
+
+  //
+  // Find Missing Tables
+  //
+  for(int i=0;i<canonical.size();i++) {
+    if(canonical.at(i).left(1)!="*") {  // Don't look for ephemeral tables
+      if(!existing.contains(canonical.at(i))) {
+	missing.push_back(canonical.at(i));
+      }
+    }
+  }
+
+  //
+  // Find Extra Tables
+  //
+  bool found;
+  for(int i=0;i<existing.size();i++) {
+    found=false;
+    for(int j=0;j<canonical.size();j++) {
+      QRegExp exp(canonical.at(j));
+      exp.setPatternSyntax(QRegExp::Wildcard);
+      if(exp.indexIn(existing.at(i),0)>=0) {
+	found=true;
+      }
+    }
+    if(!found) {
+      extra.push_back(existing.at(i));
+    }
+  }
+  return (missing.size()==0)&&(extra.size()==0);
+}
+
+
+QStringList MainObject::GetCanonicalTables(int schema) const
+{
+  QStringList tables;
+
+  switch(schema) {
+  case 275:   // v2.19.x
+    tables.push_back("AUDIO_PERMS");
+    tables.push_back("AUDIO_PORTS");
+    tables.push_back("AUTOFILLS");
+    tables.push_back("AUX_METADATA");
+    tables.push_back("CART");
+    tables.push_back("CARTSLOTS");
+    tables.push_back("CLIPBOARD");
+    tables.push_back("CLOCKS");
+    tables.push_back("CLOCK_PERMS");
+    tables.push_back("CUTS");
+    tables.push_back("CUT_EVENTS");
+    tables.push_back("DECKS");
+    tables.push_back("DECK_EVENTS");
+    tables.push_back("DROPBOXES");
+    tables.push_back("DROPBOX_PATHS");
+    tables.push_back("DROPBOX_SCHED_CODES");
+    tables.push_back("ENCODER_CHANNELS");
+    tables.push_back("ENCODER_BITRATES");
+    tables.push_back("ENCODER_SAMPLERATES");
+    tables.push_back("ENCODERS");
+    tables.push_back("EVENTS");
+    tables.push_back("EVENT_PERMS");
+    tables.push_back("EXTENDED_PANELS");
+    tables.push_back("EXTENDED_PANEL_NAMES");
+    tables.push_back("FEEDS");
+    tables.push_back("FEED_PERMS");
+    tables.push_back("GPIO_EVENTS");
+    tables.push_back("GPIS");
+    tables.push_back("GPOS");
+    tables.push_back("GROUPS");
+    tables.push_back("HOSTVARS");
+    tables.push_back("IMPORT_TEMPLATES");
+    tables.push_back("INPUTS");
+    tables.push_back("ISCI_XREFERENCE");
+    tables.push_back("JACK_CLIENTS");
+    tables.push_back("LIVEWIRE_GPIO_SLOTS");
+    tables.push_back("LOGS");
+    tables.push_back("LOGS");
+    tables.push_back("LOG_MODES");
+    tables.push_back("MATRICES");
+    tables.push_back("OUTPUTS");
+    tables.push_back("NOWNEXT_PLUGINS");
+    tables.push_back("PANELS");
+    tables.push_back("PANEL_NAMES");
+    tables.push_back("PODCASTS");
+    tables.push_back("RDAIRPLAY");
+    tables.push_back("RDAIRPLAY_CHANNELS");
+    tables.push_back("RDCATCH");
+    tables.push_back("RDHOTKEYS");
+    tables.push_back("RDLIBRARY");
+    tables.push_back("RDLOGEDIT");
+    tables.push_back("RDPANEL");
+    tables.push_back("RDPANEL_CHANNELS");
+    tables.push_back("RECORDINGS");
+    tables.push_back("REPLICATORS");
+    tables.push_back("REPLICATOR_MAP");
+    tables.push_back("REPL_CART_STATE");
+    tables.push_back("REPL_CUT_STATE");
+    tables.push_back("REPORTS");
+    tables.push_back("REPORT_GROUPS");
+    tables.push_back("REPORT_SERVICES");
+    tables.push_back("REPORT_STATIONS");
+    tables.push_back("SCHED_CODES");
+    tables.push_back("SERVICES");
+    tables.push_back("SERVICE_CLOCKS");
+    tables.push_back("SERVICE_PERMS");
+    tables.push_back("STATIONS");
+    tables.push_back("SWITCHER_NODES");
+    tables.push_back("SYSTEM");
+    tables.push_back("TRIGGERS");
+    tables.push_back("TTYS");
+    tables.push_back("USERS");
+    tables.push_back("USER_PERMS");
+    tables.push_back("USER_SERVICE_PERMS");
+    tables.push_back("VERSION");
+    tables.push_back("VGUEST_RESOURCES");
+    tables.push_back("WEBAPI_AUTHS");
+    tables.push_back("WEB_CONNECTIONS");
+    tables.push_back("*_CLK");
+    tables.push_back("*_FLG");
+    tables.push_back("*_LOG");
+    tables.push_back("*_PRE");
+    tables.push_back("*_POST");
+    tables.push_back("*_RULES");
+    tables.push_back("*_SRT");
+    tables.push_back("*_STACK");
+    break;
+
+  case 308:   // v3.0.x
+    tables.push_back("AUDIO_CARDS");
+    tables.push_back("AUDIO_INPUTS");
+    tables.push_back("AUDIO_OUTPUTS");
+    tables.push_back("AUDIO_PERMS");
+    tables.push_back("AUTOFILLS");
+    tables.push_back("AUX_METADATA");
+    tables.push_back("CART");
+    tables.push_back("CARTSLOTS");
+    tables.push_back("CART_SCHED_CODES");
+    tables.push_back("CAST_DOWNLOADS");
+    tables.push_back("CLIPBOARD");
+    tables.push_back("CLOCKS");
+    tables.push_back("CLOCK_LINES");
+    tables.push_back("CLOCK_PERMS");
+    tables.push_back("CUTS");
+    tables.push_back("CUT_EVENTS");
+    tables.push_back("DECKS");
+    tables.push_back("DECK_EVENTS");
+    tables.push_back("DROPBOXES");
+    tables.push_back("DROPBOX_PATHS");
+    tables.push_back("DROPBOX_SCHED_CODES");
+    tables.push_back("ELR_LINES");
+    tables.push_back("ENCODER_CHANNELS");
+    tables.push_back("ENCODER_BITRATES");
+    tables.push_back("ENCODER_SAMPLERATES");
+    tables.push_back("ENCODERS");
+    tables.push_back("EVENTS");
+    tables.push_back("EVENT_LINES");
+    tables.push_back("EVENT_PERMS");
+    tables.push_back("EXTENDED_PANELS");
+    tables.push_back("EXTENDED_PANEL_NAMES");
+    tables.push_back("FEEDS");
+    tables.push_back("FEED_PERMS");
+    tables.push_back("GPIO_EVENTS");
+    tables.push_back("GPIS");
+    tables.push_back("GPOS");
+    tables.push_back("GROUPS");
+    tables.push_back("HOSTVARS");
+    tables.push_back("IMPORTER_LINES");
+    tables.push_back("IMPORT_TEMPLATES");
+    tables.push_back("INPUTS");
+    tables.push_back("ISCI_XREFERENCE");
+    tables.push_back("JACK_CLIENTS");
+    tables.push_back("LIVEWIRE_GPIO_SLOTS");
+    tables.push_back("LOGS");
+    tables.push_back("LOGS");
+    tables.push_back("LOG_LINES");
+    tables.push_back("LOG_MACHINES");
+    tables.push_back("LOG_MODES");
+    tables.push_back("MATRICES");
+    tables.push_back("OUTPUTS");
+    tables.push_back("PANELS");
+    tables.push_back("PANEL_NAMES");
+    tables.push_back("PODCASTS");
+    tables.push_back("PYPAD_INSTANCES");
+    tables.push_back("RDAIRPLAY");
+    tables.push_back("RDAIRPLAY_CHANNELS");
+    tables.push_back("RDCATCH");
+    tables.push_back("RDHOTKEYS");
+    tables.push_back("RDLIBRARY");
+    tables.push_back("RDLOGEDIT");
+    tables.push_back("RDPANEL");
+    tables.push_back("RDPANEL_CHANNELS");
+    tables.push_back("RECORDINGS");
+    tables.push_back("REPLICATORS");
+    tables.push_back("REPLICATOR_MAP");
+    tables.push_back("REPL_CART_STATE");
+    tables.push_back("REPL_CUT_STATE");
+    tables.push_back("REPORTS");
+    tables.push_back("REPORT_GROUPS");
+    tables.push_back("REPORT_SERVICES");
+    tables.push_back("REPORT_STATIONS");
+    tables.push_back("RULE_LINES");
+    tables.push_back("SCHED_CODES");
+    tables.push_back("SERVICES");
+    tables.push_back("SERVICE_CLOCKS");
+    tables.push_back("SERVICE_PERMS");
+    tables.push_back("STACK_LINES");
+    tables.push_back("STACK_SCHED_CODES");
+    tables.push_back("STATIONS");
+    tables.push_back("SWITCHER_NODES");
+    tables.push_back("SYSTEM");
+    tables.push_back("TRIGGERS");
+    tables.push_back("TTYS");
+    tables.push_back("USERS");
+    tables.push_back("USER_PERMS");
+    tables.push_back("USER_SERVICE_PERMS");
+    tables.push_back("VERSION");
+    tables.push_back("VGUEST_RESOURCES");
+    tables.push_back("WEBAPI_AUTHS");
+    tables.push_back("WEB_CONNECTIONS");
+    break;
+
+  case 310:   // v3.1.x
+    tables.push_back("AUDIO_CARDS");
+    tables.push_back("AUDIO_INPUTS");
+    tables.push_back("AUDIO_OUTPUTS");
+    tables.push_back("AUDIO_PERMS");
+    tables.push_back("AUTOFILLS");
+    tables.push_back("AUX_METADATA");
+    tables.push_back("CART");
+    tables.push_back("CARTSLOTS");
+    tables.push_back("CART_SCHED_CODES");
+    tables.push_back("CAST_DOWNLOADS");
+    tables.push_back("CLIPBOARD");
+    tables.push_back("CLOCKS");
+    tables.push_back("CLOCK_LINES");
+    tables.push_back("CLOCK_PERMS");
+    tables.push_back("CUTS");
+    tables.push_back("CUT_EVENTS");
+    tables.push_back("DECKS");
+    tables.push_back("DECK_EVENTS");
+    tables.push_back("DROPBOXES");
+    tables.push_back("DROPBOX_PATHS");
+    tables.push_back("DROPBOX_SCHED_CODES");
+    tables.push_back("ELR_LINES");
+    tables.push_back("ENCODER_CHANNELS");
+    tables.push_back("ENCODER_BITRATES");
+    tables.push_back("ENCODER_SAMPLERATES");
+    tables.push_back("ENCODERS");
+    tables.push_back("EVENTS");
+    tables.push_back("EVENT_LINES");
+    tables.push_back("EVENT_PERMS");
+    tables.push_back("EXTENDED_PANELS");
+    tables.push_back("EXTENDED_PANEL_NAMES");
+    tables.push_back("FEEDS");
+    tables.push_back("FEED_PERMS");
+    tables.push_back("GPIO_EVENTS");
+    tables.push_back("GPIS");
+    tables.push_back("GPOS");
+    tables.push_back("GROUPS");
+    tables.push_back("HOSTVARS");
+    tables.push_back("IMPORTER_LINES");
+    tables.push_back("IMPORT_TEMPLATES");
+    tables.push_back("INPUTS");
+    tables.push_back("ISCI_XREFERENCE");
+    tables.push_back("JACK_CLIENTS");
+    tables.push_back("LIVEWIRE_GPIO_SLOTS");
+    tables.push_back("LOGS");
+    tables.push_back("LOGS");
+    tables.push_back("LOG_LINES");
+    tables.push_back("LOG_MACHINES");
+    tables.push_back("LOG_MODES");
+    tables.push_back("MATRICES");
+    tables.push_back("NEXUS_FIELDS");
+    tables.push_back("NEXUS_QUEUE");
+    tables.push_back("NEXUS_SERVER");
+    tables.push_back("NEXUS_STATIONS");
+    tables.push_back("OUTPUTS");
+    tables.push_back("PANELS");
+    tables.push_back("PANEL_NAMES");
+    tables.push_back("PODCASTS");
+    tables.push_back("PYPAD_INSTANCES");
+    tables.push_back("RDAIRPLAY");
+    tables.push_back("RDAIRPLAY_CHANNELS");
+    tables.push_back("RDCATCH");
+    tables.push_back("RDHOTKEYS");
+    tables.push_back("RDLIBRARY");
+    tables.push_back("RDLOGEDIT");
+    tables.push_back("RDPANEL");
+    tables.push_back("RDPANEL_CHANNELS");
+    tables.push_back("RECORDINGS");
+    tables.push_back("REPLICATORS");
+    tables.push_back("REPLICATOR_MAP");
+    tables.push_back("REPL_CART_STATE");
+    tables.push_back("REPL_CUT_STATE");
+    tables.push_back("REPORTS");
+    tables.push_back("REPORT_GROUPS");
+    tables.push_back("REPORT_SERVICES");
+    tables.push_back("REPORT_STATIONS");
+    tables.push_back("RULE_LINES");
+    tables.push_back("SCHED_CODES");
+    tables.push_back("SERVICES");
+    tables.push_back("SERVICE_CLOCKS");
+    tables.push_back("SERVICE_PERMS");
+    tables.push_back("STACK_LINES");
+    tables.push_back("STACK_SCHED_CODES");
+    tables.push_back("STATIONS");
+    tables.push_back("SWITCHER_NODES");
+    tables.push_back("SYSTEM");
+    tables.push_back("TRIGGERS");
+    tables.push_back("TTYS");
+    tables.push_back("USERS");
+    tables.push_back("USER_PERMS");
+    tables.push_back("USER_SERVICE_PERMS");
+    tables.push_back("VERSION");
+    tables.push_back("VGUEST_RESOURCES");
+    tables.push_back("WEBAPI_AUTHS");
+    tables.push_back("WEB_CONNECTIONS");
+    break;
+
+  case 375:   // v3.2.x
+    tables.push_back("AUDIO_CARDS");
+    tables.push_back("AUDIO_INPUTS");
+    tables.push_back("AUDIO_OUTPUTS");
+    tables.push_back("AUDIO_PERMS");
+    tables.push_back("AUTOFILLS");
+    tables.push_back("AUX_METADATA");
+    tables.push_back("CART");
+    tables.push_back("CARTSLOTS");
+    tables.push_back("CART_SCHED_CODES");
+    tables.push_back("CLIPBOARD");
+    tables.push_back("CLOCKS");
+    tables.push_back("CLOCK_LINES");
+    tables.push_back("CLOCK_PERMS");
+    tables.push_back("CUTS");
+    tables.push_back("CUT_EVENTS");
+    tables.push_back("DECKS");
+    tables.push_back("DECK_EVENTS");
+    tables.push_back("DROPBOXES");
+    tables.push_back("DROPBOX_PATHS");
+    tables.push_back("DROPBOX_SCHED_CODES");
+    tables.push_back("ELR_LINES");
+    tables.push_back("ENCODER_PRESETS");
+    tables.push_back("EVENTS");
+    tables.push_back("EVENT_LINES");
+    tables.push_back("EVENT_PERMS");
+    tables.push_back("EXTENDED_PANELS");
+    tables.push_back("EXTENDED_PANEL_NAMES");
+    tables.push_back("FEEDS");
+    tables.push_back("FEED_IMAGES");
+    tables.push_back("FEED_PERMS");
+    tables.push_back("GPIO_EVENTS");
+    tables.push_back("GPIS");
+    tables.push_back("GPOS");
+    tables.push_back("GROUPS");
+    tables.push_back("HOSTVARS");
+    tables.push_back("IMPORTER_LINES");
+    tables.push_back("IMPORT_TEMPLATES");
+    tables.push_back("INPUTS");
+    tables.push_back("ISCI_XREFERENCE");
+    tables.push_back("JACK_CLIENTS");
+    tables.push_back("LIVEWIRE_GPIO_SLOTS");
+    tables.push_back("LOGS");
+    tables.push_back("LOGS");
+    tables.push_back("LOG_LINES");
+    tables.push_back("LOG_MACHINES");
+    tables.push_back("LOG_MODES");
+    tables.push_back("MATRICES");
+    tables.push_back("NEXUS_FIELDS");
+    tables.push_back("NEXUS_QUEUE");
+    tables.push_back("NEXUS_SERVER");
+    tables.push_back("NEXUS_STATIONS");
+    tables.push_back("OUTPUTS");
+    tables.push_back("PANELS");
+    tables.push_back("PANEL_NAMES");
+    tables.push_back("PODCASTS");
+    tables.push_back("PYPAD_INSTANCES");
+    tables.push_back("RDAIRPLAY");
+    tables.push_back("RDAIRPLAY_CHANNELS");
+    tables.push_back("RDCATCH");
+    tables.push_back("RDHOTKEYS");
+    tables.push_back("RDLIBRARY");
+    tables.push_back("RDLOGEDIT");
+    tables.push_back("RDPANEL");
+    tables.push_back("RDPANEL_CHANNELS");
+    tables.push_back("RECORDINGS");
+    tables.push_back("REPLICATORS");
+    tables.push_back("REPLICATOR_MAP");
+    tables.push_back("REPL_CART_STATE");
+    tables.push_back("REPL_CUT_STATE");
+    tables.push_back("REPORTS");
+    tables.push_back("REPORT_GROUPS");
+    tables.push_back("REPORT_SERVICES");
+    tables.push_back("REPORT_STATIONS");
+    tables.push_back("RULE_LINES");
+    tables.push_back("SCHED_CODES");
+    tables.push_back("SERVICES");
+    tables.push_back("SERVICE_CLOCKS");
+    tables.push_back("SERVICE_PERMS");
+    tables.push_back("STACK_LINES");
+    tables.push_back("STACK_SCHED_CODES");
+    tables.push_back("STATIONS");
+    tables.push_back("SUPERFEED_MAPS");
+    tables.push_back("SWITCHER_NODES");
+    tables.push_back("SYSTEM");
+    tables.push_back("TRIGGERS");
+    tables.push_back("TTYS");
+    tables.push_back("USERS");
+    tables.push_back("USER_PERMS");
+    tables.push_back("USER_SERVICE_PERMS");
+    tables.push_back("VERSION");
+    tables.push_back("VGUEST_RESOURCES");
+    tables.push_back("WEBAPI_AUTHS");
+    tables.push_back("WEB_CONNECTIONS");
+    break;
+  }
+
+  return tables;
 }
 
 

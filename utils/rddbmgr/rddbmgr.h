@@ -2,7 +2,7 @@
 //
 // Rivendell database management utility
 //
-//   (C) Copyright 2018-2022 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2018-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -27,15 +27,28 @@
 #include <rdfeed.h>
 #include <rdstation.h>
 
+//
+// Defining this enables an '--analyze' switch, which will execute the usual
+// startup, then call the 'MainObject::Analyze()' method, located in
+// 'analyze.cpp'.
+//
+//#define RDDBMGR_ENABLE_ANALYZE
+
 #define RDDBMGR_USAGE "[options]\n"
 
 class MainObject : public QObject
 {
  public:
-  enum Command {NoCommand=0,ModifyCommand=1,CreateCommand=2,CheckCommand=3};
+  enum Command {NoCommand=0,ModifyCommand=1,CreateCommand=2,CheckCommand=3,
+    AnalyzeCommand=4};
   MainObject(QObject *parent=0);
 
  private:
+  //
+  // analyze.cpp
+  //
+  bool Analyze(int schema,QString *err_msg) const;
+  
   //
   // check.cpp
   //
@@ -63,6 +76,10 @@ class MainObject : public QObject
   void CheckOrphanedCarts() const;
   void CheckOrphanedCuts() const;
   void CheckOrphanedAudio() const;
+  void CheckOrphanedTables() const;
+  bool CheckTableNames(const QStringList &table_names,
+		       QStringList &missing,QStringList &extra) const;
+  QStringList GetCanonicalTables(int schema) const;
   void CheckLogLineIds(const QString &logname) const;
   void ValidateAudioLengths() const;
   void Rehash(const QString &arg) const;
@@ -156,6 +173,7 @@ class MainObject : public QObject
   bool db_check_orphaned_tracks;
   bool db_check_orphaned_carts;
   bool db_check_orphaned_cuts;
+  bool db_check_orphaned_tables;
   bool db_check_strings;
   bool db_check_log_line_ids;
   QString db_orphan_group_name;
@@ -165,6 +183,7 @@ class MainObject : public QObject
   bool db_relink_audio_move;
   QDateTime db_start_datetime;
   QString db_table_create_postfix;
+  int db_current_schema;
   RDConfig *db_config;
 };
 

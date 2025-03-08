@@ -184,7 +184,7 @@
       </term>
       <listitem>
 	<para>
-	  Disable all checks. Add check for log line IDs. Specifically,
+	  Disable all checks, then add check for log line IDs. Specifically,
 	  verify that all IDs are valid (>0) and unique within the context
 	  of the given log.
 	</para>
@@ -245,7 +245,7 @@
       </term>
       <listitem>
 	<para>
-	  Disable all checks. Add check for orphaned audio files.
+	  Disable all checks, then add check for orphaned audio files.
 	</para>
       </listitem>
     </varlistentry>
@@ -256,7 +256,7 @@
       </term>
       <listitem>
 	<para>
-	  Disable all checks. Add check for orphaned carts.
+	  Disable all checks, then add check for orphaned carts.
 	</para>
       </listitem>
     </varlistentry>
@@ -267,7 +267,7 @@
       </term>
       <listitem>
 	<para>
-	  Disable all checks. Add check for orphaned cuts.
+	  Disable all checks, then add check for orphaned cuts.
 	</para>
       </listitem>
     </varlistentry>
@@ -278,7 +278,18 @@
       </term>
       <listitem>
 	<para>
-	  Disable all checks. Add check for orphaned voice tracks.
+	  Disable all checks, then add check for orphaned voice tracks.
+	</para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term>
+	<option>--orphaned-tables</option>
+      </term>
+      <listitem>
+	<para>
+	  Disable all checks, then add check for orphaned database tables.
 	</para>
       </listitem>
     </varlistentry>
