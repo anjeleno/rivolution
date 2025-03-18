@@ -2,7 +2,7 @@
 //
 // Abstract a Rivendell Cart.
 //
-//   (C) Copyright 2002-2022 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -37,6 +37,7 @@
 #include <rdescape_string.h>
 #include <rdformpost.h>
 #include <rdgroup.h>
+#include <rdmacro_event.h>
 #include <rdstation.h>
 #include <rdsystem.h>
 #include <rdtextvalidator.h>
@@ -1063,21 +1064,61 @@ void RDCart::updateLength()
 
 void RDCart::updateLength(bool enforce_length,unsigned length)
 {
-  //
-  // Update Length
-  //
-  long long total=0;
-  long long segue_total=0;
-  long long hook_total=0;
-  long long min_talk_len=LLONG_MAX;
-  long long max_talk_len=0;
-  unsigned weight_total=0;
-  unsigned weight = 0;
-  QDateTime end_date;
+  QString sql;
+  RDSqlQuery *q=NULL;
+  RDCart::Type cart_type=RDCart::All;
+  QString cart_title;
+  QDateTime now=QDateTime::currentDateTime();
 
-  bool dow_active[7]={false,false,false,false,false,false,false};
-  bool time_ok=true;
-  QString sql=QString("select ")+
+  sql=QString("select ")+
+    "`CART`.`TYPE`,"+        // 00
+    "`CART`.`TITLE` "+       // 01
+    "from `CART` where "+
+    QString::asprintf("NUMBER=%u",cart_number);
+  q=new RDSqlQuery(sql);
+  if(q->first()) {
+    cart_type=(RDCart::Type)q->value(0).toInt();
+    cart_title=q->value(1).toString();
+  }
+  delete q;
+  if(cart_type==RDCart::All) {  // Should never happen!
+    sql=QString("update `CART` set ")+
+      QString::asprintf("`CART`.`VALIDITY`=%u,",RDCart::NeverValid)+
+      "`CART`.`START_DATETIME`=NULL,"+
+      "`CART`.`END_DATETIME`=NULL,"+
+      "`CART`.`AVERAGE_LENGTH`=0,"+
+      "`CART`.`AVERAGE_SEGUE_LENGTH`=0,"+
+      "`CART`.`AVERAGE_HOOK_LENGTH`=0,"+
+      "`CART`.`MINIMUM_TALK_LENGTH`=0,"+
+      "`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
+      QString::asprintf(" where `CART_NUMBER`=%u",cart_number);
+    RDSqlQuery::apply(sql);
+    rda->syslog(LOG_WARNING,"cart %06u [%s] has ambiguous type",
+		cart_number,cart_title.toUtf8().constData());
+    return;
+  }
+    
+  if(cart_type==RDCart::Macro) {
+    RDMacroEvent *macro_evt=new RDMacroEvent(rda->ripc(),NULL);
+    sql=QString("update `CART` set ")+
+      QString::asprintf("`CART`.`VALIDITY`=%u,",RDCart::AlwaysValid)+
+      "`CART`.`START_DATETIME`=NULL,"+
+      "`CART`.`END_DATETIME`=NULL,"+
+      QString::asprintf("`CART`.`AVERAGE_LENGTH`=%u,",macro_evt->length())+
+      "`CART`.`AVERAGE_SEGUE_LENGTH`=0,"+
+      "`CART`.`AVERAGE_HOOK_LENGTH`=0,"+
+      "`CART`.`MINIMUM_TALK_LENGTH`=0,"+
+      "`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
+      QString::asprintf(" where `CART_NUMBER`=%u",cart_number);
+    RDSqlQuery::apply(sql);
+    delete macro_evt;
+    return;
+  }
+
+  //
+  // Assume an audio cart from this point on...
+  //
+  sql=QString("select ")+
     "`LENGTH`,"+             // 00
     "`SEGUE_START_POINT`,"+  // 01
     "`SEGUE_END_POINT`,"+    // 02
@@ -1094,163 +1135,168 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
     "`HOOK_START_POINT`,"+   // 13
     "`HOOK_END_POINT`,"+     // 14
     "`WEIGHT`,"+             // 15
-    "`END_DATETIME`,"+       // 16
-    "`TALK_START_POINT`,"+   // 17
-    "`TALK_END_POINT` "+     // 18
+    "`START_DATETIME`,"+     // 16
+    "`END_DATETIME`,"+       // 17
+    "`TALK_START_POINT`,"+   // 18
+    "`TALK_END_POINT`,"+     // 19
+    "`EVERGREEN` "+          // 20
     "from `CUTS` where "+
     QString::asprintf("(`CUT_NAME` like \"%06d%%\")&&(`LENGTH`>0)",cart_number);
-  RDSqlQuery *q=new RDSqlQuery(sql);
-  while(q->next()) {
-    for(unsigned i=0;i<7;i++) {
-      dow_active[i]|=RDBool(q->value(4+i).toString());
-    }
-    weight = q->value(15).toUInt();
-    end_date = q->value(16).toDateTime();
-    if (end_date.isValid() && (end_date <QDateTime::currentDateTime ())){
-      // This cut has expired, it is no more, set its weight to zero.
-      weight = 0;
-    }
-    total+=q->value(0).toUInt() * weight;
-    if((q->value(1).toInt()<0)||(q->value(2).toInt()<0)) {
-      segue_total+=q->value(0).toUInt() * weight;
-    }
-    else {
-      segue_total+=(q->value(1).toInt()-q->value(3).toInt()) * weight;
-    }
-    hook_total+=(q->value(14).toUInt()-q->value(13).toUInt()) * weight;
-    if((q->value(17).toInt()>=0)&&(q->value(18).toInt()>=0)) {
-      int talk_len=q->value(18).toInt()-q->value(17).toInt();
-      if(talk_len>=0) {
-	if(min_talk_len>talk_len) {
-	  min_talk_len=talk_len;
-	}
-	if(max_talk_len<talk_len) {
-	  max_talk_len=talk_len;
-	}
-      }
-    }
-    weight_total += weight;
-  }
-  if(weight_total>0) {
-    setAverageLength(total/weight_total);
-    setAverageSegueLength(segue_total/weight_total);
-    setAverageHookLength(hook_total/weight_total);
-    if(!enforce_length) {
-      setForcedLength(total/weight_total);
-    }
-  }
-  else {
-    setAverageLength(0);
-    setAverageSegueLength(0);
-    setAverageHookLength(0);
-    if(!enforce_length) {
-      setForcedLength(0);
-    }
-  }
-  if((min_talk_len<0)||(min_talk_len==LLONG_MAX)) {
-    min_talk_len=0;
-  }
-  if((max_talk_len<0)||(max_talk_len==LLONG_MAX)) {
-    max_talk_len=0;
-  }
-  setMinimumTalkLength(min_talk_len);
-  setMaximumTalkLength(max_talk_len);
-  setCutQuantity(q->size());
-  delete q;
-
-  //
-  // Update Validity
-  //
-  RDCut::Validity cut_validity=RDCut::NeverValid;
-  RDCart::Validity cart_validity=RDCart::NeverValid;
-  bool evergreen=true;
-  QDateTime start_datetime;
-  QDateTime end_datetime;
-  RDSqlQuery *q1;
-  QDateTime valid_until;
-  bool dates_valid=true;
-
-  sql=QString("select ")+
-    "`CUT_NAME`,"+        // 00
-    "`START_DAYPART`,"+   // 01
-    "`END_DAYPART`,"+     // 02
-    "`LENGTH`,"+          // 03
-    "`SUN`,"+             // 04
-    "`MON`,"+             // 05
-    "`TUE`,"+             // 06
-    "`WED`,"+             // 07
-    "`THU`,"+             // 08
-    "`FRI`,"+             // 09
-    "`SAT`,"+             // 10
-    "`EVERGREEN`,"+       // 11
-    "`START_DATETIME`,"+  // 12
-    "`END_DATETIME` "+    // 13
-    "from `CUTS` where "+
-    QString::asprintf("`CART_NUMBER`=%u",cart_number);
   q=new RDSqlQuery(sql);
+  if(q->size()==0) {  // No usable cuts!
+    sql=QString("update `CART` set ")+
+      QString::asprintf("`CART`.`VALIDITY`=%u,",RDCart::NeverValid)+
+      "`CART`.`START_DATETIME`=NULL,"+
+      "`CART`.`END_DATETIME`=NULL,"+
+      "`CART`.`AVERAGE_LENGTH`=0,"+
+      "`CART`.`AVERAGE_SEGUE_LENGTH`=0,"+
+      "`CART`.`AVERAGE_HOOK_LENGTH`=0,"+
+      "`CART`.`MINIMUM_TALK_LENGTH`=0,"+
+      "`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
+      QString::asprintf(" where `NUMBER`=%u",cart_number);
+    RDSqlQuery::apply(sql);
+    delete q;
+    return;
+  }
+  bool evergreen_found=false;
+  RDCart::Validity active_validity=RDCart::NeverValid;
+  QDateTime active_start_datetime(QDate(3000,1,1),QTime(0,0,0));
+  QDateTime active_end_datetime(QDate(1000,1,1),QTime(0,0,0));
+  unsigned active_cuts=0;
+  unsigned active_len=0;
+  unsigned active_segue_len=0;
+  unsigned active_hook_len=0;
+  unsigned evergreen_cuts=0;
+  unsigned evergreen_len=0;
+  unsigned evergreen_segue_len=0;
+  unsigned evergreen_hook_len=0;
   while(q->next()) {
-    cut_validity=ValidateCut(q,enforce_length,length,&time_ok);
-    sql=QString::asprintf("update `CUTS` set `VALIDITY`=%u where ",
-			  cut_validity)+
-      "`CUT_NAME`='"+RDEscapeString(q->value(0).toString())+"'";
-    q1=new RDSqlQuery(sql);
-    delete q1;
-    evergreen&=RDBool(q->value(11).toString());
-    if((int)cut_validity>(int)cart_validity) {
-      cart_validity=(RDCart::Validity)cut_validity;
-    }
-    if((cut_validity!=RDCut::NeverValid)&&(q->value(13).isNull())) {
-      dates_valid=false;
-    }
-    if(!q->value(12).isNull()) {
-      if((start_datetime>q->value(12).toDateTime())||
-	 start_datetime.isNull()) {
-	start_datetime=q->value(12).toDateTime();
+    if(q->value(0).toUInt()>0) {
+      if(q->value(20).toString()=="Y") {  // Evergreen?
+	evergreen_found=true;
+	evergreen_segue_len=
+	  GetPointerRange(q->value(1).toInt(),q->value(2).toInt());
+	evergreen_hook_len=
+	  GetPointerRange(q->value(13).toInt(),q->value(14).toInt());
+	evergreen_len+=q->value(0).toUInt();
+	evergreen_cuts++;
       }
-    }
-    if(!q->value(13).isNull()) {
-      if((end_datetime<q->value(13).toDateTime())||
-	 (end_datetime.isNull())) {
-	end_datetime=q->value(13).toDateTime();
+      else {
+	// Do we have at least one DOW?
+	if((q->value(4).toString()=="Y")||(q->value(5).toString()=="Y")||
+	   (q->value(6).toString()=="Y")||(q->value(7).toString()=="Y")||
+	   (q->value(8).toString()=="Y")||(q->value(9).toString()=="Y")||
+	   (q->value(10).toString()=="Y")) {
+	  // Make sure we haven't expired
+	  if(q->value(17).isNull()||(q->value(17).toDateTime()>now)) {
+	    if(q->value(16).isNull()) {
+	      active_start_datetime=QDateTime();
+	    }
+	    else {
+	      if((!active_start_datetime.isNull())&&
+		 (q->value(16).toDateTime()<=active_start_datetime)) {
+		active_start_datetime=q->value(16).toDateTime();
+	      }
+	    }
+	    if(q->value(17).isNull()) {
+	      active_end_datetime=QDateTime();
+	    }
+	    else {
+	      if((!active_end_datetime.isNull())&&
+		 (q->value(17).toDateTime()>active_end_datetime)) {
+		active_end_datetime=q->value(17).toDateTime();
+		printf("NEW END: %s\n",active_end_datetime.toString("yyyy-MM-dd hh:mm:ss").toUtf8().constData());
+	      }
+	    }
+	    if(q->value(16).isNull()||(q->value(16).toDateTime()<=now)) {
+	      active_segue_len=
+		GetPointerRange(q->value(1).toInt(),q->value(2).toInt());
+	      active_hook_len=
+		GetPointerRange(q->value(13).toInt(),q->value(14).toInt());
+	      active_len+=q->value(0).toUInt();
+	      active_cuts++;
+	      if(q->value(17).isNull()&&q->value(12).isNull()&&
+		 (q->value(4).toString()=="Y")&&(q->value(5).toString()=="Y")&&
+		 (q->value(6).toString()=="Y")&&(q->value(7).toString()=="Y")&&
+		 (q->value(8).toString()=="Y")&&(q->value(9).toString()=="Y")&&
+		 (q->value(10).toString()=="Y")) {
+		active_validity=RDCart::AlwaysValid;
+	      }
+	      else {
+		if(active_validity==RDCart::NeverValid) {
+		  if(active_start_datetime>now) {
+		    active_validity=RDCart::FutureValid;
+		  }
+		  else {
+		    active_validity=RDCart::ConditionallyValid;
+		  }
+		}
+	      }
+	    }
+	  }
+	}
       }
     }
   }
   delete q;
-  if(cart_validity==RDCart::ConditionallyValid) {  // Promote to Always?
-    bool all_dow=true;
-    for(unsigned i=0;i<7;i++) {
-      all_dow&=dow_active[i];
-    }
-    if(all_dow&&time_ok) {
-      cart_validity=RDCart::AlwaysValid;
-    }
-  }
-  if(evergreen) {  // Promote to Evergreen?
-    cart_validity=RDCart::EvergreenValid;
-  }
 
   //
-  // Set start/end datetimes
+  // Write results
   //
-  sql="update `CART` set ";
-  if(start_datetime.isNull()||(!dates_valid)) {
-    sql+="`START_DATETIME`=NULL,";
+  if(active_len>0) {
+    sql=QString("update `CART` set ")+
+      QString::asprintf("`CART`.`VALIDITY`=%u,",active_validity)+
+    "`CART`.`START_DATETIME`="+
+      RDCheckDateTime(active_start_datetime,"yyyy-MM-dd hh:mm:ss")+","+
+      "`CART`.`END_DATETIME`="+
+      RDCheckDateTime(active_end_datetime,"yyyy-MM-dd hh:mm:ss")+","+
+      QString::asprintf("`CART`.`AVERAGE_LENGTH`=%d,",active_len/active_cuts)+
+      QString::asprintf("`CART`.`AVERAGE_SEGUE_LENGTH`=%d,",
+			active_segue_len/active_cuts)+
+      QString::asprintf("`CART`.`AVERAGE_HOOK_LENGTH`=%d,",
+			active_hook_len/active_cuts)+
+      "`CART`.`MINIMUM_TALK_LENGTH`=0,"+
+      "`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
+      QString::asprintf(" where `NUMBER`=%u",cart_number);
+    RDSqlQuery::apply(sql);
   }
   else {
-    sql+=QString("`START_DATETIME`=")+
-      RDCheckDateTime(start_datetime,"yyyy-MM-dd hh:mm:ss")+",";
+    if(evergreen_found) {
+    sql=QString("update `CART` set ")+
+      QString::asprintf("`CART`.`VALIDITY`=%u,",RDCart::EvergreenValid)+
+      "`CART`.`START_DATETIME`=NULL,"+
+      "`CART`.`END_DATETIME`=NULL,"+
+      QString::asprintf("`CART`.`AVERAGE_LENGTH`=%d,",
+			evergreen_len/evergreen_cuts)+
+      QString::asprintf("`CART`.`AVERAGE_SEGUE_LENGTH`=%d,",
+			evergreen_segue_len/evergreen_cuts)+
+      QString::asprintf("`CART`.`AVERAGE_HOOK_LENGTH`=%d,",
+			evergreen_hook_len/evergreen_cuts)+
+      "`CART`.`MINIMUM_TALK_LENGTH`=0,"+
+      "`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
+      QString::asprintf(" where `NUMBER`=%u",cart_number);
+    RDSqlQuery::apply(sql);
+    }
+    else {  // Nothing playable!
+      RDCart::Validity validity=RDCart::NeverValid;
+      if((!active_start_datetime.isNull())&&(active_start_datetime>now)) {
+	validity=RDCart::FutureValid;
+      }
+      sql=QString("update `CART` set ")+
+	QString::asprintf("`CART`.`VALIDITY`=%u,",validity)+
+	"`CART`.`START_DATETIME`="+
+	RDCheckDateTime(active_start_datetime,"yyyy-MM-dd hh:mm:ss")+","+
+	"`CART`.`END_DATETIME`="+
+	RDCheckDateTime(active_end_datetime,"yyyy-MM-dd hh:mm:ss")+","+
+	"`CART`.`AVERAGE_LENGTH`=0,"+
+	"`CART`.`AVERAGE_SEGUE_LENGTH`=0,"+
+	"`CART`.`AVERAGE_HOOK_LENGTH`=0,"+
+	"`CART`.`MINIMUM_TALK_LENGTH`=0,"+
+	"`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
+	QString::asprintf(" where `NUMBER`=%u",cart_number);
+      RDSqlQuery::apply(sql);
+    }
   }
-  if(end_datetime.isNull()||(!dates_valid)) {
-    sql+="`END_DATETIME`=NULL,";
-  }
-  else {
-    sql+=QString("`END_DATETIME`=")+
-      RDCheckDateTime(end_datetime,"yyyy-MM-dd hh:mm:ss")+",";
-  }
-  sql+=QString::asprintf("`VALIDITY`=%u where `NUMBER`=%u",
-			 cart_validity,cart_number);
-  q=new RDSqlQuery(sql);
-  delete q;
 }
 
 
@@ -2382,7 +2428,7 @@ RDCut::Validity RDCart::ValidateCut(RDSqlQuery *q,bool enforce_length,
       }
     }
   }
-
+  
   //
   // Timescaling
   //
@@ -2423,6 +2469,15 @@ QString RDCart::VerifyTitle(const QString &title) const
   }
   delete system;
   return ret;
+}
+
+
+int RDCart::GetPointerRange(int start_point,int end_point) const
+{
+  if((start_point>=0)&&(end_point>=0)&&(end_point>=start_point)) {
+    return end_point-start_point;
+  }
+  return 0;
 }
 
 

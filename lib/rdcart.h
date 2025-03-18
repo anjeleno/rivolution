@@ -2,7 +2,7 @@
 //
 // Abstract a Rivendell Cart
 //
-//   (C) Copyright 2002-2022 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -184,6 +184,7 @@ class RDCart
   RDCut::Validity ValidateCut(RDSqlQuery *q,bool enforce_length,
 			      unsigned length,bool *time_ok) const;
   QString VerifyTitle(const QString &title) const;
+  int GetPointerRange(int start_point,int end_point) const;
   void SetRow(const QString &param,const QString &value) const;
   void SetRow(const QString &param,unsigned value) const;
   void SetRow(const QString &param,const QDateTime &value) const;
