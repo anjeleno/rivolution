@@ -28,6 +28,7 @@
 MainObject::MainObject(QObject *parent)
   : QObject(parent)
 {
+#ifdef HPI
   QHostAddress from_addr;
   int card=0;
   int port=0;
@@ -90,6 +91,10 @@ MainObject::MainObject(QObject *parent)
 	 d_playstream->getStream());
   d_soundcard->setOutputVolume(card,d_playstream->getStream(),port,0);
   d_playstream->play();
+#else
+  fprintf(stderr,"hpiplayout_test: this test requires that HPI support be enabled.\n");
+  exit(1);
+#endif  //HPI
 }
 
 

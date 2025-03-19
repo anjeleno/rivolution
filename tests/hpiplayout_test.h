@@ -2,7 +2,7 @@
 //
 // Test the Rivendell HPI playout routines
 //
-//   (C) Copyright 2024 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2024-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -26,8 +26,10 @@
 #include "rdconfig.h"
 #include "rdwavefile.h"
 
+#ifdef HPI
 #include "rdhpiplaystream.h"
 #include "rdhpisoundcard.h"
+#endif  // HPI
 
 #define HPIPLAYOUT_TEST_USAGE "[options]\n\nTest the Rivendell HPI play-out routines\n\nOptions are:\n--filename=<filename>\n     WAV file to play\n\n--card=<card-num>\n     Card number [0-15]\n\n--port=<port-num>\n     Port number [0-16]\n\n"
 
@@ -50,8 +52,10 @@ class MainObject : public QObject
   int d_card;
   int d_stream;
   int d_port;
+#ifdef HPI
   RDHPISoundCard *d_soundcard;
   RDHPIPlayStream *d_playstream;
+#endif  // HPI
   RDWaveData *d_wavedata;
   RDConfig *d_rdconfig;
 };

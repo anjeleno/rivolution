@@ -24967,3 +24967,6 @@
 2025-03-18 Fred Gleason <fredg@paravelsystems.com>
 	* Refactored the 'RDCart::updateLength()' so as to process evergreen
 	cuts properly.
+2025-03-19 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in the 'hpiplayout-test' test harness that caused the
+	build to fail when HPI support was disabled.
