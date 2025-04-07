@@ -24970,3 +24970,6 @@
 2025-03-19 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in the 'hpiplayout-test' test harness that caused the
 	build to fail when HPI support was disabled.
+2025-04-07 Fred Gleason <fredg@paravelsystems.com>
+	* Dropped the 'RDAIRPLAY.INSTANCE' field from the database.
+	* Incremented the database version to 376.

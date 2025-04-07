@@ -18,6 +18,8 @@
 //   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <QMultiMap>
+
 #include <rdcart.h>
 #include <rdconf.h>
 #include <rddb.h>
@@ -11850,6 +11852,46 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
       return false;
     }
 
+    WriteSchemaVersion(++cur_schema);
+  }
+
+  if((cur_schema<376)&&(set_schema>cur_schema)) {
+    //
+    // De-duplicate Host Entries
+    //
+    QMultiMap<QString,int> id_map;
+    sql=QString("select ")+
+      "`STATION`,"+  // 00
+      "`ID` "+       // 01
+      "from `RDAIRPLAY`";
+    RDSqlQuery *q=new RDSqlQuery(sql);
+    while(q->next()) {
+      id_map.insert(q->value(0).toString(),q->value(1).toInt());
+    }
+    delete q;
+    QStringList keys=id_map.uniqueKeys();
+    for(int i=0;i<keys.size();i++) {
+      QList<int> ids=id_map.values(keys.at(i));
+      for(int j=1;j<ids.size();j++) {
+	sql=QString("delete from `RDAIRPLAY` where ")+
+	  QString::asprintf("`ID`=%d",ids.at(j));
+	fprintf(stderr,"deleting duplicate RDAIRPLAY entry %d:\"%s\"\n",
+		ids.at(j),keys.at(i).toUtf8().constData());
+	RDSqlQuery::apply(sql);
+      }
+    }
+
+    //
+    // Apply Schema Change
+    //
+    DropIndex("RDAIRPLAY","STATION_IDX");
+    DropColumn("RDAIRPLAY","INSTANCE");
+    sql=QString("alter table `RDAIRPLAY` ")+
+      "add unique index `STATION_IDX` (`STATION`)";
+    if(!RDSqlQuery::apply(sql,err_msg)) {
+      return false;
+    }
+    
     WriteSchemaVersion(++cur_schema);
   }
 
