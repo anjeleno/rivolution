@@ -1,8 +1,8 @@
 ## Makefile.am
 ##
-## Automake.am for rivendell/lib
+## Makefile.am for rivendell/lib
 ##
-## (C) Copyright 2002-2023 Fred Gleason <fredg@paravelsystems.com>
+## (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 ##
 ##   This program is free software; you can redistribute it and/or modify
 ##   it under the terms of the GNU General Public License version 2 as
@@ -264,6 +264,7 @@ dist_librd_la_SOURCES = dbversion.h\
                         rdtempdirectory.cpp rdtempdirectory.h\
                         rdtextfile.cpp rdtextfile.h\
                         rdtextvalidator.cpp rdtextvalidator.h\
+                        rdtimearray.cpp rdtimearray.h\
                         rdtimeedit.cpp rdtimeedit.h\
                         rdtimeengine.cpp rdtimeengine.h\
                         rdtimeprobe.cpp rdtimeprobe.h\

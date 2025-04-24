@@ -441,6 +441,14 @@ For example:
    Entries should be sorted by surname, then christian name of the author.
 
 
+DEBUGGING/OPTIMIZATION AIDS:
+The following classes exist for aiding the debugging and optimization
+process:
+
+   RDTimeArray. Record a series of code points with microsecond precision
+   and then render the results to a QString. See 'lib/rdtimearray.h'.
+
+
 QUESTIONS:
 Questions about coding style, or indeed any aspect of Rivendell development,
 are welcomed on the Rivendell-prog mailing list. Subscription information

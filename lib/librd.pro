@@ -2,7 +2,7 @@
 #
 # The lib/ QMake project file for Rivendell.
 #
-# (C) Copyright 2003-2022 Fred Gleason <fredg@paravelsystems.com>
+# (C) Copyright 2003-2025 Fred Gleason <fredg@paravelsystems.com>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License version 2 as
@@ -204,6 +204,7 @@ SOURCES += rdtableview.cpp
 SOURCES += rdtempdirectory.cpp
 SOURCES += rdtextfile.cpp
 SOURCES += rdtextvalidator.cpp
+SOURCES += rdtimearray.cpp
 SOURCES += rdtimeedit.cpp
 SOURCES += rdtimeengine.cpp
 SOURCES += rdtimeprobe.cpp
@@ -399,6 +400,7 @@ HEADERS += rdtableview.h
 HEADERS += rdtempdirectory.h
 HEADERS += rdtextfile.h
 HEADERS += rdtextvalidator.h
+HEADERS += rdtimearray.h
 HEADERS += rdtimeedit.h
 HEADERS += rdtimeedit.h
 HEADERS += rdtimeengine.h
