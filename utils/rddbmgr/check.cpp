@@ -1237,7 +1237,8 @@ QStringList MainObject::GetCanonicalTables(int schema) const
     tables.push_back("WEB_CONNECTIONS");
     break;
 
-  case 375:   // v3.2.x
+  case 375:   // v4.3.x
+  case 376:   // v4.4.x
     tables.push_back("AUDIO_CARDS");
     tables.push_back("AUDIO_INPUTS");
     tables.push_back("AUDIO_OUTPUTS");
