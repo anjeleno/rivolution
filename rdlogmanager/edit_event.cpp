@@ -69,8 +69,6 @@ EditEvent::EditEvent(QString eventname,bool new_event,QStringList *new_events,
   event_lib_view->setModel(event_lib_model);
   event_lib_view->hideColumn(3);
   event_cart_filter->setModel(event_lib_model);
-  connect(event_cart_filter,SIGNAL(filterChanged(const QString &,int)),
-	  event_lib_model,SLOT(setFilterSql(const QString &,int)));
   connect(rda->ripc(),SIGNAL(userChanged()),
 	  event_cart_filter,SLOT(changeUser()));
   connect(event_lib_view->selectionModel(),

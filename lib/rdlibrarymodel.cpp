@@ -631,7 +631,7 @@ void RDLibraryModel::updateModel(const QString &filter_sql)
     return;
   }
 #ifdef RDLIBRARYMODEL_ENABLE_UPDATE_PROFILING
-  printf("%p - filter_sql: %s\n",this,filter_sql.toUtf8().constData());
+  //  printf("%p - filter_sql: %s\n",this,filter_sql.toUtf8().constData());
   RDTimeProbe *probe=new RDTimeProbe();
   probe->printWaypoint("updateModel - 1");
 #endif  // RDLIBRARYMODEL_ENABLE_UPDATE_PROFILING
@@ -674,7 +674,9 @@ void RDLibraryModel::updateModel(const QString &filter_sql)
 #endif  // RDLIBRARYMODEL_ENABLE_UPDATE_PROFILING
 
   sql=sqlFields()+
-    filter_sql;
+    filter_sql+
+    QString::asprintf(" limit %d ",RD_LIMITED_CART_SEARCH_QUANTITY);
+
   beginResetModel();
   d_texts.clear();
   d_notes.clear();
@@ -691,7 +693,6 @@ void RDLibraryModel::updateModel(const QString &filter_sql)
   probe->printWaypoint("updateModel - 4");
 #endif  // RDLIBRARYMODEL_ENABLE_UPDATE_PROFILING
 
-  //  printf("RDLibraryModel::updateModel() SQL: %s\n",sql.toUtf8().constData());
   q=new RDSqlQuery(sql);
   while(q->next()&&(carts_loaded<d_cart_limit)) {
     if(q->value(0).toUInt()!=prev_cartnum) {
@@ -707,7 +708,6 @@ void RDLibraryModel::updateModel(const QString &filter_sql)
       prev_cartnum=q->value(0).toUInt();
       carts_loaded++;
     }
-    //    printf("carts_loaded: %d\n",carts_loaded);
   }
   delete q; 
 
