@@ -2,7 +2,7 @@
 //
 // Filter widget for picking Rivendell carts.
 //
-//   (C) Copyright 2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2021-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -103,10 +103,8 @@ class RDCartFilter : public RDWidget
   QLabel *d_group_label;
   QComboBox *d_codes_box;
   QLabel *d_codes_label;
-
   QComboBox *d_and_codes_box;
   QLabel *d_and_codes_label;
-
   QLineEdit *d_matches_edit;
   QLabel *d_matches_label;
   QPushButton *d_search_button;
@@ -119,15 +117,12 @@ class RDCartFilter : public RDWidget
   QCheckBox *d_showmacro_check;
   QLabel *d_shownotes_label;
   QCheckBox *d_shownotes_box;
-  QLabel *d_showmatches_label;
-  QCheckBox *d_showmatches_box;
   QLabel *d_showmacro_label;
   RDCart::Type d_show_cart_type;
   bool d_show_track_carts;
   QString d_default_group;
   bool d_user_is_admin;
   QString d_service;
-
   QString d_model_filter_sql;
   int d_model_cart_limit;
 };

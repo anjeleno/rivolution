@@ -2,7 +2,7 @@
 //
 // Edit a Rivendell Log Event
 //
-//   (C) Copyright 2002-2023 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -31,6 +31,7 @@
 #include <QStringList>
 #include <QTextEdit>
 
+#include <rdcartfilter.h>
 #include <rdcombobox.h>
 #include <rddialog.h>
 #include <rdemptycart.h>
@@ -60,10 +61,6 @@ class EditEvent : public RDDialog
   QSizePolicy sizePolicy() const;
 
  private slots:
-  void filterChangedData(const QString &str);
-  void filterActivatedData(const QString &str);
-  void filterClickedData(int id);
-  void searchData();
   void selectionChangedData(const QItemSelection &before,
 			    const QItemSelection &after);
   void saveData();
@@ -79,26 +76,12 @@ class EditEvent : public RDDialog
   void paintEvent(QPaintEvent *e);
 
  private:
-  void RefreshLibrary();
   void Save();
   void CopyEventPerms(QString old_name,QString new_name);
   void AbandonEvent(QString name);
   QString event_name;
   RDEvent *event_event;
-  QLabel *event_lib_filter_label;
-  QLineEdit *event_lib_filter_edit;
-  QButtonGroup *event_lib_type_group;
-  QLabel *event_lib_type_none_label;
-  QRadioButton *event_lib_type_none_radio;
-  QLabel *event_lib_type_audio_label;
-  QRadioButton *event_lib_type_audio_radio;
-  QLabel *event_lib_type_macro_label;
-  QRadioButton *event_lib_type_macro_radio;
-  QLabel *event_group_label;
-  QComboBox *event_group_box;
-  RDGroupListModel *event_group_model;
-  RDComboBox *event_sched_group_box;
-  QPushButton *event_search_button;
+  RDCartFilter *event_cart_filter;
   LibraryTableView *event_lib_view;
   RDLibraryModel *event_lib_model;
   RDTransportButton *event_postimport_up_button;

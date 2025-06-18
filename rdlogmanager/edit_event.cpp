@@ -2,7 +2,7 @@
 //
 // Edit a Rivendell Log Event
 //
-//   (C) Copyright 2002-2023 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -54,62 +54,9 @@ EditEvent::EditEvent(QString eventname,bool new_event,QStringList *new_events,
   // Library Section
   // *******************************
   //
-  // Text Filter
+  // Cart Filter
   //
-  event_lib_filter_edit=new QLineEdit(this);
-  if(rda->station()->filterMode()==RDStation::FilterAsynchronous) {
-    connect(event_lib_filter_edit,SIGNAL(returnPressed()),
-	    this,SLOT(searchData()));
-  }
-  connect(event_lib_filter_edit,SIGNAL(textChanged(const QString &)),
-	  this,SLOT(filterChangedData(const QString &)));
-  event_lib_filter_label=new QLabel(tr("Filter:"),this);
-  event_lib_filter_label->setFont(labelFont());
-  event_lib_filter_label->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
-  event_search_button=new QPushButton(tr("Search"),this);
-  event_search_button->setFont(subButtonFont());
-  event_search_button->setDisabled(true);
-  connect(event_search_button,SIGNAL(clicked()),this,SLOT(searchData()));
-  event_search_button->
-    setVisible(rda->station()->filterMode()==RDStation::FilterAsynchronous);
-
-  //
-  // Group Filter
-  //
-  event_group_box=new QComboBox(this);
-  event_group_model=new RDGroupListModel(true,false,false,this);
-  event_group_model->changeUser();
-  event_group_box->setModel(event_group_model);
-  connect(event_group_box,SIGNAL(activated(const QString &)),
-	  this,SLOT(filterActivatedData(const QString &)));
-  event_group_label=new QLabel(tr("Group:"),this);
-  event_group_label->setFont(labelFont());
-  event_group_label->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
-
-  //
-  // Type Filter
-  //
-  event_lib_type_group=new QButtonGroup(this);
-  connect(event_lib_type_group,SIGNAL(buttonClicked(int)),
-	  this,SLOT(filterClickedData(int)));
-  event_lib_type_none_radio=new QRadioButton(this);
-  event_lib_type_group->addButton(event_lib_type_none_radio,0);
-  event_lib_type_none_label=new QLabel(tr("All"),this);
-  event_lib_type_none_label->setFont(labelFont());
-  event_lib_type_none_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
-  event_lib_type_none_radio->setChecked(true);
-
-  event_lib_type_audio_radio=new QRadioButton(this);
-  event_lib_type_group->addButton(event_lib_type_audio_radio,1);
-  event_lib_type_audio_label=new QLabel(tr("Audio Only"),this);
-  event_lib_type_audio_label->setFont(labelFont());
-  event_lib_type_audio_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
-
-  event_lib_type_macro_radio=new QRadioButton(this);
-  event_lib_type_group->addButton(event_lib_type_macro_radio,2);
-  event_lib_type_macro_label=new QLabel(tr("Macros Only"),this);
-  event_lib_type_macro_label->setFont(labelFont());
-  event_lib_type_macro_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  event_cart_filter=new RDCartFilter(false,false,this);
 
   //
   // Cart List
@@ -121,6 +68,11 @@ EditEvent::EditEvent(QString eventname,bool new_event,QStringList *new_events,
   event_lib_model->setPalette(palette());
   event_lib_view->setModel(event_lib_model);
   event_lib_view->hideColumn(3);
+  event_cart_filter->setModel(event_lib_model);
+  connect(event_cart_filter,SIGNAL(filterChanged(const QString &,int)),
+	  event_lib_model,SLOT(setFilterSql(const QString &,int)));
+  connect(rda->ripc(),SIGNAL(userChanged()),
+	  event_cart_filter,SLOT(changeUser()));
   connect(event_lib_view->selectionModel(),
        SIGNAL(selectionChanged(const QItemSelection &,const QItemSelection &)),
        this,
@@ -165,11 +117,6 @@ EditEvent::EditEvent(QString eventname,bool new_event,QStringList *new_events,
   event_remarks_label=new QLabel(tr("USER NOTES"),this);
   event_remarks_label->setFont(labelFont());
   event_remarks_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
-
-  //
-  // Load Group List
-  //
-  RefreshLibrary();
 
   //
   // Properties Section
@@ -238,6 +185,7 @@ EditEvent::EditEvent(QString eventname,bool new_event,QStringList *new_events,
     event_color_button->
       setPalette(QPalette(event_color,palette().color(QPalette::Background)));
   }
+  event_cart_filter->changeUser();
   event_widget->load(event_event);
 }
 
@@ -250,53 +198,13 @@ EditEvent::~EditEvent()
 
 QSize EditEvent::sizeHint() const
 {
-  return QSize(1300,800);
+  return QSize(1350,800);
 } 
 
 
 QSizePolicy EditEvent::sizePolicy() const
 {
   return QSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-}
-
-
-void EditEvent::filterChangedData(const QString &str)
-{
-  if(rda->station()->filterMode()==RDStation::FilterSynchronous) {
-    RefreshLibrary();
-  }
-  else {
-    event_search_button->setEnabled(true);
-  }
-}
-
-
-void EditEvent::filterActivatedData(const QString &str)
-{
-  if(rda->station()->filterMode()==RDStation::FilterSynchronous) {
-    RefreshLibrary();
-  }
-  else {
-    event_search_button->setEnabled(true);
-  }
-}
-
-
-void EditEvent::filterClickedData(int id)
-{
-  if(rda->station()->filterMode()==RDStation::FilterSynchronous) {
-    RefreshLibrary();
-  }
-  else {
-    event_search_button->setEnabled(true);
-  }
-}
-
-
-void EditEvent::searchData()
-{
-  RefreshLibrary();
-  event_search_button->setDisabled(true);
 }
 
 
@@ -435,25 +343,8 @@ void EditEvent::resizeEvent(QResizeEvent *e)
   int h=size().height();
   int x_divide=w-event_widget->sizeHint().width();
 
-  if(rda->station()->filterMode()==RDStation::FilterAsynchronous) {
-    event_lib_filter_edit->setGeometry(55,2,x_divide-130,20);
-  }
-  else {
-    event_lib_filter_edit->setGeometry(55,2,x_divide-65,20);
-  }
-
-  event_lib_filter_label->setGeometry(5,2,45,20);
-  event_search_button->setGeometry(CENTER_LINE-70,2,60,20);
-  event_group_box->setGeometry(55,25,x_divide-65,20);
-  event_group_label->setGeometry(5,25,45,20);
-  event_lib_type_none_radio->setGeometry(55,55,15,15);
-  event_lib_type_none_label->setGeometry(75,55,30,15);
-  event_lib_type_audio_radio->setGeometry(125,55,15,15);
-  event_lib_type_audio_label->setGeometry(145,55,80,15);
-  event_lib_type_macro_radio->setGeometry(235,55,15,15);
-  event_lib_type_macro_label->setGeometry(255,55,80,15);
-
-  event_lib_view->setGeometry(10,80,x_divide-20,h/2);
+  event_cart_filter->setGeometry(0,0,x_divide,90);
+  event_lib_view->setGeometry(10,90,x_divide-20,h/2-10);
   event_empty_cart->setGeometry(x_divide-230,h/2+100,32,32);
   if(event_player!=NULL) {
     event_player->playButton()->setGeometry(x_divide-180,h/2+90,80,50);
@@ -484,22 +375,6 @@ void EditEvent::paintEvent(QPaintEvent *e)
   p->setPen(Qt::black);
   p->drawLine(x_divide,10,x_divide,size().height()-10);
   p->end();
-}
-
-
-void EditEvent::RefreshLibrary()
-{
-  QString sql=QString("where ")+
-    RDCartFilter::typeFilter(event_lib_type_group->button(0)->isChecked()||
-			     event_lib_type_group->button(1)->isChecked(),
-			     event_lib_type_group->button(0)->isChecked()||
-			     event_lib_type_group->button(2)->isChecked(),
-			     RDCart::All)+
-    RDCartFilter::phraseFilter(event_lib_filter_edit->text(),false)+
-    RDCartFilter::groupFilter(event_group_box->currentText(),
-			      event_group_model->allGroupNames());
-  sql=sql.left(sql.length()-3);
-  event_lib_model->setFilterSql(sql,RD_MAX_CART_NUMBER+1);
 }
 
 

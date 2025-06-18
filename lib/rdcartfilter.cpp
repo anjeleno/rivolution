@@ -2,7 +2,7 @@
 //
 // Filter widget for picking Rivendell carts.
 //
-//   (C) Copyright 2021-2022 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2021-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -158,36 +158,6 @@ RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
     new QLabel(tr("Show Note Bubbles"),this);
   d_shownotes_label->setFont(labelFont());
   d_shownotes_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
-
-  //
-  // Show Matches Checkbox
-  //
-  d_showmatches_box=new QCheckBox(this);
-  d_showmatches_label=
-    new QLabel(tr("Show Only First ")+
-	       QString::asprintf("%d",RD_LIMITED_CART_SEARCH_QUANTITY)+
-	       tr(" Matches"),this);
-  d_showmatches_label->setFont(labelFont());
-  d_showmatches_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
-  connect(d_showmatches_box,SIGNAL(stateChanged(int)),
-	  this,SLOT(searchLimitChangedData(int)));
-
-  //
-  // Load Data
-  //
-  switch(rda->libraryConf()->limitSearch()) {
-  case RDLibraryConf::LimitNo:
-    d_showmatches_box->setChecked(false);
-    break;
-
-  case RDLibraryConf::LimitYes:
-    d_showmatches_box->setChecked(true);
-    break;
-
-  case RDLibraryConf::LimitPrevious:
-    d_showmatches_box->setChecked(rda->libraryConf()->searchLimited());
-    break;
-  }
 }
 
 
@@ -279,10 +249,7 @@ QString RDCartFilter::filterSql(const QStringList &and_fields) const
 
 int RDCartFilter::cartLimit() const
 {
-  if(d_showmatches_box->isChecked()) {
-    return RD_LIMITED_CART_SEARCH_QUANTITY;
-  }
-  return RD_MAX_CART_NUMBER+1;  // Effectively "unlimited"
+  return RD_LIMITED_CART_SEARCH_QUANTITY;
 }
 
 
@@ -358,13 +325,12 @@ void RDCartFilter::setShowTrackCarts(bool state)
 
 bool RDCartFilter::limitSearch() const
 {
-  return d_showmatches_box->isChecked();
+  return true;
 }
 
 
 void RDCartFilter::setLimitSearch(bool state)
 {
-  d_showmatches_box->setChecked(state);
 }
 
 
@@ -555,36 +521,53 @@ void RDCartFilter::searchLimitChangedData(int state)
 
 void RDCartFilter::resizeEvent(QResizeEvent *e)
 {
+  int w=e->size().width();
+
   switch(rda->station()->filterMode()) {
   case RDStation::FilterSynchronous:
-    d_filter_edit->setGeometry(70,10,e->size().width()-170,20);
+    d_filter_edit->setGeometry(70,10,w-170,20);
     break;
 
   case RDStation::FilterAsynchronous:
-    d_search_button->setGeometry(e->size().width()-180,10,80,50);
-    d_filter_edit->setGeometry(70,10,e->size().width()-260,20);
+    d_search_button->setGeometry(w-180,10,80,50);
+    d_filter_edit->setGeometry(70,10,w-260,20);
     break;
   }
-  d_clear_button->setGeometry(e->size().width()-90,10,80,50);
+  d_clear_button->setGeometry(w-90,10,80,50);
   d_filter_label->setGeometry(10,10,55,20);
   d_group_label->setGeometry(10,40,55,20);
   d_group_box->setGeometry(70,38,140,24);
   d_codes_label->setGeometry(215,40,115,20);
   d_codes_box->setGeometry(335,38,120,24);
-  d_and_codes_label->setGeometry(455,40,labelFontMetrics()->width(d_and_codes_label->text()),20);
-  d_and_codes_box->setGeometry(d_and_codes_label->x()+d_and_codes_label->width(),38,120,24);
-  d_matches_label->setGeometry(660,40,100,20);
-  d_matches_edit->setGeometry(765,40,55,20);
-  d_showmatches_label->setGeometry(760,66,200,20);
-  d_showmatches_box->setGeometry(740,68,15,15);
-  d_allowdrag_label->setGeometry(580,66,130,20);
-  d_allowdrag_box->setGeometry(560,68,15,15);
-  d_showaudio_label->setGeometry(90,66,130,20);
-  d_showaudio_check->setGeometry(70,68,15,15);
-  d_showmacro_label->setGeometry(250,66,130,20);
-  d_showmacro_check->setGeometry(230,68,15,15);
-  d_shownotes_label->setGeometry(410,66,130,20);
-  d_shownotes_box->setGeometry(390,68,15,15);
+  d_and_codes_label->
+    setGeometry(455,40,labelFontMetrics()->width(d_and_codes_label->text()),20);
+  d_and_codes_box->
+    setGeometry(d_and_codes_label->x()+d_and_codes_label->width(),38,120,24);
+
+  int x_pos=70;
+
+  if(d_show_cart_type==RDCart::All) {
+    d_showaudio_check->setGeometry(x_pos,68,15,15);
+    d_showaudio_label->setGeometry(x_pos+20,66,130,20);
+
+    d_showmacro_check->setGeometry(x_pos+160,68,15,15);
+    d_showmacro_label->setGeometry(x_pos+180,66,130,20);
+
+    x_pos+=320;
+  }
+  
+  d_shownotes_box->setGeometry(x_pos,68,15,15);
+  d_shownotes_label->setGeometry(x_pos+20,66,130,20);
+  x_pos+=160;
+  
+  if(d_show_drag_box) {
+    d_allowdrag_box->setGeometry(x_pos,68,15,15);
+    d_allowdrag_label->setGeometry(x_pos+20,66,130,20);
+    x_pos+=160;
+  }
+
+  d_matches_label->setGeometry(w-165,66,100,20);
+  d_matches_edit->setGeometry(w-65,66,55,20);
 }
 
 

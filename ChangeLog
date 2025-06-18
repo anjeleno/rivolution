@@ -24979,3 +24979,8 @@
 	* Added a 'RDTimeArray' class for optimization and debugging.
 2025-05-14 Fred Gleason <fredg@paravelsystems.com>
 	* Added schema 376 support for '--orphaned-tables' in rddbmgr(8).
+2025-06-18 Fred Gleason <fredg@paravelsystems.com>
+	* Refactored the 'Editing Event' dialog in rdlogmanager(1) to use
+	'RDCartFilter' for filtering the library.
+	* Modified 'RDCartFilter to apply a maximum limit of 100 matches
+	for all searches.
