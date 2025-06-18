@@ -24984,3 +24984,6 @@
 	'RDCartFilter' for filtering the library.
 	* Modified 'RDCartFilter to apply a maximum limit of 100 matches
 	for all searches.
+2025-06-18 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression in the 'Editing Event' in rdlogmanager(1) that
+	caused double SQL lookups.
