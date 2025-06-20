@@ -60,6 +60,7 @@ class RDCartFilter : public RDWidget
   static QString phraseFilter(QString phrase,bool incl_cuts);
   static QString groupFilter(const QString &group,const QStringList &groups);
   static QString typeFilter(bool incl_audio,bool incl_macro,RDCart::Type mask);
+  static QString typeFilter(RDCart::Type type,RDCart::Type mask);
 
  public slots:
   void setDragEnabled(bool state);
@@ -77,12 +78,13 @@ class RDCartFilter : public RDWidget
  private slots:
   void setMatchCount(int matches);
   void filterChangedData(const QString &str);
+  void filterToggledData(bool state);
   void searchClickedData();
   void clearClickedData();
   void groupChangedData(const QString &str);
   void schedulerCodeChangedData(const QString &str);
   void andSchedulerCodeChangedData(const QString &str);
-  void checkChangedData(int n);
+  void showtypeActivatedData(int n);
   void dragsChangedData(int n);
   void searchLimitChangedData(int state);
 
@@ -105,6 +107,8 @@ class RDCartFilter : public RDWidget
   QLabel *d_codes_label;
   QComboBox *d_and_codes_box;
   QLabel *d_and_codes_label;
+  QLabel *d_showmatches_label;
+  QCheckBox *d_showmatches_check;
   QLineEdit *d_matches_edit;
   QLabel *d_matches_label;
   QPushButton *d_search_button;
@@ -112,12 +116,10 @@ class RDCartFilter : public RDWidget
   QCheckBox *d_allowdrag_box;
   QLabel *d_allowdrag_label;
   bool d_show_drag_box;
-  QCheckBox *d_showaudio_check;
-  QLabel *d_showaudio_label;
-  QCheckBox *d_showmacro_check;
+  QLabel *d_showtype_label;
+  QComboBox *d_showtype_box;
   QLabel *d_shownotes_label;
   QCheckBox *d_shownotes_box;
-  QLabel *d_showmacro_label;
   RDCart::Type d_show_cart_type;
   bool d_show_track_carts;
   QString d_default_group;

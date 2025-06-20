@@ -1,8 +1,8 @@
 // rdcut_dialog.h
 //
-// A widget to select a Rivendell Cut.
+// A Dialog to select a Rivendell Cut.
 //
-//   (C) Copyright 2002-2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -65,9 +65,6 @@ class RDCutDialog : public RDDialog
   void closeEvent(QCloseEvent *e);
 
  private:
-  QString StateFile();
-  void LoadState();
-  void SaveState();
   QString *cart_cutname;
   RDCartFilter *cart_cart_filter;
   RDTreeView *cart_cart_view;

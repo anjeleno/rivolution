@@ -24987,3 +24987,6 @@
 2025-06-18 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression in the 'Editing Event' in rdlogmanager(1) that
 	caused double SQL lookups.
+2025-06-21 Fred Gleason <fredg@paravelsystems.com>
+	* Restored the 'Show Only First 100 Carts' checkbox to the
+	'RDCartFilter' widget.

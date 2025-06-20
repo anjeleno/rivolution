@@ -2,7 +2,7 @@
 //
 // A widget to select a Rivendell Cart.
 //
-//   (C) Copyright 2002-2022 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -170,7 +170,6 @@ QSize RDCartDialog::sizeHint() const
 int RDCartDialog::exec(int *cartnum,RDCart::Type type,const QString &svc,
 		       bool *temp_allowed)
 {
-  LoadState();
   cart_cart_filter->setShowCartType(type);
   cart_cart_filter->setService(svc);
   cart_cartnum=cartnum;
@@ -339,7 +338,6 @@ void RDCartDialog::okData()
   QModelIndexList rows=cart_cart_view->selectionModel()->selectedRows();
 
   if(rows.size()==1) {
-    SaveState();
     if(cart_player!=NULL) {
       cart_player->stop();
     }
@@ -357,7 +355,6 @@ void RDCartDialog::okData()
 
 void RDCartDialog::cancelData()
 {
-  SaveState();
   if(cart_player!=NULL) {
     cart_player->stop();
   }
@@ -390,54 +387,4 @@ void RDCartDialog::closeEvent(QCloseEvent *e)
     cart_player->stop();
   }
   cancelData();
-}
-
-
-QString RDCartDialog::StateFile() {
-  bool home_found = false;
-  QString home = RDGetHomeDir(&home_found);
-  if (home_found) {
-    return home+"/.rdcartdialog";
-  } 
-  else {
-    return NULL;
-  }
-}
-
-void RDCartDialog::LoadState()
-{
-  QString state_file=StateFile();
-  if (state_file.isEmpty()) {
-    return;
-  }
-
-  RDProfile *p=new RDProfile();
-  p->setSource(state_file);
-
-  cart_cart_filter->
-    setLimitSearch(p->boolValue("RDCartDialog","LimitSearch",true));
-  delete p;
-}
-
-
-void RDCartDialog::SaveState()
-{
-  FILE *f=NULL;
-
-  QString state_file=StateFile();
-  if (state_file.isEmpty()) {
-    return;
-  }
-
-  if((f=fopen(state_file.toUtf8(),"w"))==NULL) {
-    return;
-  }
-  fprintf(f,"[RDCartDialog]\n");
-  if(cart_cart_filter->limitSearch()) {
-    fprintf(f,"LimitSearch=Yes\n");
-  }
-  else {
-    fprintf(f,"LimitSearch=No\n");
-  }
-  fclose(f);
 }

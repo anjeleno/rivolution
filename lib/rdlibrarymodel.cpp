@@ -2,7 +2,7 @@
 //
 // Data model for the Rivendell cart library
 //
-//   (C) Copyright 2021-2024 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2021-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -675,7 +675,7 @@ void RDLibraryModel::updateModel(const QString &filter_sql)
 
   sql=sqlFields()+
     filter_sql+
-    QString::asprintf(" limit %d ",RD_LIMITED_CART_SEARCH_QUANTITY);
+    QString::asprintf(" limit %d ",d_cart_limit);
 
   beginResetModel();
   d_texts.clear();

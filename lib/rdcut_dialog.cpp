@@ -1,8 +1,8 @@
 // rdcut_dialog.cpp
 //
-// A widget to select a Rivendell Cut.
+// A dialog to select a Rivendell Cut.
 //
-//   (C) Copyright 2002-2022 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -173,7 +173,6 @@ QSize RDCutDialog::sizeHint() const
 
 int RDCutDialog::exec(QString *cutname)
 {
-  LoadState();
   cart_cart_filter->setShowCartType(RDCart::Audio);
   cart_cutname=cutname;
   cart_ok_button->setEnabled(false);
@@ -278,7 +277,6 @@ void RDCutDialog::okData()
   QModelIndexList rows=cart_cart_view->selectionModel()->selectedRows();
 
   if((rows.size()==1)&&(cart_cart_model->isCut(rows.first()))) {
-    SaveState();
     if(cart_filter!=NULL) {
       *cart_filter=cart_cart_filter->filterText();
     }
@@ -293,7 +291,6 @@ void RDCutDialog::okData()
 
 void RDCutDialog::cancelData()
 {
-  SaveState();
   done(false);
 }
 
@@ -324,54 +321,4 @@ void RDCutDialog::resizeEvent(QResizeEvent *e)
 void RDCutDialog::closeEvent(QCloseEvent *e)
 {
   cancelData();
-}
-
-
-QString RDCutDialog::StateFile() {
-  bool home_found = false;
-  QString home = RDGetHomeDir(&home_found);
-  if (home_found) {
-    return home+"/.rdcartdialog";
-  } 
-  else {
-    return NULL;
-  }
-}
-
-void RDCutDialog::LoadState()
-{
-  QString state_file=StateFile();
-  if (state_file.isEmpty()) {
-    return;
-  }
-
-  RDProfile *p=new RDProfile();
-  p->setSource(state_file);
-
-  cart_cart_filter->
-    setLimitSearch(p->boolValue("RDCutDialog","LimitSearch",true));
-  delete p;
-}
-
-
-void RDCutDialog::SaveState()
-{
-  FILE *f=NULL;
-
-  QString state_file=StateFile();
-  if (state_file.isEmpty()) {
-    return;
-  }
-
-  if((f=fopen(state_file.toUtf8(),"w"))==NULL) {
-    return;
-  }
-  fprintf(f,"[RDCutDialog]\n");
-  if(cart_cart_filter->limitSearch()) {
-    fprintf(f,"LimitSearch=Yes\n");
-  }
-  else {
-    fprintf(f,"LimitSearch=No\n");
-  }
-  fclose(f);
 }

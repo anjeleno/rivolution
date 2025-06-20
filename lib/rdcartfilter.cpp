@@ -27,6 +27,8 @@
 #include "rdescape_string.h"
 #include "rd.h"
 
+#define RDCARTFILTER_SECOND_SCHED_CODE_WIDTH 810
+
 RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
 			   QWidget *parent)
   : RDWidget(parent)
@@ -105,11 +107,20 @@ RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
 	  this,SLOT(andSchedulerCodeChangedData(const QString &)));
 
   //
-  // Results Counter
+  // Cart Matches Switch
+  //
+  d_showmatches_check=new QCheckBox(this);
+  d_showmatches_label=new QLabel(tr("Show Only First 100 Carts"),this);
+  d_showmatches_label->setFont(labelFont());
+  connect(d_showmatches_check,SIGNAL(toggled(bool)),
+	  this,SLOT(filterToggledData(bool)));
+
+  //
+  // Cart Matches Counter
   //
   d_matches_edit=new QLineEdit(this);
   d_matches_edit->setReadOnly(true);
-  d_matches_label=new QLabel(tr("Matching Carts:"),this);
+  d_matches_label=new QLabel(tr("Matches")+":",this);
   d_matches_label->setFont(labelFont());
 
   //
@@ -128,27 +139,18 @@ RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
   }
 
   //
-  // Show Audio Carts Checkbox
+  // Show Type Selector
   //
-  d_showaudio_check=new QCheckBox(this);
-  d_showaudio_check->setChecked(true);
-  d_showaudio_label=new QLabel(tr("Show Audio Carts"),this);
-  d_showaudio_label->setFont(labelFont());
-  d_showaudio_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
-  connect(d_showaudio_check,SIGNAL(stateChanged(int)),
-	  this,SLOT(checkChangedData(int)));
-
-  //
-  // Show Macro Carts Checkbox
-  //
-  d_showmacro_check=new QCheckBox(this);
-  d_showmacro_check->setChecked(true);
-  d_showmacro_label=new QLabel(tr("Show Macro Carts"),this);
-  d_showmacro_label->setFont(labelFont());
-  d_showmacro_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
-  connect(d_showmacro_check,SIGNAL(stateChanged(int)),
-	  this,SLOT(checkChangedData(int)));
-
+  d_showtype_box=new QComboBox(this);
+  d_showtype_label=new QLabel(tr("Cart Type")+":",this);
+  d_showtype_label->setFont(labelFont());
+  d_showtype_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  connect(d_showtype_box,SIGNAL(activated(int)),
+	  this,SLOT(showtypeActivatedData(int)));
+  d_showtype_box->insertItem((int)RDCart::All,tr("All carts"));
+  d_showtype_box->insertItem((int)RDCart::Audio,tr("Audio carts"));
+  d_showtype_box->insertItem((int)RDCart::Macro,tr("Macro carts"));
+  
   //
   // Show Cart Notes Checkbox
   //
@@ -158,6 +160,25 @@ RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
     new QLabel(tr("Show Note Bubbles"),this);
   d_shownotes_label->setFont(labelFont());
   d_shownotes_label->setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  connect(d_showmatches_check,SIGNAL(stateChanged(int)),
+	  this,SLOT(searchLimitChangedData(int)));
+
+  //
+  // Load Data
+  //
+  switch(rda->libraryConf()->limitSearch()) {
+  case RDLibraryConf::LimitNo:
+    d_showmatches_check->setChecked(false);
+    break;
+
+  case RDLibraryConf::LimitYes:
+    d_showmatches_check->setChecked(true);
+    break;
+
+  case RDLibraryConf::LimitPrevious:
+    d_showmatches_check->setChecked(rda->libraryConf()->searchLimited());
+    break;
+  }
 }
 
 
@@ -190,9 +211,9 @@ QString RDCartFilter::filterSql(const QStringList &and_fields) const
   //
   // Cart Type Filter
   //
-  sql+=RDCartFilter::typeFilter(d_showaudio_check->isChecked(),
-				d_showmacro_check->isChecked(),
+  sql+=RDCartFilter::typeFilter((RDCart::Type)(d_showtype_box->currentIndex()),
 				d_show_cart_type);
+
   //
   // Full Text Filter
   //
@@ -222,7 +243,8 @@ QString RDCartFilter::filterSql(const QStringList &and_fields) const
   if(d_codes_box->currentIndex()>0) {
     sql+="&&(`CART_SCHED_CODES`.`SCHED_CODE`='"+
       RDEscapeString(d_codes_box->currentText())+"') ";
-    if(d_and_codes_box->currentIndex()>0) {
+    if((d_and_codes_box->currentIndex()>0)&&
+       (size().width()>RDCARTFILTER_SECOND_SCHED_CODE_WIDTH)) {
       //
       // Generate a list of carts with the second scheduler code
       //
@@ -249,7 +271,10 @@ QString RDCartFilter::filterSql(const QStringList &and_fields) const
 
 int RDCartFilter::cartLimit() const
 {
-  return RD_LIMITED_CART_SEARCH_QUANTITY;
+  if(d_showmatches_check->isChecked()) {
+    return RD_LIMITED_CART_SEARCH_QUANTITY;
+  }
+  return RD_MAX_CART_NUMBER+1;  // Effectively "unlimited"
 }
 
 
@@ -291,19 +316,9 @@ RDCart::Type RDCartFilter::showCartType() const
 
 void RDCartFilter::setShowCartType(RDCart::Type type)
 {
-  if(type!=d_show_cart_type) { 
-    if(type==RDCart::All) {
-      d_showaudio_check->show();
-      d_showaudio_label->show();
-      d_showmacro_check->show();
-      d_showmacro_label->show();
-    }
-    else {
-      d_showaudio_check->hide();
-      d_showaudio_label->hide();
-      d_showmacro_check->hide();
-      d_showmacro_label->hide();
-    }
+  if(type!=d_show_cart_type) {
+    d_showtype_box->setVisible(type==RDCart::All);
+    d_showtype_label->setVisible(type==RDCart::All);
     d_show_cart_type=type;
   }
 }
@@ -325,12 +340,13 @@ void RDCartFilter::setShowTrackCarts(bool state)
 
 bool RDCartFilter::limitSearch() const
 {
-  return true;
+  return d_showmatches_check->isChecked();
 }
 
 
 void RDCartFilter::setLimitSearch(bool state)
 {
+  d_showmatches_check->setChecked(state);
 }
 
 
@@ -433,6 +449,12 @@ void RDCartFilter::filterChangedData(const QString &str)
 }
 
 
+void RDCartFilter::filterToggledData(bool state)
+{
+  filterChangedData("");
+}
+
+
 void RDCartFilter::setMatchCount(int matches)
 {
   d_matches_edit->setText(QString::asprintf("%d",matches));
@@ -499,8 +521,14 @@ void RDCartFilter::andSchedulerCodeChangedData(const QString &str)
   filterChangedData("");
 }
 
-
+/*
 void RDCartFilter::checkChangedData(int n)
+{
+  filterChangedData("");
+}
+*/
+
+void RDCartFilter::showtypeActivatedData(int n)
 {
   filterChangedData("");
 }
@@ -525,49 +553,53 @@ void RDCartFilter::resizeEvent(QResizeEvent *e)
 
   switch(rda->station()->filterMode()) {
   case RDStation::FilterSynchronous:
-    d_filter_edit->setGeometry(70,10,w-170,20);
+    d_filter_edit->setGeometry(80,5,w-180,20);
     break;
 
   case RDStation::FilterAsynchronous:
-    d_search_button->setGeometry(w-180,10,80,50);
-    d_filter_edit->setGeometry(70,10,w-260,20);
+    d_search_button->setGeometry(w-180,5,80,50);
+    d_filter_edit->setGeometry(80,5,w-280,20);
     break;
   }
-  d_clear_button->setGeometry(w-90,10,80,50);
-  d_filter_label->setGeometry(10,10,55,20);
-  d_group_label->setGeometry(10,40,55,20);
-  d_group_box->setGeometry(70,38,140,24);
-  d_codes_label->setGeometry(215,40,115,20);
-  d_codes_box->setGeometry(335,38,120,24);
+  d_clear_button->setGeometry(w-90,5,80,50);
+  d_filter_label->setGeometry(20,5,55,20);
+  d_group_label->setGeometry(20,33,55,20);
+  d_group_box->setGeometry(80,31,140,24);
+  d_codes_label->setGeometry(225,33,115,20);
+  d_codes_box->setGeometry(345,31,120,24);
   d_and_codes_label->
-    setGeometry(455,40,labelFontMetrics()->width(d_and_codes_label->text()),20);
+    setGeometry(465,33,labelFontMetrics()->width(d_and_codes_label->text()),20);
+  d_and_codes_label->setVisible(w>RDCARTFILTER_SECOND_SCHED_CODE_WIDTH);
   d_and_codes_box->
-    setGeometry(d_and_codes_label->x()+d_and_codes_label->width(),38,120,24);
-
-  int x_pos=70;
+    setGeometry(d_and_codes_label->x()+d_and_codes_label->width(),31,120,24);
+  d_and_codes_box->setVisible(w>810);
+  
+  int x_pos=10;
 
   if(d_show_cart_type==RDCart::All) {
-    d_showaudio_check->setGeometry(x_pos,68,15,15);
-    d_showaudio_label->setGeometry(x_pos+20,66,130,20);
-
-    d_showmacro_check->setGeometry(x_pos+160,68,15,15);
-    d_showmacro_label->setGeometry(x_pos+180,66,130,20);
-
-    x_pos+=320;
+    d_showtype_label->setGeometry(x_pos,61,65,24);
+    d_showtype_box->setGeometry(x_pos+70,61,100,24);
+    x_pos+=190;
+  }
+  else {
+    x_pos+=70;
   }
   
-  d_shownotes_box->setGeometry(x_pos,68,15,15);
-  d_shownotes_label->setGeometry(x_pos+20,66,130,20);
+  d_shownotes_box->setGeometry(x_pos,70-5,15,15);
+  d_shownotes_label->setGeometry(x_pos+20,61,130,24);
   x_pos+=160;
   
   if(d_show_drag_box) {
-    d_allowdrag_box->setGeometry(x_pos,68,15,15);
-    d_allowdrag_label->setGeometry(x_pos+20,66,130,20);
+    d_allowdrag_box->setGeometry(x_pos,70-5,15,15);
+    d_allowdrag_label->setGeometry(x_pos+20,61,130,24);
     x_pos+=160;
   }
 
-  d_matches_label->setGeometry(w-165,66,100,20);
-  d_matches_edit->setGeometry(w-65,66,55,20);
+  d_showmatches_check->setGeometry(w-340,65,15,15);
+  d_showmatches_label->setGeometry(w-320,61,180,24);
+  
+  d_matches_label->setGeometry(w-135,61,60,24);
+  d_matches_edit->setGeometry(w-75,61,65,24);
 }
 
 
@@ -666,7 +698,7 @@ QString RDCartFilter::groupFilter(const QString &group,
 
 
 QString RDCartFilter::typeFilter(bool incl_audio,bool incl_macro,
-				    RDCart::Type mask)
+				 RDCart::Type mask)
 {
   QString sql;
 
@@ -698,6 +730,58 @@ QString RDCartFilter::typeFilter(bool incl_audio,bool incl_macro,
     }
     break;
   }
+  return sql;
+}
+
+
+QString RDCartFilter::typeFilter(RDCart::Type type,RDCart::Type mask)
+{
+  QString sql;
+
+  switch(mask) {
+  case RDCart::Audio:
+    switch(type) {
+    case RDCart::Audio:
+    case RDCart::All:
+      sql="(`CART`.`TYPE`=1) &&";
+      break;
+
+    case RDCart::Macro:
+      sql="(`CART`.`TYPE`=0) &&";
+      break;
+    }
+    break;
+
+  case RDCart::Macro:
+    switch(type) {
+    case RDCart::Macro:
+    case RDCart::All:
+      sql="(`CART`.`TYPE`=2) &&";
+      break;
+
+    case RDCart::Audio:
+      sql="(`CART`.`TYPE`=0) &&";
+      break;
+    }
+    break;
+
+  case RDCart::All:
+    switch(type) {
+    case RDCart::All:
+      sql="((`CART`.`TYPE`=1)||(`CART`.`TYPE`=2)) &&";
+      break;
+
+    case RDCart::Audio:
+      sql="(`CART`.`TYPE`=1) &&";
+      break;
+
+    case RDCart::Macro:
+      sql="(`CART`.`TYPE`=2) &&";
+      break;
+    }
+    break;
+  }
+
   return sql;
 }
 

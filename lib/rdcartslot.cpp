@@ -2,7 +2,7 @@
 //
 // The cart slot widget.
 //
-//   (C) Copyright 2012-2023 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2012-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -613,11 +613,12 @@ unsigned RDCartSlot::SelectCart(const QString &svcname,unsigned msecs)
     "`AUTOFILLS`.`CART_NUMBER`,"+  // 00
     "`CART`.`FORCED_LENGTH` "+     // 01
     "from "+
-    "`AUTOFILLS` left join `CART` on `AUTOFILLS`.`CART_NUMBER`=`CART`.`NUMBER`"+
-    QString().
-    sprintf(" where (`CART`.`FORCED_LENGTH`>%u)&&(`CART`.`FORCED_LENGTH`<%u)&&",
-	    (unsigned)((double)msecs*RD_TIMESCALE_MIN),
-	    (unsigned)((double)msecs*RD_TIMESCALE_MAX))+
+    "`AUTOFILLS` left join `CART` "+
+    "on `AUTOFILLS`.`CART_NUMBER`=`CART`.`NUMBER` where "+
+    QString::asprintf("(`CART`.`FORCED_LENGTH`>%u)&&",
+		      (unsigned)((double)msecs*RD_TIMESCALE_MIN))+
+    QString::asprintf("(`CART`.`FORCED_LENGTH`<%u)&&",
+		      (unsigned)((double)msecs*RD_TIMESCALE_MAX))+
     "(`SERVICE`='"+RDEscapeString(svcname)+"')";
   q=new RDSqlQuery(sql);
   while(q->next()) {
