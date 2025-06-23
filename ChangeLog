@@ -24993,3 +24993,5 @@
 2025-06-23 Fred Gleason <fredg@paravelsystems.com>
 	* Updated screenshots showing cart filter controls in the Operations
 	Guide.
+2025-06-23 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the pacakge version to 4.3.0int9.

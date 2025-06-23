@@ -1,10 +1,15 @@
 The NEWS file for the Rivendell package.
 
 -------------------------------------------------------------------------------
-v4.3.0int8 -- 7 March 2025
+v4.3.0int9 -- 23 June 2025
 
 Changes:
-   Bug fixes. See the ChangeLog.
+   Cart Filtering. Refactored the cart filtering controls to be consistent
+   across all modules [rdadmin(10), rdairplay(1), rdcartslots(1),
+   rdcastmanager(1), rdcatch(1), rdlibrary(1) rdlogedit(1), rdlogmanager(1)
+   and rdpanel(1).
+ 
+   Various bug fixes. See the ChangeLog.
 
 Database Update:
    This version of Rivendell uses database schema version 376, and will
