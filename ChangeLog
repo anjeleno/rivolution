@@ -24990,3 +24990,6 @@
 2025-06-21 Fred Gleason <fredg@paravelsystems.com>
 	* Restored the 'Show Only First 100 Carts' checkbox to the
 	'RDCartFilter' widget.
+2025-06-23 Fred Gleason <fredg@paravelsystems.com>
+	* Updated screenshots showing cart filter controls in the Operations
+	Guide.
