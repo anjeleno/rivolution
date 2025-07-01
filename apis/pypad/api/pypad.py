@@ -223,7 +223,7 @@ class Update(object):
                 else:
                     pat+=s+' '
             dt_pattern=pat
-
+            dt_pattern=dt_pattern.strip()
 
         except AttributeError:
             return ''

@@ -25003,3 +25003,6 @@
 	the 'Update Library Metadata' attribute was not selected.
 2025-07-01 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the pacakge version to 4.3.0int10.
+2025-07-01 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in the PyPAD service that could cause resolution of the
+	'%d()' wildcard to return dnagling whitespace.
