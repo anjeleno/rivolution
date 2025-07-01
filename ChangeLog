@@ -24995,3 +24995,9 @@
 	Guide.
 2025-06-23 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the pacakge version to 4.3.0int9.
+2025-07-01 Fred Gleason <fredg@paravelsystems.com>
+	* Added a 'bool incl_str_fields' parameter to the
+	'RDCut::setMetadata()' and 'RDCut::getMetadata()' methods.
+	* Fixed a bug in rdcatchd(8) that caused embedded source start and
+	end datetime metadata to fail to be applied in download events when
+	the 'Update Library Metadata' attribute was not selected.

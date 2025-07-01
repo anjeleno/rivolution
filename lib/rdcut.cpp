@@ -1014,7 +1014,7 @@ bool RDCut::copyTo(RDStation *station,RDUser *user,
 }
 
 
-void RDCut::getMetadata(RDWaveData *data) const
+void RDCut::getMetadata(RDWaveData *data,bool incl_str_fields) const
 {
   QString sql;
   RDSqlQuery *q;
@@ -1047,8 +1047,10 @@ void RDCut::getMetadata(RDWaveData *data) const
   if(q->first()) {
     data->setCutName(q->value(0).toString());
     data->setCutNumber(RDCut::cutNumber(q->value(0).toString()));
-    data->setDescription(q->value(1).toString());
-    data->setOutCue(q->value(2).toString());
+    if(incl_str_fields) {
+      data->setDescription(q->value(1).toString());
+      data->setOutCue(q->value(2).toString());
+    }
     data->setIsrc(q->value(3).toString());
     data->setIsci(q->value(4).toString());
     data->setOriginationDate(q->value(5).toDate());
@@ -1077,7 +1079,7 @@ void RDCut::getMetadata(RDWaveData *data) const
 }
 
 
-void RDCut::setMetadata(RDWaveData *data) const
+void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
 {
   QString sql="update `CUTS` set ";
   if(!data->description().isEmpty()) {

@@ -229,8 +229,8 @@ void Xport::Import()
 			  remote_host,settings,msecs);
     if(use_metadata>0) {
       cart->setMetadata(conv->sourceWaveData());
-      cut->setMetadata(conv->sourceWaveData());
     }
+    cut->setMetadata(conv->sourceWaveData(),use_metadata);
     if(autotrim_level!=0) {
       cut->autoTrim(RDCut::AudioBoth,100*autotrim_level);
     }

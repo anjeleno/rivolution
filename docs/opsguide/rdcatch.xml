@@ -748,6 +748,17 @@
       left blank.
     </para>
     <para>
+      If the <computeroutput>Update Library Metadata</computeroutput>
+      checkbox is ticked, then the string metadata fields of the destination
+      cart (Title, Artist, etc) will be updated to the values of the
+      downloaded audio file.
+    </para>
+    <note>
+      A file's intrinsic metadata --e.g. segue markers,
+      start/end date/times, etc-- will <emphasis>always</emphasis> be
+      applied.
+    </note>
+    <para>
       Automated uploads are configured by means of the Edit Upload dialog
       (see <xref endterm="para.rdcatch.the_edit_upload_dialog" endlink="metaobject.rdcatch.edit_upload_dialog"/>), which can be accessed either by clicking the
       <computeroutput>Upload</computeroutput> button in the Add Event

@@ -134,8 +134,8 @@ class RDCut
   void logPlayout() const;
   bool copyTo(RDStation *station,RDUser *user,const QString &cutname,
 	      RDConfig *config) const;
-  void getMetadata(RDWaveData *data) const;
-  void setMetadata(RDWaveData *data) const;
+  void getMetadata(RDWaveData *data,bool incl_str_fields) const;
+  void setMetadata(RDWaveData *data,bool incl_str_fields) const;
   bool checkInRecording(const QString &station_name,const QString &user_name,
 			QString src_hostname,RDSettings *settings,
 			unsigned msecs) const;

@@ -392,7 +392,7 @@ bool MainObject::Export(CatchEvent *evt,QString *err_msg)
   if(evt->enableMetadata()) {
     wavedata=new RDWaveData();
     cart->getMetadata(wavedata);
-    cut->getMetadata(wavedata);
+    cut->getMetadata(wavedata,true);
     conv->setDestinationWaveData(wavedata);
   }
   switch((conv_err=conv->convert())) {
@@ -481,9 +481,11 @@ bool MainObject::Import(CatchEvent *evt,QString *err_msg)
     ret=false;
     break;
   }
-  if((conv->sourceWaveData()!=NULL)&&(evt->enableMetadata())) {
-    cart->setMetadata(conv->sourceWaveData());
-    cut->setMetadata(conv->sourceWaveData());
+  if(conv->sourceWaveData()!=NULL) {
+    cut->setMetadata(conv->sourceWaveData(),evt->enableMetadata());
+    if(evt->enableMetadata()) {
+      cart->setMetadata(conv->sourceWaveData());
+    }
   }
   rda->syslog(LOG_INFO,"completed import of %s to cut %s, id=%d",
 	      (const char *)evt->tempName().toUtf8(),

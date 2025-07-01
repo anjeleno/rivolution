@@ -125,7 +125,7 @@ void Xport::Export()
     RDCart *cart=new RDCart(cartnum);
     RDCut *cut=new RDCut(cartnum,cutnum);
     cart->getMetadata(wavedata);
-    cut->getMetadata(wavedata);
+    cut->getMetadata(wavedata,true);
     if(cart->enforceLength()) {
       speed_ratio=(float)cut->length()/(float)cart->forcedLength();
     }

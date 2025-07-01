@@ -1454,7 +1454,7 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
   if(cart_created) {
     cart->setMetadata(wavedata);
   }
-  cut->setMetadata(wavedata);
+  cut->setMetadata(wavedata,true);
   cut->autoSegue(import_segue_level,import_segue_length,rda->station(),
 		 rda->user(),rda->config());
   if(cut->description().isEmpty()) {      // Final backstop, so we don't end up

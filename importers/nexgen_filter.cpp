@@ -396,7 +396,7 @@ void MainObject::ProcessXmlFile(const QString &xml,const QString &wavname,
   q=new RDSqlQuery(sql);
   if(q->first()) {
     cut=new RDCut(q->value(0).toString());
-    cut->setMetadata(&data);
+    cut->setMetadata(&data,true);
     delete cut;
   }
   delete q;

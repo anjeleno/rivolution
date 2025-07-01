@@ -238,7 +238,7 @@ void MainObject::GetAudio()
   wavedata=new RDWaveData();
   if(wavedata!=NULL) {
     cart->getMetadata(wavedata);
-    cut->getMetadata(wavedata);
+    cut->getMetadata(wavedata,true);
     if(cart->enforceLength()) {
       speed_ratio=(float)cut->length()/(float)cart->forcedLength();
     }
