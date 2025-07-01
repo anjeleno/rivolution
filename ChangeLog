@@ -25001,3 +25001,5 @@
 	* Fixed a bug in rdcatchd(8) that caused embedded source start and
 	end datetime metadata to fail to be applied in download events when
 	the 'Update Library Metadata' attribute was not selected.
+2025-07-01 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the pacakge version to 4.3.0int10.
