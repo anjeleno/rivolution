@@ -25009,3 +25009,6 @@
 2025-07-01 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the pacakge version to 4.3.0int11.
 	* Incremented the Python API version to 4.3.0post4.
+2025-07-02 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression in 'lib/rdtimeedit.cpp' that broke the build
+	on CentOS 7.
