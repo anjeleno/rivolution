@@ -25012,3 +25012,5 @@
 2025-07-02 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression in 'lib/rdtimeedit.cpp' that broke the build
 	on CentOS 7.
+2025-07-02 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the pacakge version to 4.3.0int12.
