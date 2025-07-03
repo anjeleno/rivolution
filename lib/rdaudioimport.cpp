@@ -184,7 +184,12 @@ RDAudioImport::ErrorCode RDAudioImport::runImport(const QString &username,
   //
   // Send it
   //
-  switch(curl_err=curl_easy_perform(curl)) {
+  curl_err=curl_easy_perform(curl);
+  if(curl_err!=CURLE_OK) {
+    rda->syslog(LOG_WARNING,"importer returned CURL error: %d [%s]\n",curl_err,
+		curl_easy_strerror(curl_err));
+  }
+  switch(curl_err) {
   case CURLE_OK:
     break;
 

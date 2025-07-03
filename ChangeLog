@@ -25014,3 +25014,5 @@
 	on CentOS 7.
 2025-07-02 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the pacakge version to 4.3.0int12.
+2025-07-03 Fred Gleason <fredg@paravelsystems.com>
+	* Added code in 'RDAudioImport' to log errors returned by CURL.
