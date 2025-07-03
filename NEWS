@@ -1,7 +1,7 @@
 The NEWS file for the Rivendell package.
 
 -------------------------------------------------------------------------------
-v4.3.0int12 -- 2 July 2025
+v4.3.0int13 -- 3 July 2025
 
 Changes:
    Cart Filtering. Refactored the cart filtering controls to be consistent
