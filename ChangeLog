@@ -25016,3 +25016,6 @@
 	* Incremented the pacakge version to 4.3.0int12.
 2025-07-03 Fred Gleason <fredg@paravelsystems.com>
 	* Added code in 'RDAudioImport' to log errors returned by CURL.
+2025-07-03 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression in 'lib/rdcart.cpp' that broke the 'Import'
+	Web API call.

@@ -1205,7 +1205,6 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
 	      if((!active_end_datetime.isNull())&&
 		 (q->value(17).toDateTime()>active_end_datetime)) {
 		active_end_datetime=q->value(17).toDateTime();
-		printf("NEW END: %s\n",active_end_datetime.toString("yyyy-MM-dd hh:mm:ss").toUtf8().constData());
 	      }
 	    }
 	    if(q->value(16).isNull()||(q->value(16).toDateTime()<=now)) {
@@ -1262,20 +1261,20 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
   }
   else {
     if(evergreen_found) {
-    sql=QString("update `CART` set ")+
-      QString::asprintf("`CART`.`VALIDITY`=%u,",RDCart::EvergreenValid)+
-      "`CART`.`START_DATETIME`=NULL,"+
-      "`CART`.`END_DATETIME`=NULL,"+
-      QString::asprintf("`CART`.`AVERAGE_LENGTH`=%d,",
-			evergreen_len/evergreen_cuts)+
-      QString::asprintf("`CART`.`AVERAGE_SEGUE_LENGTH`=%d,",
-			evergreen_segue_len/evergreen_cuts)+
-      QString::asprintf("`CART`.`AVERAGE_HOOK_LENGTH`=%d,",
-			evergreen_hook_len/evergreen_cuts)+
-      "`CART`.`MINIMUM_TALK_LENGTH`=0,"+
-      "`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
-      QString::asprintf(" where `NUMBER`=%u",cart_number);
-    RDSqlQuery::apply(sql);
+      sql=QString("update `CART` set ")+
+	QString::asprintf("`CART`.`VALIDITY`=%u,",RDCart::EvergreenValid)+
+	"`CART`.`START_DATETIME`=NULL,"+
+	"`CART`.`END_DATETIME`=NULL,"+
+	QString::asprintf("`CART`.`AVERAGE_LENGTH`=%d,",
+			  evergreen_len/evergreen_cuts)+
+	QString::asprintf("`CART`.`AVERAGE_SEGUE_LENGTH`=%d,",
+			  evergreen_segue_len/evergreen_cuts)+
+	QString::asprintf("`CART`.`AVERAGE_HOOK_LENGTH`=%d,",
+			  evergreen_hook_len/evergreen_cuts)+
+	"`CART`.`MINIMUM_TALK_LENGTH`=0,"+
+	"`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
+	QString::asprintf(" where `NUMBER`=%u",cart_number);
+      RDSqlQuery::apply(sql);
     }
     else {  // Nothing playable!
       RDCart::Validity validity=RDCart::NeverValid;
@@ -2428,7 +2427,7 @@ RDCut::Validity RDCart::ValidateCut(RDSqlQuery *q,bool enforce_length,
       }
     }
   }
-  
+
   //
   // Timescaling
   //
