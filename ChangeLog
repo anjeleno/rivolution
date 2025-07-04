@@ -25020,4 +25020,4 @@
 	* Fixed a regression in 'lib/rdcart.cpp' that broke the 'Import'
 	Web API call.
 2025-07-03 Fred Gleason <fredg@paravelsystems.com>
-	* Incremented the pacakge version to 4.3.0int13.
+	* Incremented the package version to 4.3.0int13.
