@@ -25021,3 +25021,7 @@
 	Web API call.
 2025-07-03 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the package version to 4.3.0int13.
+2025-07-04 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in the 'Edit Audio' dialog in rdlibrary(1) that caused
+	a marker to be removed from the view if it was dragged beyond the
+	left hand edge of the view.

@@ -206,7 +206,7 @@ void RDMarkerHandle::mouseMoveEvent(QGraphicsSceneMouseEvent *e)
     }
 
     if(limit_ptr<0) {  // Generate new pointer value
-      int64_t pframes=(int64_t)(1152*x*view->shrinkFactor());
+      int64_t pframes=(int64_t)(1152*(x+1)*view->shrinkFactor());
       view->updatePosition(d_role,(int)((int64_t)1000*pframes/
 					(int64_t)view->sampleRate()));
     }
