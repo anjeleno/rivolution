@@ -25025,3 +25025,6 @@
 	* Fixed a bug in the 'Edit Audio' dialog in rdlibrary(1) that caused
 	a marker to be removed from the view if it was dragged beyond the
 	left hand edge of the view.
+2025-07-05 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in rdadmin(1) that thew a SQL error when creating
+	a new Host record.
