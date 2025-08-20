@@ -1016,6 +1016,9 @@ bool RDCut::copyTo(RDStation *station,RDUser *user,
 
 void RDCut::getMetadata(RDWaveData *data,bool incl_str_fields) const
 {
+  //
+  // Load an RDWaveData instance with data from a DB CUTS record
+  //
   QString sql;
   RDSqlQuery *q;
 
@@ -1081,6 +1084,9 @@ void RDCut::getMetadata(RDWaveData *data,bool incl_str_fields) const
 
 void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
 {
+  //
+  // Load a DB CUT record with data from an RDWaveData instance
+  //
   QString sql="update `CUTS` set ";
   if(!data->description().isEmpty()) {
     sql+=QString("`DESCRIPTION`='")+
@@ -1118,17 +1124,23 @@ void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
       RDEscapeString(data->releaseMbId().left(40))+"',";
   }
   sql+=QString::asprintf("`PLAY_GAIN`=%d,",data->playGain());
+
+  //
+  // Ensure sane START_POINT and END_POINT values
+  //
   if(data->startPos()>=0) {
     sql+=QString::asprintf("`START_POINT`=%d,",data->startPos());
   }
   if(data->endPos()>=0) {
-    if(data->endPos()>length()) {
-      sql+=QString::asprintf("`END_POINT`=%d,",length());
+    if((unsigned)data->endPos()>length()) {
+      data->setEndPos(length());
     }
-    else {
-      sql+=QString::asprintf("`END_POINT`=%d,",data->endPos());
-    }
+    sql+=QString::asprintf("`END_POINT`=%d,",data->endPos());
   }
+
+  //
+  // Ensure sane TALK_START_POINT and TALK_END_POINT values
+  //
   if((data->talkStartPos()==data->startPos())&&
      (data->talkEndPos()==data->endPos())) {
     sql+="`TALK_START_POINT`=-1,`TALK_END_POINT`=-1,";
@@ -1151,6 +1163,10 @@ void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
       }
     }
   }
+
+  //
+  // Ensure sane SEGUE_START_POINT and SEGUE_END_POINT values
+  //
   if(((data->segueStartPos()==data->startPos())&&
       (data->segueEndPos()==data->endPos()))||(data->segueStartPos()==0)) {
     sql+="`SEGUE_START_POINT`=-1,`SEGUE_END_POINT`=-1,";
@@ -1169,6 +1185,7 @@ void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
 	if(data->endPos()<0) {
 	  sql+=QString::asprintf("`SEGUE_END_POINT`=%d,",
 				 data->segueStartPos()+1);
+	  //				 data->segueStartPos()+1);
 	}
 	else {
 	  sql+=QString::asprintf("`SEGUE_END_POINT`=%d,",data->endPos());
@@ -1232,8 +1249,7 @@ void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
     sql=sql.left(sql.length()-1);
   }
   sql+=QString(" where `CUT_NAME`='")+RDEscapeString(cut_name)+"'";
-  RDSqlQuery *q=new RDSqlQuery(sql);
-  delete q;
+  RDSqlQuery::apply(sql);
 
   //
   // Sanity Check: NEVER permit the 'description' field to be empty.

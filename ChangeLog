@@ -25028,3 +25028,8 @@
 2025-07-05 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in rdadmin(1) that thew a SQL error when creating
 	a new Host record.
+2025-08-20 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in 'RDCut::setMetadata()' where processing an
+	'RDWaveData' structure containing segue data but no endpoint data
+	could result with a record where the value of
+	'CUTS.SEGUE_END_POINT' was greater than that of 'CUTS.END_POINT'.

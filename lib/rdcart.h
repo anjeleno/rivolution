@@ -138,8 +138,8 @@ class RDCart
   QString macros() const;
   void setMacros(const QString &cmds) const;
   bool validateLengths(int len) const;
-  void getMetadata(RDWaveData *data) const;
-  void setMetadata(const RDWaveData *data);
+  void getMetadata(RDWaveData *data) const;   // DB=>FILE
+  void setMetadata(const RDWaveData *data);   // FILE=>DB
   QString xml(bool include_cuts,bool absolute,
 	      RDSettings *settings=NULL,int cutnum=-1) const;
   void updateLength();

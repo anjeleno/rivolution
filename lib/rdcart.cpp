@@ -919,6 +919,9 @@ void RDCart::setMacros(const QString &cmds) const
 
 void RDCart::getMetadata(RDWaveData *data) const
 {
+  //
+  // Load an RDWaveData instance with data from a DB CART record
+  //
   QString sql;
   RDSqlQuery *q;
 
@@ -964,6 +967,9 @@ void RDCart::getMetadata(RDWaveData *data) const
 
 void RDCart::setMetadata(const RDWaveData *data)
 {
+  //
+  // Load a DB CART record with data from an RDWaveData instance
+  //
   QString sql="update `CART` set ";
   if(!data->title().isEmpty()) {
     sql+=QString("`TITLE`='")+RDEscapeString(data->title().left(191))+"',";
