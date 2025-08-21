@@ -1,14 +1,18 @@
 The NEWS file for the Rivendell package.
 
 -------------------------------------------------------------------------------
-v4.3.0int13 -- 3 July 2025
+v4.4.0 -- 21 August 2025
 
 Changes:
    Cart Filtering. Refactored the cart filtering controls to be consistent
    across all modules [rdadmin(10), rdairplay(1), rdcartslots(1),
    rdcastmanager(1), rdcatch(1), rdlibrary(1) rdlogedit(1), rdlogmanager(1)
-   and rdpanel(1).
- 
+   and rdpanel(1)].
+
+   Data Backup/Restore. Added a set of scripts for automating and monitoring
+   Rivendell data backups (database + audio store). See the rdautoback(8),
+   rdautocheck(8) and rdautorest(8) man pages for details.
+
    Various bug fixes. See the ChangeLog.
 
 Database Update:

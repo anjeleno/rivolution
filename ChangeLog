@@ -25033,3 +25033,6 @@
 	'RDWaveData' structure containing segue data but no endpoint data
 	could result with a record where the value of
 	'CUTS.SEGUE_END_POINT' was greater than that of 'CUTS.END_POINT'.
+2025-08-21 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the package version to 4.4.0.
+	* Incremented the Python API version to 4.4.0
