@@ -26,6 +26,9 @@
 
   ( ) Update https://www.rivendellaudio.org.
 
+  ( ) Update the ChangeSummary on the Rivendell Wiki
+      (https://wiki.rivendellaudio.org/index.php/ChangeSummary).
+
   ( ) Update 'rivendell-opsguide' package at 'opsguide.rivendellaudio.org'.
 
   ( ) Post announcement to https://Groups.io/g/Rivendell
