@@ -25039,3 +25039,6 @@
 2025-08-29 Fred Gleason <fredg@paravelsystems.com>
 	* Added an item to update the ChangeSummary on the Rivendell wiki
 	to section three of 'docs/misc/rivendell_release_checklist.txt'.
+2025-08-30 Fred Gleason <fredg@paravelsystems.com>
+	* Added a 'LogDropboxProcessing=' directive to the '[Debugging]'
+	section of rd.conf(5).

@@ -104,7 +104,8 @@ MainObject::MainObject(QObject *parent)
   import_dump_isci_xref=false;
   import_by_isci_program_code="";
   import_by_isci=false;
- 
+  import_log_processing=false;
+
   //
   // Open the Database
   //
@@ -522,10 +523,17 @@ MainObject::MainObject(QObject *parent)
     ErrorExit(RDApplication::ExitInvalidOption);
   }
   if((import_cart_number>0)&&import_by_isci) {
-    Log(LOG_ERR,QString().sprintf("rdimport: --to-cart and --by-isci are mutually exclusive\n"));
+    Log(LOG_ERR,QString::asprintf("rdimport: --to-cart and --by-isci are mutually exclusive\n"));
     ErrorExit(RDApplication::ExitInvalidOption);
   }
- 
+
+  //
+  // Enable Log Dropbox Processing
+  //
+  import_log_processing=(import_persistent_dropbox_id>0)&&
+    (rda->config()->logDropboxProcessingIds().
+     contains(import_persistent_dropbox_id));
+  
   import_cut_markers=new MarkerSet();
   import_cut_markers->loadMarker(rda->cmdSwitch(),"cut");
   import_talk_markers=new MarkerSet();
@@ -882,6 +890,18 @@ MainObject::MainObject(QObject *parent)
   if(import_string_year!=0) {
     Log(LOG_INFO,QString::asprintf(" Year set to: %d\n",import_string_year));
   }
+  QString str=" LogDropboxProcessing = ";
+  QList<int> ids=rda->config()->logDropboxProcessingIds();
+  for(int i=0;i<ids.size();i++) {
+    str+=QString::asprintf("%d,",ids.at(i));
+  }
+  Log(LOG_INFO,str.left(str.length()-1)+"\n");
+  if(import_log_processing) {
+    Log(LOG_INFO," Logging dropbox processing: Yes\n");
+  }
+  else {
+    Log(LOG_INFO," Logging dropbox processing: No\n");
+  }
   if(import_xml) {
     Log(LOG_INFO,QString::asprintf(" Importing RDXML metadata from external file\n"));
   }
@@ -1003,20 +1023,23 @@ void MainObject::userData()
 
 void MainObject::RunDropBox()
 {
+  LogDropBox("starting");
+  
+  
   //
   // Set Process Priority
   //
   struct sched_param sp;
   memset(&sp,0,sizeof(sp));
   if(sched_setscheduler(getpid(),SCHED_BATCH,&sp)!=0) {
-    printf(" Unable to set batch permissions, %s",strerror(errno));
+    fprintf(stderr," Unable to set batch permissions, %s",strerror(errno));
   }
 
   do {
     //
     // Clear the Checked Flag
     //
-    for(std::list<struct DropboxList *>::const_iterator 
+    for(std::list<DropboxList *>::const_iterator 
 	  ci=import_dropbox_list.begin();
 	ci!=import_dropbox_list.end();ci++) {
       (*ci)->checked=false;
@@ -1032,7 +1055,7 @@ void MainObject::RunDropBox()
     //
     // Take Out the Trash
     //
-    for(std::list<struct DropboxList *>::iterator 
+    for(std::list<DropboxList *>::iterator 
 	  ci=import_dropbox_list.begin();
 	ci!=import_dropbox_list.end();ci++) {
       if(!(*ci)->checked) {
@@ -1050,11 +1073,13 @@ void MainObject::RunDropBox()
 
 void MainObject::ProcessFileEntry(const QString &entry)
 {
+  LogDropBox("ProcessFileEntry(\""+entry+"\")");
   glob_t globbuf;
   int gflags=GLOB_MARK;
 
   if(entry=="-") {
     import_stdin_specified=true;
+    LogDropBox("STDIN path, no processing done");
     return;
   }
   if(import_drop_box) {  // Assume No Shell Preprocessing
@@ -1066,6 +1091,7 @@ void MainObject::ProcessFileEntry(const QString &entry)
 					  entry.toUtf8().constData()));
 	globfree(&globbuf);
       }
+      LogDropBox(QString::asprintf("found %lu matches",globbuf.gl_pathc));
       for(size_t i=0;i<globbuf.gl_pathc;i++) {
 	if(globbuf.gl_pathv[i][strlen(globbuf.gl_pathv[i])-1]!='/') {
 	  if(!import_single_cart) {
@@ -1091,6 +1117,7 @@ void MainObject::ProcessFileEntry(const QString &entry)
 MainObject::Result MainObject::ImportFile(const QString &filename,
 					  unsigned *cartnum)
 {
+  LogDropBox("ImportFile(\""+filename+")");
   bool found_cart=false;
   bool cart_created=false;
   RDWaveData *wavedata=new RDWaveData();
@@ -1236,7 +1263,7 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
     if(isci.isEmpty()) {
       isci=import_string_isci.trimmed();
       if(isci.isEmpty()) {
-	Log(LOG_WARNING,QString().sprintf(" File \"%s\" has no ISCI code, skipping...\n",
+	Log(LOG_WARNING,QString::asprintf(" File \"%s\" has no ISCI code, skipping...\n",
 					  RDGetBasePart(filename).toUtf8().constData()));
 	wavefile->closeWave();
 	import_failed_imports++;
@@ -1259,7 +1286,7 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
       *cartnum=wd->cartNumber();
     }
     if(*cartnum==0) {
-      Log(LOG_WARNING,QString().sprintf(" File \"%s\" has no ISCI xreference entry, skipping...\n",
+      Log(LOG_WARNING,QString::asprintf(" File \"%s\" has no ISCI xreference entry, skipping...\n",
 					RDGetBasePart(filename).toUtf8().constData()));
       wavefile->closeWave();
       import_failed_imports++;
@@ -1271,7 +1298,7 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
       return MainObject::FileBad;
     }
     if(!effective_group->cartNumberValid(*cartnum)) {
-      Log(LOG_WARNING,QString().sprintf(" File \"%s\" cart number %06u is is not valid in group \"%s\", skipping...\n",
+      Log(LOG_WARNING,QString::asprintf(" File \"%s\" cart number %06u is is not valid in group \"%s\", skipping...\n",
 		     RDGetBasePart(filename).toUtf8().constData(),
 		     *cartnum,
 		     effective_group->name().toUtf8().constData()));
@@ -1296,7 +1323,7 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
       *cartnum=effective_group->nextFreeCart();
     }
     if(*cartnum==0) {
-      Log(LOG_ERR,QString().sprintf("rdimport: no free carts available in specified group\n"));
+      Log(LOG_ERR,QString::asprintf("rdimport: no free carts available in specified group\n"));
       wavefile->closeWave();
       import_failed_imports++;
       import_failed_imports++;
@@ -1345,10 +1372,10 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
 	  "`TITLE`='"+RDEscapeString(wavedata->title())+"'";
 	q=new RDSqlQuery(sql);
 	if(q->first()) {
-	  QString err_msg=QString().
-	    sprintf(" File \"%s\" has duplicate title \"%s\", skipping...\n",
-		    RDGetBasePart(filename).toUtf8().constData(),
-		    wavedata->title().toUtf8().constData());
+	  QString err_msg=
+	    QString::asprintf(" File \"%s\" has duplicate title \"%s\", skipping...\n",
+			      RDGetBasePart(filename).toUtf8().constData(),
+			      wavedata->title().toUtf8().constData());
 	  Log(LOG_WARNING,err_msg);
 	  import_journal->addFailure(effective_group->name(),filename,
 				     tr("duplicate title"));
@@ -1406,11 +1433,11 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
   settings->setAutotrimLevel(import_autotrim_level/100);
   conv->setDestinationSettings(settings);
   conv->setUseMetadata(import_update_metadata);
-  Log(LOG_INFO,QString().
-      sprintf(" Importing file \"%s\" [%s] to cart %06u ... ",
-	      RDGetBasePart(filename).toUtf8().constData(),
-	      wavedata->title().trimmed().toUtf8().constData(),
-	      *cartnum));
+  Log(LOG_INFO,
+      QString::asprintf(" Importing file \"%s\" [%s] to cart %06u ... ",
+			RDGetBasePart(filename).toUtf8().constData(),
+			wavedata->title().trimmed().toUtf8().constData(),
+			*cartnum));
   switch(conv_err=conv->runImport(rda->user()->name(),rda->user()->password(),
 				  &audio_conv_err)) {
   case RDAudioImport::ErrorOk:
@@ -1690,10 +1717,15 @@ bool MainObject::OpenAudioFile(RDWaveFile **wavefile,RDWaveData *wavedata)
 
 void MainObject::VerifyFile(const QString &filename,unsigned *cartnum)
 {
+  LogDropBox("VerifyFile(\""+filename+"\")");
+
   bool found=false;
   QDateTime dt;
 
-  for(std::list<struct DropboxList *>::const_iterator 
+  //
+  // Monitor Previously Detected Matches
+  //
+  for(std::list<DropboxList *>::const_iterator 
 	ci=import_dropbox_list.begin();
       ci!=import_dropbox_list.end();ci++) {
     if((*ci)->filename==filename) {
@@ -1704,10 +1736,12 @@ void MainObject::VerifyFile(const QString &filename,unsigned *cartnum)
 	 (file->lastModified().toSecsSinceEpoch()>dt.toSecsSinceEpoch())) {
 	if((file->size()==(*ci)->size)&&(!(*ci)->failed)) {
 	  (*ci)->pass++;
+	  LogDropBox("incremented pass count, "+(*ci)->dump());
 	}
 	else {
 	  (*ci)->size=file->size();
 	  (*ci)->pass=0;
+	  LogDropBox("[1] size changed, reset pass, "+(*ci)->dump());
 	}
 	if((*ci)->failed) {
 	  (*ci)->checked=true;
@@ -1715,10 +1749,13 @@ void MainObject::VerifyFile(const QString &filename,unsigned *cartnum)
 	    (*ci)->failed=false;
 	    (*ci)->size=file->size();
 	    (*ci)->pass=0;
+	    LogDropBox("[2] size changed, reset pass, "+(*ci)->dump());
 	  }
 	}
 	if((*ci)->pass>=RDIMPORT_DROPBOX_PASSES) {
-	  switch(ImportFile(filename,cartnum)) {
+	  MainObject::Result rslt=ImportFile(filename,cartnum);
+	  LogDropBox("  Result: "+ResultText(rslt));
+	  switch(rslt) {
 	    case MainObject::Success:
 	      WriteTimestampCache(filename,file->lastModified());
 	      break;
@@ -1742,18 +1779,19 @@ void MainObject::VerifyFile(const QString &filename,unsigned *cartnum)
 	  (*ci)->checked=true;
 	}
       }
+      else {
+	LogDropBox("stale file, ignoring");
+      }
       delete file;
     }
   }
+
   if(!found) {
-    QFile *file=new QFile(filename);
-    import_dropbox_list.push_back(new struct DropboxList());
-    import_dropbox_list.back()->filename=filename;
-    import_dropbox_list.back()->size=file->size();
-    import_dropbox_list.back()->pass=0;
-    import_dropbox_list.back()->checked=true;
-    import_dropbox_list.back()->failed=false;
-    delete file;
+    //
+    // No Remaining Matches, So Look For New Ones
+    //
+    import_dropbox_list.push_back(new DropboxList(filename));
+    LogDropBox("adding new file, "+import_dropbox_list.back()->dump());
   }
 }
 
@@ -2440,7 +2478,7 @@ bool MainObject::LoadIsciXref(QString *err_msg,const QString &filename)
     }
     else {
       *err_msg=tr("invalid/corrupt data at line")+
-	QString().sprintf("%d",3+fields.size());
+	QString::asprintf("%d",3+fields.size());
       return false;
     }
   }
@@ -2552,6 +2590,15 @@ void MainObject::Log(int prio,const QString &msg) const
 }
 
 
+void MainObject::LogDropBox(const QString &msg) const
+{
+  if(import_log_processing) {
+    Log(LOG_DEBUG,
+	QString::asprintf("[DB-%d]: ",import_persistent_dropbox_id)+msg+"\n");
+  }
+}
+
+
 void MainObject::NormalExit() const
 {
   if((import_journal!=NULL)&&(import_send_mail)) {
@@ -2570,6 +2617,36 @@ void MainObject::ErrorExit(RDApplication::ExitCode code) const
     import_journal->sendAll();
   }
   exit(code);
+}
+
+
+QString MainObject::ResultText(Result rslt) const
+{
+  QString ret=QString::asprintf("Unknown [%u]",rslt);
+
+  switch(rslt) {
+  case MainObject::Success:
+    ret="Success";
+    break;
+
+  case MainObject::FileBad:
+    ret="FileBad";
+    break;
+
+  case MainObject::NoCart:
+    ret="NoCart";
+    break;
+
+  case MainObject::NoCut:
+    ret="NoCut";
+    break;
+
+  case MainObject::DuplicateTitle:
+    ret="DuplicateTitle";
+    break;
+  }
+  
+  return ret;
 }
 
 

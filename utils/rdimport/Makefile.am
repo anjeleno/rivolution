@@ -27,7 +27,8 @@ moc_%.cpp:	%.h
 
 bin_PROGRAMS = rdimport
 
-dist_rdimport_SOURCES = journal.cpp journal.h\
+dist_rdimport_SOURCES = dropboxlist.cpp dropboxlist.h\
+                        journal.cpp journal.h\
                         markerset.cpp markerset.h\
                         rdimport.cpp rdimport.h
 
