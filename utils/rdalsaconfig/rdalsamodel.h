@@ -2,7 +2,7 @@
 //
 // Abstract an ALSA configuration. 
 //
-//   (C) Copyright 2009-2018 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2009-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -42,9 +42,7 @@ class RDAlsaModel : public QAbstractListModel
   QVariant data(const QModelIndex &index,int role=Qt::DisplayRole) const;
   QVariant headerData(int section,Qt::Orientation orient,
 		      int role=Qt::DisplayRole) const;
-  QModelIndex indexOf(const QString &card_id,int pcm_num) const;
-  RDAlsaCard *card(const QModelIndex &index) const;
-  int pcmNumber(const QModelIndex &index) const;
+  QModelIndex indexOf(const QString &card_id) const;
   bool isEnabled(int row) const;
   void setEnabled(int row,bool state);
   bool loadConfig(const QString &filename);
@@ -53,8 +51,6 @@ class RDAlsaModel : public QAbstractListModel
  private:
   void LoadSystemConfig();
   QList<RDAlsaCard *> model_alsa_cards;
-  QList<int> model_card_index;
-  QList<int> model_pcm_index;
   unsigned model_sample_rate;
   QStringList model_other_lines;
 };

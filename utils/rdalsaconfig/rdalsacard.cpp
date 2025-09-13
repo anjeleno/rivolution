@@ -2,7 +2,7 @@
 //
 // Abstract ALSA 'card' information
 //
-//   (C) Copyright 2019-2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2019-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -24,7 +24,6 @@ RDAlsaCard::RDAlsaCard(snd_ctl_t *ctl,int index)
 {
   snd_ctl_card_info_t *card_info;
   snd_pcm_info_t *pcm_info;
-  int pcm=0;
 
   card_index=index;
 
@@ -37,15 +36,12 @@ RDAlsaCard::RDAlsaCard(snd_ctl_t *ctl,int index)
   card_name=QString(snd_ctl_card_info_get_name(card_info));
   card_long_name=QString(snd_ctl_card_info_get_longname(card_info));
   card_mixer_name=QString(snd_ctl_card_info_get_mixername(card_info));
-  if(snd_ctl_pcm_info(ctl,pcm_info)==0) {
-    pcm=0;
-    while(pcm>=0) {
-      card_pcm_names.push_back(snd_pcm_info_get_name(pcm_info)+
-			       QString::asprintf("[%02d]",pcm+1));
-      snd_ctl_pcm_next_device(ctl,&pcm);
-      card_enableds.push_back(false);
-    }
+  if(card_name=="Loopback") {  // Fix the opaque name assigned by Wheatstone
+    card_name.replace("Loopback","WheatNet");
+    card_long_name.replace("Loopback","WheatNet");
+    card_mixer_name.replace("Loopback","WheatNet");
   }
+  card_enabled=false;
   snd_pcm_info_free(pcm_info);
   snd_ctl_card_info_free(card_info);
 }
@@ -87,15 +83,15 @@ QString RDAlsaCard::mixerName() const
 }
 
 
-bool RDAlsaCard::isEnabled(int pcm_num) const
+bool RDAlsaCard::isEnabled() const
 {
-  return card_enableds.at(pcm_num);
+  return card_enabled;
 }
 
 
-void RDAlsaCard::setEnabled(int pcm_num,bool state)
+void RDAlsaCard::setEnabled(bool state)
 {
-  card_enableds[pcm_num]=state;
+  card_enabled=state;
 }
 
 
@@ -107,21 +103,6 @@ QString RDAlsaCard::dump() const
   ret+="  Name: "+name()+"\n";
   ret+="  LongName: "+longName()+"\n";
   ret+="  MixerName: "+mixerName()+"\n";
-  for(int i=0;i<pcmQuantity();i++) {
-    ret+=QString::asprintf("    PCM[%d]: ",i)+pcmName(i)+"\n";
-  }
 
   return ret;
-}
-
-
-int RDAlsaCard::pcmQuantity() const
-{
-  return card_pcm_names.size();
-}
-
-
-QString RDAlsaCard::pcmName(int n) const
-{
-  return card_pcm_names.at(n);
 }

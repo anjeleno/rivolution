@@ -25045,3 +25045,6 @@
 2025-09-13 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in 'RDConfig' that caused a false 'invalid dropbox ID'
 	warning to be generated when parsing rd.conf(5).
+2025-09-13 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in rdalsaconfig(8) that caused multiple card entries
+	to appear for sound devices with more than one PCM.

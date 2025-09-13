@@ -2,7 +2,7 @@
 //
 // Abstract an ALSA configuration. 
 //
-//   (C) Copyright 2009-2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2009-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -32,13 +32,7 @@ RDAlsaModel::RDAlsaModel(unsigned samprate,QObject *parent)
 
 int RDAlsaModel::rowCount(const QModelIndex &parent) const
 {
-  int rows=0;
-
-  for(int i=0;i<model_alsa_cards.size();i++) {
-    rows+=model_alsa_cards.at(i)->pcmQuantity();
-  }
-
-  return rows;
+  return model_alsa_cards.size();
 }
 
 
@@ -46,7 +40,7 @@ Qt::ItemFlags RDAlsaModel::flags(const QModelIndex &index) const
 {
   Qt::ItemFlags flags=QAbstractListModel::flags(index);
 
-  if((model_alsa_cards.at(model_card_index.at(index.row()))->id()=="Axia")&&
+  if((model_alsa_cards.at(index.row())->id()=="Axia")&&
      (model_sample_rate!=48000)) {
     flags=flags&Qt::ItemIsEnabled;
   }
@@ -61,9 +55,7 @@ QVariant RDAlsaModel::data(const QModelIndex &index,int role) const
 
   switch((Qt::ItemDataRole)role) {
   case Qt::DisplayRole:
-    return QVariant(model_alsa_cards.at(model_card_index.at(row))->name()+" - "+
-    		    model_alsa_cards.at(model_card_index.at(row))->
-		    pcmName(model_pcm_index.at(row)));
+    return QVariant(model_alsa_cards.at(row)->longName());
     break;
 
   case Qt::DecorationRole:
@@ -108,23 +100,13 @@ QVariant RDAlsaModel::headerData(int section,Qt::Orientation orient,
 }
 
 
-QModelIndex RDAlsaModel::indexOf(const QString &card_id,int pcm_num) const
+QModelIndex RDAlsaModel::indexOf(const QString &card_id) const
 {
   bool ok=false;
-  int cardnum=card_id.toUInt(&ok);
 
   if(ok) {
-    for(int i=0;i<model_card_index.size();i++) {
-      if((model_card_index.at(i)==cardnum)&&
-	 (model_pcm_index.at(i)==pcm_num)) {
-	return createIndex(i,0);
-      }
-    }
-  }
-  else {
-    for(int i=0;i<model_card_index.size();i++) {
-      if((model_alsa_cards.at(model_card_index.at(i))->id()==card_id)&&
-	 (model_pcm_index.at(i)==pcm_num)) {
+    for(int i=0;i<model_alsa_cards.size();i++) {
+      if(model_alsa_cards.at(i)->id()==card_id) {
 	return createIndex(i,0);
       }
     }
@@ -134,29 +116,15 @@ QModelIndex RDAlsaModel::indexOf(const QString &card_id,int pcm_num) const
 }
 
 
-RDAlsaCard *RDAlsaModel::card(const QModelIndex &index) const
-{
-  return model_alsa_cards.at(model_card_index.at(index.row()));
-}
-
-
-int RDAlsaModel::pcmNumber(const QModelIndex &index) const
-{
-  return model_pcm_index.at(index.row());
-}
-
-
 bool RDAlsaModel::isEnabled(int row) const
 {
-  return model_alsa_cards.at(model_card_index.at(row))->
-    isEnabled(model_pcm_index.at(row));
+  return model_alsa_cards.at(row)->isEnabled();
 }
 
 
 void RDAlsaModel::setEnabled(int row,bool state)
 {
-  return model_alsa_cards.at(model_card_index.at(row))->
-    setEnabled(model_pcm_index.at(row),state);
+  return model_alsa_cards.at(row)->setEnabled(state);
 }
 
 
@@ -213,15 +181,15 @@ bool RDAlsaModel::loadConfig(const QString &filename)
 		card_num=card_id.toUInt(&ok);
 		if(ok) {
 		  if(card_num==card->index()) {
-		    if((device>=0)&&(device<card->pcmQuantity())) {
-		      card->setEnabled(device,true);
+		    if(device>=0) {
+		      card->setEnabled(true);
 		    }
 		  }
 		}
 		else {
 		  if(card_id==card->id()) {
-		    if((device>=0)&&(device<card->pcmQuantity())) {
-		      card->setEnabled(device,true);
+		    if(device>=0) {
+		      card->setEnabled(true);
 		    }
 		  }
 		}
@@ -276,23 +244,21 @@ bool RDAlsaModel::saveConfig(const QString &filename)
   fprintf(f,"%s\n",START_MARKER);
   for(int i=0;i<model_alsa_cards.size();i++) {
     RDAlsaCard *card=model_alsa_cards.at(i);
-    for(int j=0;j<card->pcmQuantity();j++) {
-      if(card->isEnabled(j)) {
-	fprintf(f,"pcm.rd%d {\n",index);
-	fprintf(f,"  type hw\n");
-	fprintf(f,"  card %s\n",(const char *)card->id().toUtf8());
-	fprintf(f,"  device %d\n",j);
-	fprintf(f,"  rate %u\n",rda->system()->sampleRate());
-	if(card->id()=="Axia") {
-	  fprintf(f,"  channels 2\n");
-	}
-	fprintf(f,"}\n");
-	fprintf(f,"ctl.rd%d {\n",index);
-	fprintf(f,"  type hw\n");
-	fprintf(f,"  card %s\n",(const char *)card->id().toUtf8());
-	fprintf(f,"}\n");
-	index++;
+    if(card->isEnabled()) {
+      fprintf(f,"pcm.rd%d {\n",index);
+      fprintf(f,"  type hw\n");
+      fprintf(f,"  card %s\n",(const char *)card->id().toUtf8());
+      fprintf(f,"  device 0\n");
+      fprintf(f,"  rate %u\n",rda->system()->sampleRate());
+      if(card->id()=="Axia") {
+	fprintf(f,"  channels 2\n");
       }
+      fprintf(f,"}\n");
+      fprintf(f,"ctl.rd%d {\n",index);
+      fprintf(f,"  type hw\n");
+      fprintf(f,"  card %s\n",(const char *)card->id().toUtf8());
+      fprintf(f,"}\n");
+      index++;
     }
   }
   fprintf(f,"%s\n",END_MARKER);
@@ -311,10 +277,7 @@ void RDAlsaModel::LoadSystemConfig()
 
   while(snd_ctl_open(&snd_ctl,QString::asprintf("hw:%d",index).toUtf8(),0)>=0) {
     model_alsa_cards.push_back(new RDAlsaCard(snd_ctl,index));
-    for(int i=0;i<model_alsa_cards.back()->pcmQuantity();i++) {
-      model_card_index.push_back(index);
-      model_pcm_index.push_back(i);
-    }
+    printf("[%d]: %s\n\n",index,model_alsa_cards.back()->dump().toUtf8().constData());
     snd_ctl_close(snd_ctl);
     index++;
   }

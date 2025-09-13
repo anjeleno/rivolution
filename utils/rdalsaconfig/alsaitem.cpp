@@ -2,7 +2,7 @@
 //
 // QListBoxItem for ALSA PCM devices. 
 //
-//   (C) Copyright 2009-2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2009-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -24,14 +24,12 @@ AlsaItem::AlsaItem(const QString &text)
   : QListWidgetItem(text)
 {
   alsa_card_number=-1;
-  alsa_pcm_number=-1;
 }
 
 
 AlsaItem::AlsaItem(const AlsaItem &item)
 {
   setCardNumber(item.cardNumber());
-  setPcmNumber(item.pcmNumber());
 }
 
 
@@ -44,16 +42,4 @@ int AlsaItem::cardNumber() const
 void AlsaItem::setCardNumber(int cardnum)
 {
   alsa_card_number=cardnum;
-}
-
-
-int AlsaItem::pcmNumber() const
-{
-  return alsa_pcm_number;
-}
-
-
-void AlsaItem::setPcmNumber(int pcmnum)
-{
-  alsa_pcm_number=pcmnum;
 }

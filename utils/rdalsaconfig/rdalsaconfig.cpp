@@ -2,7 +2,7 @@
 //
 // A Qt-based application to display info about ALSA cards.
 //
-//   (C) Copyright 2009-2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2009-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -224,88 +224,6 @@ void MainWidget::LoadConfig(const QString &filename)
 	select(alsa_system_model->index(i,0),QItemSelectionModel::Deselect);
     }
   }
-
-  /*
-  FILE *f=NULL;
-  char line[1024];
-  int istate=0;
-  int port=0;
-  QString card_id=0;
-  int device=0;
-  QStringList list;
-  bool active_line=false;
-  QModelIndex index;
-
-  if((f=fopen(filename.toUtf8(),"r"))==NULL) {
-    return;
-  }
-  while(fgets(line,1024,f)!=NULL) {
-    QString str=line;
-    str.replace("\n","");
-    if(str==START_MARKER) {
-      active_line=true;
-    }
-    if(str==END_MARKER) {
-      active_line=false;
-    }
-    if((str!=START_MARKER)&&(str!=END_MARKER)) {
-      if(active_line) {
-	switch(istate) {
-	case 0:
-	  if(str.left(6)=="pcm.rd") {
-	    port=str.mid(6,1).toInt();
-	    istate=1;
-	  }
-	  else {
-	    if(str.left(6)=="ctl.rd") {
-	      istate=10;
-	    }
-	    else {
-	      alsa_other_lines.push_back(str+"\n");
-	    }
-	  }
-	  break;
-
-	case 1:
-	  list=str.split(" ",QString::SkipEmptyParts);
-	  if(list[0]=="}") {
-	    if((port>=0)&&(port<RD_MAX_CARDS)) {
-	      index=alsa_system_model->indexOf(card_id,device);
-	      if(index.isValid()) {
-		alsa_system_list->selectionModel()->
-		  select(index,QItemSelectionModel::Select);
-	      }
-	    }
-	    card_id="";
-	    device=0;
-	    istate=0;
-	  }
-	  else {
-	    if(list.size()==2) {
-	      if(list[0]=="card") {
-		card_id=list[1].trimmed();
-	      }
-	      if(list[0]=="device") {
-		device=list[1].toInt();
-	      }
-	    }
-	  }
-	  break;
-
-	case 10:
-	  if(str.left(1)=="}") {
-	    istate=0;
-	  }
-	  break;
-	}
-      }
-      else {
-	alsa_other_lines.push_back(str+"\n");
-      }
-    }
-  }
-  fclose(f);
-  */
 }
 
 
@@ -316,42 +234,6 @@ void MainWidget::SaveConfig(const QString &filename) const
     alsa_system_model->setEnabled(i,sel->isRowSelected(i,QModelIndex()));
   }
   alsa_system_model->saveConfig(filename);
-
-
-  /*
-  QString tempfile=filename+"-temp";
-  FILE *f=NULL;
-
-  if((f=fopen(tempfile.toUtf8(),"w"))==NULL) {
-    return;
-  }
-  for(int i=0;i<alsa_other_lines.size();i++) {
-    fprintf(f,alsa_other_lines.at(i));
-  }
-  fprintf(f,"%s\n",START_MARKER);
-  QModelIndexList indexes=alsa_system_list->selectionModel()->selectedIndexes();
-  for(int i=0;i<indexes.size();i++) {
-    fprintf(f,"pcm.rd%d {\n",i);
-    fprintf(f,"  type hw\n");
-    fprintf(f,"  card %s\n",
-	    (const char *)alsa_system_model->card(indexes.at(i))->id().toUtf8());
-    fprintf(f,"  device %d\n",alsa_system_model->pcmNumber(indexes.at(i)));
-    fprintf(f,"  rate %u\n",rda->system()->sampleRate());
-    if(alsa_system_model->card(indexes.at(i))->id()=="Axia") {
-      fprintf(f,"  channels 2\n");
-    }
-    fprintf(f,"}\n");
-    fprintf(f,"ctl.rd%d {\n",i);
-    fprintf(f,"  type hw\n");
-    fprintf(f,"  card %s\n",
-	    (const char *)alsa_system_model->card(indexes.at(i))->id().toUtf8());
-    fprintf(f,"}\n");
-  }
-  fprintf(f,"%s\n",END_MARKER);
-
-  fclose(f);
-  rename(tempfile.toUtf8(),filename.toUtf8());
-  */
 }
 
 

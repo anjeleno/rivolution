@@ -2,7 +2,7 @@
 //
 // Abstract ALSA 'card' information
 //
-//   (C) Copyright 2019 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2019-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -36,10 +36,8 @@ class RDAlsaCard
   QString name() const;
   QString longName() const;
   QString mixerName() const;
-  int pcmQuantity() const;
-  QString pcmName(int n) const;
-  bool isEnabled(int pcm_num) const;
-  void setEnabled(int pcm_num,bool state);
+  bool isEnabled() const;
+  void setEnabled(bool state);
   QString dump() const;
 
  private:
@@ -49,8 +47,7 @@ class RDAlsaCard
   QString card_name;
   QString card_long_name;
   QString card_mixer_name;
-  QStringList card_pcm_names;
-  QList<bool> card_enableds;
+  bool card_enabled;
 };
 
 
