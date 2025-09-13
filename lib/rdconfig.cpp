@@ -714,13 +714,15 @@ bool RDConfig::load()
   QStringList f0=profile->stringValue("Debugging","LogDropboxProcessing").
     split(",",QString::KeepEmptyParts);
   for(int i=0;i<f0.size();i++) {
-    bool ok=false;
-    int id=f0.at(i).trimmed().toUInt(&ok);
-    if(ok&&(id>0)) {
-      conf_log_dropbox_processing_ids.push_back(id);
-    }
-    else {
-      fprintf(stderr,"WARNING: invalid dropbox ID \"%s\" specified in LogDropboxProcessing=\n",f0.at(i).toUtf8().constData());
+    if(!f0.at(i).trimmed().isEmpty()) {
+      bool ok=false;
+      int id=f0.at(i).trimmed().toUInt(&ok);
+      if(ok&&(id>0)) {
+	conf_log_dropbox_processing_ids.push_back(id);
+      }
+      else {
+	fprintf(stderr,"WARNING: invalid dropbox ID \"%s\" specified in LogDropboxProcessing=\n",f0.at(i).toUtf8().constData());
+      }
     }
   }
   conf_meter_base_port=

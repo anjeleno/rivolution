@@ -25042,3 +25042,6 @@
 2025-08-30 Fred Gleason <fredg@paravelsystems.com>
 	* Added a 'LogDropboxProcessing=' directive to the '[Debugging]'
 	section of rd.conf(5).
+2025-09-13 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in 'RDConfig' that caused a false 'invalid dropbox ID'
+	warning to be generated when parsing rd.conf(5).
