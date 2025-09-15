@@ -25048,3 +25048,6 @@
 2025-09-13 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in rdalsaconfig(8) that caused multiple card entries
 	to appear for sound devices with more than one PCM.
+2025-09-15 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression in 'lib/rdairplay_conf.cpp' that caused database
+	corruption when adding new host records.

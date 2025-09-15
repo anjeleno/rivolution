@@ -37,14 +37,18 @@ RDAirPlayConf::RDAirPlayConf(const QString &station,const QString &tablename)
   sql=QString("select `ID` from `")+air_tablename+"` where "+
     "`STATION`='"+RDEscapeString(air_station)+"'";
   q=new RDSqlQuery(sql);
-  if(q->first()) {
-    air_id=q->value(0).toUInt();
+  if(!q->first()) {
+    delete q;
+    sql=QString("insert into `")+air_tablename+"` set "+
+      "`STATION`='"+RDEscapeString(air_station)+"'";
+    q=new RDSqlQuery(sql);
+    delete q;
+    sql=QString("select `ID` from `")+air_tablename+"` where "+
+      "`STATION`='"+RDEscapeString(air_station)+"'";
+    q=new RDSqlQuery(sql);
+    q->first();
   }
-  else {
-    air_id=-1;
-    fprintf(stderr,"RDAirplayConf - no STATION record found for host \"%s\"\n",
-	    air_station.toUtf8().constData());
-  }
+  air_id=q->value(0).toUInt();
   delete q;
 }
 
