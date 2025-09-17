@@ -24,6 +24,7 @@ if HPI_RD_AM
 endif
 if ALSA_RD_AM
   ALSACONFIG_RD_OPT = rdalsaconfig
+  RDALSA_RD_OPT = rdalsa
 endif
 
 SUBDIRS = versions\
@@ -32,7 +33,7 @@ SUBDIRS = versions\
           helpers\
           LICENSES\
           lib\
-          $(HPI_RD_OPT) apis\
+          $(HPI_RD_OPT) $(RDALSA_RD_OPT) apis\
           scripts\
           conf\
           docs\

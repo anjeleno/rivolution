@@ -1,6 +1,10 @@
 ## Makefile.am
 ##
-## (C) Copyright 2009-2025 Fred Gleason <fredg@paravelsystems.com>
+## Makefile.am for rivendell/rdalsa
+##
+## by Fred Gleason <fredg@paravelsystems.com>
+##
+##   (C) Copyright 2025 Fred Gleason <fredg@paravelsystems.com>
 ##
 ##   This program is free software; you can redistribute it and/or modify
 ##   it under the terms of the GNU General Public License version 2 as
@@ -15,33 +19,38 @@
 ##   License along with this program; if not, write to the Free Software
 ##   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 ##
-##   Use automake to process this into a Makefile.in
-##
+## Use automake to process this into a Makefile.in
 
-AM_CPPFLAGS = -Wall -DPREFIX=\"$(prefix)\" -Wno-strict-aliasing -std=c++11 -fPIC -I$(top_srcdir)/lib -I$(top_srcdir)/rdhpi -I$(top_srcdir)/rdalsa @QT5_CFLAGS@ @MUSICBRAINZ_CFLAGS@ @IMAGEMAGICK_CFLAGS@
-LIBS = -L$(top_srcdir)/lib -L$(top_srcdir)/rdhpi -L$(top_srcdir)/rdalsa
+AM_CPPFLAGS = -Wall -DPREFIX=\"$(prefix)\" -Wno-strict-aliasing -std=c++11 -fPIC -I$(top_srcdir)/lib @QT5_CFLAGS@ @IMAGEMAGICK_CFLAGS@
+LIBS = -L$(top_srcdir)/lib
 MOC = @QT_MOC@
+CWRAP = ../helpers/cwrap
 
 # The dependency for qt's Meta Object Compiler (moc)
 moc_%.cpp:	%.h
 	$(MOC) $< -o $@
 
-bin_PROGRAMS = rddbconfig
+# The cwrap dependency
+html_%.cpp:	%.html
+	$(CWRAP) -o $@ $<
 
-dist_rddbconfig_SOURCES = rddbconfig.cpp rddbconfig.h mysql_login.cpp mysql_login.h \
-	db.cpp db.h createdb.cpp createdb.h
+lib_LTLIBRARIES = librdalsa.la
+dist_librdalsa_la_SOURCES = rdalsacard.cpp rdalsacard.h
 
-nodist_rddbconfig_SOURCES = moc_rddbconfig.cpp moc_mysql_login.cpp
-
-rddbconfig_LDADD = @LIB_RDLIBS@ @LIBVORBIS@ @LIBALSA@ @QT5_LIBS@ @MUSICBRAINZ_LIBS@ @IMAGEMAGICK_LIBS@
+librdalsa_la_LDFLAGS = -release $(VERSION)
 
 CLEANFILES = *~\
+             *.idb\
+             *.ilk\
+             *.lib\
+             *.obj\
+             *.pdb\
              *.qm\
              moc_*
 
+DISTCLEAN = Makefile
+
 MAINTAINERCLEANFILES = *~\
-                       *.tar.gz\
-                       aclocal.m4\
-                       configure\
+                       Makefile\
                        Makefile.in\
                        moc_*

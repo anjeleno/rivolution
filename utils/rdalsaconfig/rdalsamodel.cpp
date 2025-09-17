@@ -55,7 +55,7 @@ QVariant RDAlsaModel::data(const QModelIndex &index,int role) const
 
   switch((Qt::ItemDataRole)role) {
   case Qt::DisplayRole:
-    return QVariant(model_alsa_cards.at(row)->longName());
+    return QVariant(model_alsa_cards.at(row)->prettyLongName());
     break;
 
   case Qt::DecorationRole:

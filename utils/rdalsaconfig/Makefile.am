@@ -1,6 +1,6 @@
 ## Makefile.am
 ##
-## (C) Copyright 2009-2022 Fred Gleason <fredg@paravelsystems.com>
+## (C) Copyright 2009-2025 Fred Gleason <fredg@paravelsystems.com>
 ##
 ##   This program is free software; you can redistribute it and/or modify
 ##   it under the terms of the GNU General Public License version 2 as
@@ -18,8 +18,8 @@
 ##   Use automake to process this into a Makefile.in
 ##
 
-AM_CPPFLAGS = -Wall -DPREFIX=\"$(prefix)\" -Wno-strict-aliasing -std=c++11 -fPIC -I$(top_srcdir)/lib -I$(top_srcdir)/rdhpi @QT5_CFLAGS@ @MUSICBRAINZ_CFLAGS@ @IMAGEMAGICK_CFLAGS@
-LIBS = -L$(top_srcdir)/lib -L$(top_srcdir)/rdhpi
+AM_CPPFLAGS = -Wall -DPREFIX=\"$(prefix)\" -Wno-strict-aliasing -std=c++11 -fPIC -I$(top_srcdir)/lib -I$(top_srcdir)/rdalsa @QT5_CFLAGS@ @MUSICBRAINZ_CFLAGS@ @IMAGEMAGICK_CFLAGS@
+LIBS = -L$(top_srcdir)/lib -L$(top_srcdir)/rdalsa
 MOC = @QT_MOC@
 
 # The dependency for qt's Meta Object Compiler (moc)
@@ -29,7 +29,6 @@ moc_%.cpp:	%.h
 bin_PROGRAMS = rdalsaconfig
 
 dist_rdalsaconfig_SOURCES = alsaitem.cpp alsaitem.h\
-                            rdalsacard.cpp rdalsacard.h\
                             rdalsamodel.cpp rdalsamodel.h\
                             rdalsaconfig.cpp rdalsaconfig.h
 

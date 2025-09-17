@@ -18,32 +18,60 @@
 //   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <QObject>
+
+#include <rdapplication.h>
+
 #include "rdalsacard.h"
 
 RDAlsaCard::RDAlsaCard(snd_ctl_t *ctl,int index)
 {
-  snd_ctl_card_info_t *card_info;
-  snd_pcm_info_t *pcm_info;
-
+  card_enabled=false;
   card_index=index;
 
+  snd_ctl_card_info_t *card_info;
+
   snd_ctl_card_info_malloc(&card_info);
-  snd_pcm_info_malloc(&pcm_info);
 
   snd_ctl_card_info(ctl,card_info);
   card_id=QString(snd_ctl_card_info_get_id(card_info));
   card_driver=QString(snd_ctl_card_info_get_driver(card_info));
   card_name=QString(snd_ctl_card_info_get_name(card_info));
+  card_pretty_name=card_name;
   card_long_name=QString(snd_ctl_card_info_get_longname(card_info));
+  card_pretty_long_name=card_long_name;
   card_mixer_name=QString(snd_ctl_card_info_get_mixername(card_info));
+  card_pretty_mixer_name=card_mixer_name;
+  card_max_channels_per_pcm=rda->config()->alsaChannelsPerPcm();
+
+  //
+  // Apply Specific Device Quirks
+  //
   if(card_name=="Loopback") {  // Fix the opaque name assigned by Wheatstone
-    card_name.replace("Loopback","WheatNet");
-    card_long_name.replace("Loopback","WheatNet");
-    card_mixer_name.replace("Loopback","WheatNet");
+    card_pretty_name.replace("Loopback","WheatNet");
+    card_pretty_long_name.replace("Loopback","WheatNet");
+    card_pretty_mixer_name.replace("Loopback","WheatNet");
+    if(card_max_channels_per_pcm<0) {
+      card_max_channels_per_pcm=2;
+    }
   }
-  card_enabled=false;
-  snd_pcm_info_free(pcm_info);
   snd_ctl_card_info_free(card_info);
+}
+
+
+RDAlsaCard::RDAlsaCard(const QString &id,int index)
+{
+  card_id=id;
+  card_index=index;
+
+  card_driver=QObject::tr("ALSA Driver");
+  card_name=card_id;
+  card_pretty_name=card_name;
+  card_long_name=QObject::tr("ALSA Device")+" "+card_id;
+  card_pretty_long_name=card_long_name;
+  card_mixer_name=QObject::tr("[none]");
+  card_pretty_mixer_name=card_mixer_name;
+  card_max_channels_per_pcm=rda->config()->alsaChannelsPerPcm();
 }
 
 
@@ -71,15 +99,33 @@ QString RDAlsaCard::name() const
 }
 
 
+QString RDAlsaCard::prettyName() const
+{
+  return card_pretty_name;
+}
+
+
 QString RDAlsaCard::longName() const
 {
   return card_long_name;
 }
 
 
+QString RDAlsaCard::prettyLongName() const
+{
+  return card_pretty_long_name;
+}
+
+
 QString RDAlsaCard::mixerName() const
 {
   return card_long_name;
+}
+
+
+QString RDAlsaCard::prettyMixerName() const
+{
+  return card_pretty_mixer_name;
 }
 
 
@@ -95,14 +141,29 @@ void RDAlsaCard::setEnabled(bool state)
 }
 
 
+int RDAlsaCard::maxChannelsPerPcm() const
+{
+  return card_max_channels_per_pcm;
+}
+
+
 QString RDAlsaCard::dump() const
 {
   QString ret=QString::asprintf("Card %d\n",index());
 
   ret+="  ID: "+id()+"\n";
   ret+="  Name: "+name()+"\n";
-  ret+="  LongName: "+longName()+"\n";
-  ret+="  MixerName: "+mixerName()+"\n";
-
+  ret+="  Pretty Name: "+prettyName()+"\n";
+  ret+="  Long Name: "+longName()+"\n";
+  ret+="  Pretty Long Name: "+prettyLongName()+"\n";
+  ret+="  Driver: "+driver()+"\n";
+  ret+="  Mixer Name: "+mixerName()+"\n";
+  ret+="  Pretty Mixer Name: "+prettyMixerName()+"\n";
+  if(maxChannelsPerPcm()<0) {
+    ret+="  Max Channels Per PCM: [default]\n";
+  }
+  else {
+    ret+=QString::asprintf("  Max Channels Per PCM: %d\n",maxChannelsPerPcm());
+  }
   return ret;
 }

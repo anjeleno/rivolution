@@ -25051,3 +25051,8 @@
 2025-09-15 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression in 'lib/rdairplay_conf.cpp' that caused database
 	corruption when adding new host records.
+2025-09-17 Fred Gleason <fredg@paravelsystems.com>
+	* Added a 'librdalsa' convenience library in 'rdalsa/'.
+	* Moved the 'RDAlsaCard' class from 'utils/rdalsaconfig/' to
+	'rdalsa/' to contain ALSA card quirk information.
+	* Refactored the ALSA driver in caed(8) to use 'RDAlsaCard'.

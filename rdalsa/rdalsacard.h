@@ -21,23 +21,29 @@
 #ifndef RDALSACARD_H
 #define RDALSACARD_H
 
+#ifdef ALSA
 #include <alsa/asoundlib.h>
 
-#include <qstring.h>
-#include <qstringlist.h>
+#include <QString>
+#include <QStringList>
 
 class RDAlsaCard
 {
  public:
   RDAlsaCard(snd_ctl_t *ctl,int index);
+  RDAlsaCard(const QString &id,int index);
   int index() const;
   QString id() const;
   QString driver() const;
   QString name() const;
+  QString prettyName() const;
   QString longName() const;
+  QString prettyLongName() const;
   QString mixerName() const;
+  QString prettyMixerName() const;
   bool isEnabled() const;
   void setEnabled(bool state);
+  int maxChannelsPerPcm() const;
   QString dump() const;
 
  private:
@@ -45,10 +51,14 @@ class RDAlsaCard
   QString card_id;
   QString card_driver;
   QString card_name;
+  QString card_pretty_name;
   QString card_long_name;
+  QString card_pretty_long_name;
   QString card_mixer_name;
+  QString card_pretty_mixer_name;
+  int card_max_channels_per_pcm;
   bool card_enabled;
 };
-
+#endif  // ALSA
 
 #endif  // RDALSACARD_H

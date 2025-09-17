@@ -502,7 +502,7 @@ if test $ALSA_FOUND ; then
       AC_MSG_ERROR([*** libsamplerate not found, but is needed for ALSA support ***])
     fi
     AC_DEFINE(ALSA,yes)
-    AC_SUBST(LIBALSA,-lasound)
+    AC_SUBST(LIBALSA,"-lasound -lrdalsa")
     SRC_NEEDED=yes
     USING_ALSA=yes
   else 
@@ -664,6 +664,7 @@ AC_CONFIG_FILES([rivendell.spec \
     rdadmin/Makefile \
     ripcd/Makefile \
     rdairplay/Makefile \
+    rdalsa/Makefile \
     rdcartslots/Makefile \
     rdcastmanager/Makefile \
     rdcatch/Makefile \

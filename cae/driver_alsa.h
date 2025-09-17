@@ -2,7 +2,7 @@
 //
 // caed(8) driver for Advanced Linux Audio Architecture devices
 //
-//   (C) Copyright 2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2021-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -23,6 +23,7 @@
 
 #include <QMap>
 
+#include <rdalsacard.h>
 #include <rdconfig.h>
 #include <rdwavefile.h>
 
@@ -98,8 +99,10 @@ class DriverAlsa : public Driver
 
  private:
 #ifdef ALSA
-  bool AlsaStartCaptureDevice(QString &dev,int card,snd_pcm_t *pcm);
-  bool AlsaStartPlayDevice(QString &dev,int card,snd_pcm_t *pcm);
+  bool AlsaStartCaptureDevice(QString &dev,int card,snd_pcm_t *pcm,
+			      RDAlsaCard *alsacard);
+  bool AlsaStartPlayDevice(QString &dev,int card,snd_pcm_t *pcm,
+			   RDAlsaCard *alsacard);
   void AlsaInitCallback();
   int GetAlsaOutputStream(int card);
   void FreeAlsaOutputStream(int card,int stream);
