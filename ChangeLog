@@ -25058,3 +25058,6 @@
 	* Refactored the ALSA driver in caed(8) to use 'RDAlsaCard'.
 2025-10-13 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression that broke the 'make rpm' target.
+2025-10-13 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the package version to 4.4.1.
+	* Incremented the Python API version to 4.4.1.
