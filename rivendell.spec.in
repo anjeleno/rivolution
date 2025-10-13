@@ -486,6 +486,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/librd.a
 %{_libdir}/librd.la
 %{_libdir}/librd.so
+%{_libdir}/librdalsa-@VERSION@.so
+%{_libdir}/librdalsa.a
+%{_libdir}/librdalsa.la
+%{_libdir}/librdalsa.so
 %{_libdir}/python@PYTHON_VERSION@/site-packages/rivendellaudio/*
 %{_sbindir}/rdservice
 %{_sbindir}/caed

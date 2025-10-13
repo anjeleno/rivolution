@@ -25056,3 +25056,5 @@
 	* Moved the 'RDAlsaCard' class from 'utils/rdalsaconfig/' to
 	'rdalsa/' to contain ALSA card quirk information.
 	* Refactored the ALSA driver in caed(8) to use 'RDAlsaCard'.
+2025-10-13 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression that broke the 'make rpm' target.
