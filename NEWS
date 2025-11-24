@@ -1,7 +1,7 @@
 The NEWS file for the Rivendell package.
 
 -------------------------------------------------------------------------------
-v4.4.1int0 -- 24 October 2025
+v4.4.1int1 -- 24 November 2025
 
 Changes:
    Bugfixes. Fixed a bug that could cause patently ridiculous values to
