@@ -25069,5 +25069,5 @@
 	* Incremented the package version to 4.4.1int0.
 2025-11-24 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression in rdimport(1) that could cause imports to
-	get hung up when using dropbox mode without the '--delete-source'
+	get hung up when using dropbox mode with the '--delete-source'
 	flag set.
