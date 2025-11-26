@@ -25076,3 +25076,6 @@
 2025-11-26 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in 'RDCart::updateLength()' that could throw a SQL
 	error.
+2025-11-26 Fred Gleason <fredg@paravelsystems.com>
+	* Documented the 'LogDropboxProcessing=' directive in the rd.conf(5)
+	manpage.
