@@ -25073,3 +25073,6 @@
 	flag set.
 2025-11-24 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the package version to 4.4.1int1.
+2025-11-26 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in 'RDCart::updateLength()' that could throw a SQL
+	error.
