@@ -25079,3 +25079,14 @@
 2025-11-26 Fred Gleason <fredg@paravelsystems.com>
 	* Documented the 'LogDropboxProcessing=' directive in the rd.conf(5)
 	manpage.
+2025-12-02 Fred Gleason <fredg@paravelsystems.com>
+	* Added a 'DROPBOXES.DROP_BOX_SCAN_COUNT' field to the database.
+	* Added a 'DROPBOXES.DROP_BOX_SCAN_INTERVAL' field to the database.
+	* Incremented the database version to 377.
+	* Added '--drop-box-scan-count' and '--drop-box-scan-interval'
+	switches to rdimport(1).
+	* Added 'RDDropbox::dropBoxScanCount()',
+	'RDDropbox::setDropBoxScanCount()', 'RDDropbox::dropBoxScanInterval()'
+	and 'RDDropbox::setDropBoxScanInterval()' methods.
+	* Added an 'Advanced Settings' button to the 'Edit Dropbox' dialog
+	in rdadmin(1).
