@@ -25090,3 +25090,5 @@
 	and 'RDDropbox::setDropBoxScanInterval()' methods.
 	* Added an 'Advanced Settings' button to the 'Edit Dropbox' dialog
 	in rdadmin(1).
+2025-12-02 Fred Gleason <fredg@paravelsystems.com>
+	* Added a 'dropbox_copy_test' test harness in 'tests/'.
