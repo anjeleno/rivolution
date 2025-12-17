@@ -390,7 +390,8 @@ void RDMarkerPlayer::buttonPlayData()
     }
   }
   d_loop_start_msec=d_cursor_position;
-  d_loop_start_length=0;
+  d_loop_start_length=
+    d_pointers[RDMarkerHandle::CutEnd]-d_loop_start_msec;
   rda->cae()->setOutputVolume(d_cae_serial,0+100*d_play_gain_spin->value());
   rda->cae()->play(d_cae_serial,d_loop_start_length,100000,false);
   d_meter_timer->start(RD_METER_UPDATE_INTERVAL);
@@ -408,7 +409,8 @@ void RDMarkerPlayer::buttonPlayFromData()
   if(d_selected_markers[RDMarkerHandle::Start]!=RDMarkerHandle::LastRole) {
     d_loop_start_msec=d_pointers[d_selected_markers[0]];
     rda->cae()->positionPlay(d_cae_serial,d_loop_start_msec);
-    d_loop_start_length=0;
+    d_loop_start_length=
+      d_pointers[RDMarkerHandle::CutEnd]-d_loop_start_msec;
     rda->cae()->setOutputVolume(d_cae_serial,0+100*d_play_gain_spin->value());
     rda->cae()->play(d_cae_serial,d_loop_start_length,100000,false);
     d_meter_timer->start(RD_METER_UPDATE_INTERVAL);
