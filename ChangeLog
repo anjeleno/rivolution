@@ -25092,3 +25092,6 @@
 	in rdadmin(1).
 2025-12-02 Fred Gleason <fredg@paravelsystems.com>
 	* Added a 'dropbox_copy_test' test harness in 'tests/'.
+2025-12-17 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression in caed(8) that caused incorrect play-out
+	lengths to be set by the 'Play' ['PY'] command.

@@ -2,7 +2,7 @@
 //
 //   A class for playing Microsoft WAV file on AudioScience HPI devices.
 //
-//   (C) Copyright 2002-2021 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -74,7 +74,6 @@ RDHPIPlayStream::RDHPIPlayStream(RDHPISoundCard *card,QObject *parent)
   is_open=false;
   playing=false;
   is_paused=false;
-  repositioned=false;
   stopping=false;
   samples_skipped=0;
   play_length=0;
@@ -313,6 +312,7 @@ RDHPIPlayStream::Error RDHPIPlayStream::openWave()
     RDWaveFile::closeWave();
     return RDHPIPlayStream::NoStream;
   }
+  setPlayLength(getExtTimeLength());
   is_open=true;
   return RDHPIPlayStream::Ok;
 }
@@ -497,8 +497,7 @@ bool RDHPIPlayStream::play()
     }
 #endif
   }
-  bool restart_timer=false;
-   if(!is_paused) {
+  if(!is_paused) {
     memset(pdata,0,fragment_size);
     left_to_write=getDataLength()-seekWave(0,SEEK_CUR);
     if(left_to_write<fragment_size) {
@@ -530,25 +529,9 @@ bool RDHPIPlayStream::play()
       emit isStopped(false);
       emit played();
       emit stateChanged(card_number,stream_number,(int)stream_state);
+      play_timer->start(play_length);
+      start_time=QTime::currentTime();
     }
-   }
-  if((!playing)&&(is_paused|repositioned)) {
-    LogHpi(HPI_OutStreamStart(NULL,hpi_stream),__LINE__);
-    clock->start(FRAGMENT_TIME);
-    playing=true;
-    stopping=false;
-    is_paused=false;
-    stream_state=RDHPIPlayStream::Playing;
-    if(!restart_transport) {
-      emit isStopped(false);
-      emit played();
-      emit stateChanged(card_number,stream_number,(int)stream_state);
-    }
-    restart_timer=true;
-  }      
-  if((play_length>0)&&restart_timer) {
-    play_timer->start(play_length);
-    start_time=QTime::currentTime();
   }
 
   return true;
@@ -657,7 +640,7 @@ bool RDHPIPlayStream::setPosition(unsigned samples)
   if(!playing) {
     if(is_paused) {
       is_paused=false;
-      repositioned=true;
+      //      repositioned=true;
     }
     LogHpi(HPI_OutStreamReset(NULL,hpi_stream),__LINE__);
     samples_played=0;

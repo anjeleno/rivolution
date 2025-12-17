@@ -2,7 +2,7 @@
 //
 //   A class for playing Microsoft WAV files.
 //
-//   (C) Copyright 2002-2007,2016 Fred Gleason <fredg@paravelsystems.com>
+//   (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 //
 //   This program is free software; you can redistribute it and/or modify
 //   it under the terms of the GNU General Public License version 2 as
@@ -99,7 +99,6 @@ class RDHPIPlayStream : public QObject,public RDWaveFile
   bool is_open;
   bool playing;
   bool is_paused;
-  bool repositioned;
   bool stopping;
   unsigned audio_ptr;
   unsigned left_to_write;

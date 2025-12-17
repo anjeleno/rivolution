@@ -146,11 +146,15 @@ void CaeServer::sendCommand(uint64_t phandle,const QString &cmd)
 
 void CaeServer::sendCommand(int id,const QString &cmd)
 {
+  CaeServerConnection *conn=cae_connections.value(id);
 #ifdef __CAE_SERVER_LOG_PROTOCOL_MESSAGES
-  RDApplication::syslog(cae_config,LOG_DEBUG,
-			"send[%d]: %s",id,(const char *)cmd.toUtf8());
+  RDApplication::syslog(cae_config,LOG_DEBUG,"to connection %d [%s:%u]: \"%s\"",
+		    id,
+		    conn->socket->peerAddress().toString().toUtf8().constData(),
+		    conn->socket->peerPort(),
+		    cmd.toUtf8().constData());
 #endif  // __CAE_SERVER_LOG_PROTOCOL_MESSAGES
-  cae_connections.value(id)->socket->write(cmd.toUtf8());
+  conn->socket->write(cmd.toUtf8());
 }
 
 
@@ -224,20 +228,22 @@ void CaeServer::connectionClosedData(int id)
 
 bool CaeServer::ProcessCommand(int id,const QString &cmd)
 {
-  //  rda->syslog(LOG_NOTICE,"processing command: \"%s\"",cmd.toUtf8().constData());
   CaeServerConnection *conn=cae_connections.value(id);
   bool ok=false;
   QString cmdstr=cmd;
   QStringList f0=cmd.split(" ",QString::SkipEmptyParts);
 
+#ifdef __CAE_SERVER_LOG_PROTOCOL_MESSAGES
+  rda->syslog(LOG_DEBUG,"from connection %d [%s:%u]: \"%s!\"",
+	      id,
+	      conn->socket->peerAddress().toString().toUtf8().constData(),
+	      conn->socket->peerPort(),
+	      cmd.toUtf8().constData());
+#endif  // __CAE_SERVER_LOG_PROTOCOL_MESSAGES
+
   if(f0.size()==0) {
     return false;
   }
-#ifdef __CAE_SERVER_LOG_PROTOCOL_MESSAGES
-  RDApplication::syslog(cae_config,LOG_DEBUG,
-			"recv[%d]: %s",id,(const char *)cmd.toUtf8());
-#endif  // __CAE_SERVER_LOG_PROTOCOL_MESSAGES
-
   cae_connections.value(id)->accum="";
 
   //
