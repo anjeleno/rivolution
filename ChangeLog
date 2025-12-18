@@ -25098,3 +25098,5 @@
 2025-12-17 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed bugs in the 'Edit Markers' dialog that caused play-out
 	duration to be incorrectly calculated.
+2025-12-18 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression that broke the build under CentOS 7.
