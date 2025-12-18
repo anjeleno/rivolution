@@ -70,10 +70,6 @@ RDPlayDeck::RDPlayDeck(RDCae *cae,int id,QObject *parent)
     mapper->setMapping(play_point_timer[i],i);
   }
 
-  play_end_timer=new QTimer(this);
-  play_end_timer->setSingleShot(true);
-  connect(play_end_timer,SIGNAL(timeout()),this,SLOT(endData()));
-
   play_position_timer=new QTimer(this);
   connect(play_position_timer,SIGNAL(timeout()),
 	  this,SLOT(positionTimerData()));
@@ -501,11 +497,11 @@ void RDPlayDeck::play(unsigned pos,int segue_start,int segue_end,
 			       fadeup);
     }
   }
-  int len=(int)(100000.0*(double)(play_audio_point[1]-play_audio_point[0]-pos)/
-		(double)play_timescale_speed);
   play_cae->
-    play(play_serial,len,play_timescale_speed,false);
-  play_end_timer->start(len);
+    play(play_serial,
+         (int)(100000.0*(double)(play_audio_point[1]-play_audio_point[0]-pos)/
+	       (double)play_timescale_speed),
+         play_timescale_speed,false);
   play_start_time=QTime::currentTime();
   StartTimers(pos);
   play_state=RDPlayDeck::Playing;
@@ -705,34 +701,6 @@ void RDPlayDeck::pointTimerData(int point)
 }
 
 
-void RDPlayDeck::endData()
-{
-  printf("RDPlayDeck::endData()\n"); 
-  play_position_timer->stop();
-  play_start_time=QTime();
-  StopTimers();
-  if(pause_called) {
-    play_state=RDPlayDeck::Paused;
-    emit stateChanged(play_id,RDPlayDeck::Paused);
-  }
-  else {
-    play_cae->unloadPlay(play_serial);
-
-    play_serial=0;
-    play_state=RDPlayDeck::Stopped;
-    play_current_position=0;
-    play_duck_down_state=false;
-    play_fade_down_state=false;
-    if(stop_called) {
-      emit stateChanged(play_id,RDPlayDeck::Stopped);
-    }
-    else {
-      emit stateChanged(play_id,RDPlayDeck::Finished);
-    }
-  }
-}
-
-
 void RDPlayDeck::positionTimerData()
 {
   play_current_position=
@@ -791,6 +759,45 @@ void RDPlayDeck::duckTimerData()
 
 void RDPlayDeck::StartTimers(int offset)
 {
+  /*
+   * Previous implementation, not currently used
+   *
+  int audio_point;
+
+  for(int i=0;i<RDPlayDeck::SizeOf;i++) {
+    play_point_state[i]=false;
+    if((play_point_value[i][0]!=-1)&&
+       (play_point_value[i][0]!=play_point_value[i][1])) {
+      audio_point=(int)
+	(RD_TIMESCALE_DIVISOR*(double)play_audio_point[0]/
+	 (double)play_timescale_speed);
+      if((play_point_value[i][0]-audio_point-offset)>=0) {
+	play_point_timer[i]->
+	  start(play_point_value[i][0]-audio_point-offset);
+      }
+      else {
+	if((play_point_value[i][1]-audio_point-offset)>=0) {
+	  play_point_state[i]=true;
+	  play_point_timer[i]->
+	    start(play_point_value[i][1]-audio_point-offset);
+	}
+      }
+      if((i==0)&&(rda->config()->padSegueOverlaps()>0)) {
+	play_point_timer[0]->stop();
+	play_point_timer[0]->start(play_point_timer[0]->interval()+
+				   rda->config()->padSegueOverlaps());;
+      }
+    }
+  }
+  if((play_fade_point[1]!=-1)&&(offset<play_fade_point[1])&&
+     ((play_fade_down=play_audio_point[1]-play_fade_point[1])>0)) {
+    play_fade_timer->start(play_fade_point[1]-play_audio_point[0]-offset);
+  }
+  if(offset<play_duck_up_point){
+    play_duck_timer->start(play_duck_up_point-offset);
+  }
+  */
+
   //
   // Calculate Time-Scaled Points
   //
@@ -818,8 +825,6 @@ void RDPlayDeck::StartTimers(int offset)
     (int)(RD_TIMESCALE_DIVISOR*(double)play_duck_up_point/
 	  (double)play_timescale_speed);
     
-  play_end_timer->stop();
-
   //
   // Initialize Segue Timers
   //
@@ -892,7 +897,6 @@ void RDPlayDeck::StartTimers(int offset)
 
 void RDPlayDeck::StopTimers()
 {
-  play_end_timer->stop();
   for(int i=0;i<RDPlayDeck::SizeOf;i++) {
     if(play_point_timer[i]->isActive()) {
       play_point_timer[i]->stop();

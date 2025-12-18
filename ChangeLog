@@ -25100,3 +25100,6 @@
 	duration to be incorrectly calculated.
 2025-12-18 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression that broke the build under CentOS 7.
+2025-12-18 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a regression in 'RDPlayDeck' that could cause clipping at
+	the end of play-outs in rdairplay(1).
