@@ -25103,3 +25103,5 @@
 2025-12-18 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression in 'RDPlayDeck' that could cause clipping at
 	the end of play-outs in rdairplay(1).
+2025-12-18 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the package version to 4.4.1int2.
