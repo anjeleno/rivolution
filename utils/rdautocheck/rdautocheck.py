@@ -25,10 +25,24 @@ import datetime
 import MySQLdb
 import os
 from pathlib import Path
+import subprocess
 import sys
 import syslog
 
+def UnmountDevice(mntpt):
+    if(os.system(command='findmnt '+mntpt+' > /dev/null')==0):
+        os.system(command='umount --quiet '+mntpt)
+    try:
+        os.rmdir(mntpt)
+    except FileNotFoundError:
+        pass
+
 def PrintMetadata(mntpt):
+    #
+    # Proactively unmount to make sure we get a clean volume
+    #
+    UnmountDevice(mntpt)
+
     #
     # Mount backup device
     #
@@ -37,6 +51,7 @@ def PrintMetadata(mntpt):
     if((result!=0)and(result!=64)):
         print(mntpt+': [not found]')
         print()
+        UnmountDevice(mntpt)
         return
     os.system(command='sleep 5')
 
@@ -56,8 +71,7 @@ def PrintMetadata(mntpt):
     #
     # Unmount backup device
     #
-    os.system(command='umount '+mntpt)
-    os.rmdir(mntpt)
+    UnmountDevice(mntpt)
 
 USAGE='rdautocheck.py <backup-mountpoint1> [<backup-mountpoint2>] [...]'
 

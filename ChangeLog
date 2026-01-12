@@ -25105,3 +25105,6 @@
 	the end of play-outs in rdairplay(1).
 2025-12-18 Fred Gleason <fredg@paravelsystems.com>
 	* Incremented the package version to 4.4.1int2.
+2026-01-12 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed bugs in rdautocheck(8) That could cause failure if
+	mountpoints were in a partially connected state.
