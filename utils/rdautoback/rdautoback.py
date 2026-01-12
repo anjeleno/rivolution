@@ -28,7 +28,20 @@ from pathlib import Path
 import sys
 import syslog
 
+def UnmountDevice(mntpt):
+    if(os.system(command='findmnt '+mntpt+' > /dev/null')==0):
+        os.system(command='umount --quiet '+mntpt)
+    try:
+        os.rmdir(mntpt)
+    except FileNotFoundError:
+        pass
+
 def BackupMountpoint(mntpt):
+    #
+    # Proactively unmount to make sure we get a clean volume
+    #
+    UnmountDevice(mntpt)
+
     #
     # Mount backup device
     #
@@ -92,8 +105,9 @@ def BackupMountpoint(mntpt):
     #
     # Unmount backup device
     #
-    os.system(command='umount '+mntpt)
-    os.rmdir(mntpt)
+    UnmountDevice(mntpt)
+    #os.system(command='umount '+mntpt)
+    #os.rmdir(mntpt)
 
     syslog.syslog(syslog.LOG_INFO,'Completed Rivendell backup to "'+mntpt+'"')
 

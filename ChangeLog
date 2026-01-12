@@ -25108,3 +25108,6 @@
 2026-01-12 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed bugs in rdautocheck(8) That could cause failure if
 	mountpoints were in a partially connected state.
+2026-01-12 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed bugs in rdautoback(8) That could cause failure if
+	mountpoints were in a partially connected state.
