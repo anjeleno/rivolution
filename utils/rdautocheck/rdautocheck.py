@@ -31,7 +31,7 @@ import syslog
 
 def UnmountDevice(mntpt):
     if(os.system(command='findmnt '+mntpt+' > /dev/null')==0):
-        os.system(command='umount --quiet '+mntpt)
+        os.system(command='umount '+mntpt+' > /dev/null')
     try:
         os.rmdir(mntpt)
     except FileNotFoundError:

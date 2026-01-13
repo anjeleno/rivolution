@@ -30,7 +30,7 @@ import syslog
 
 def UnmountDevice(mntpt):
     if(os.system(command='findmnt '+mntpt+' > /dev/null')==0):
-        os.system(command='umount --quiet '+mntpt)
+        os.system(command='umount '+mntpt+' > /dev/null')
     try:
         os.rmdir(mntpt)
     except FileNotFoundError:
@@ -88,10 +88,14 @@ def BackupMountpoint(mntpt):
                                database=rd_config.get('mySQL','Database'),
                                charset='utf8mb4')
         cursor=db.cursor()
-        cursor.execute('select `REALM_NAME` from `SYSTEM`')
-        f.write('RealmName='+cursor.fetchone()[0]+'\n')
         cursor.execute('select `DB` from `VERSION`')
-        f.write('DatabaseSchema='+str(cursor.fetchone()[0])+'\n')
+        db_ver=cursor.fetchone()[0]
+        f.write('DatabaseSchema='+str(db_ver)+'\n')
+        if(db_ver>=353):
+            cursor.execute('select `REALM_NAME` from `SYSTEM`')
+            f.write('RealmName='+cursor.fetchone()[0]+'\n')
+        else:
+            f.write('RealmName=NULL\n')
         db.close()
         with os.popen('du -h '+mntpt+'/snd',mode='r') as f1:
             values=f1.read().split('\t')

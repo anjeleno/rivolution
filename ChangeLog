@@ -25114,3 +25114,6 @@
 2026-01-12 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed bugs in rdautorest(8) That could cause failure if
 	mountpoints were in a partially connected state.
+2026-01-13 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in rdautoback(8) that threw an exception when operating
+	with a database version less than 353.
