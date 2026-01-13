@@ -25117,3 +25117,7 @@
 2026-01-13 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a bug in rdautoback(8) that threw an exception when operating
 	with a database version less than 353.
+2026-01-13 Fred Gleason <fredg@paravelsystems.com>
+	* Fixed a bug in rdautoback(8) that would generate an incorrect
+	'AudioStorage=' metadata value if the audio store contained
+	sub directories.

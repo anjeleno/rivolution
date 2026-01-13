@@ -97,7 +97,7 @@ def BackupMountpoint(mntpt):
         else:
             f.write('RealmName=NULL\n')
         db.close()
-        with os.popen('du -h '+mntpt+'/snd',mode='r') as f1:
+        with os.popen('du -hd 0 '+mntpt+'/snd',mode='r') as f1:
             values=f1.read().split('\t')
             f.write('AudioStorage='+values[0]+'\n')
             f1.close()
