@@ -1,0 +1,9 @@
+                   SCHED_CODES Table Layout for Rivendell
+
+The SCHED_CODES table holds schedule code definitions for use by the
+integrated music scheduler.
+
+FIELD NAME           TYPE              REMARKS
+------------------------------------------------------------------------------
+CODE                 varchar(10)       * Primary key
+DESCRIPTION          varchar(255)

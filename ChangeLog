@@ -25103,3 +25103,6 @@
 2025-12-18 Fred Gleason <fredg@paravelsystems.com>
 	* Fixed a regression in 'RDPlayDeck' that could cause clipping at
 	the end of play-outs in rdairplay(1).
+2026-01-31 Fred Gleason <fredg@paravelsystems.com>
+	* Documented the 'SCHED_CODES' table in
+	'docs/tables/sched_codes.txt'.
