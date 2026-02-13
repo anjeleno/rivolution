@@ -25129,3 +25129,5 @@
 	'MainObject::GetCanonicalTables(int schema)' method in rddbmgr(8).
 	* Removed support for database version 377 to the
 	'MainObject::GetCanonicalTables(int schema)' method in rddbmgr(8).
+2026-02-13 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the package version to 4.4.1int3.

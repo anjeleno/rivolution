@@ -1,7 +1,7 @@
 The NEWS file for the Rivendell package.
 
 -------------------------------------------------------------------------------
-v4.4.1int2 -- 18 December 2025
+v4.4.1int3 -- 13 February 2026
 
 Changes:
    Bugfixes. Fixed a bug that could cause clipping at the end of play-outs
