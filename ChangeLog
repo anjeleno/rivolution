@@ -25124,3 +25124,8 @@
 2026-01-31 Fred Gleason <fredg@paravelsystems.com>
 	* Documented the 'SCHED_CODES' table in
 	'docs/tables/sched_codes.txt'.
+2026-02-13 Fred Gleason <fredg@paravelsystems.com>
+	* Removed support for database version 275 from the
+	'MainObject::GetCanonicalTables(int schema)' method in rddbmgr(8).
+	* Removed support for database version 377 to the
+	'MainObject::GetCanonicalTables(int schema)' method in rddbmgr(8).
