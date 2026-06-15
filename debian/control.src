@@ -37,18 +37,17 @@ Description: Rivendell Operations and Administration Guide
 
 Package: rivendell-webapi
 Architecture: any
-Depends: ${misc:Depends}
-Description: Client libraries for interfacing with Rivendell's Web API.
+Depends:  ${shlibs:Depends}, ${misc:Depends}
+Description: Client libraries for interfacing with Rivendell's C Web API.
  This package contains client libraries for interfacing with Rivendell's
- Web API subsystem.
+ C Web API subsystem.
 
 Package: rivendell-dev
 Architecture: any
-Depends: ${misc:Depends}, rivendell (= @VERSION@-1)
-Description: Header files and example code for development with Rivendell APIs
+Depends: ${misc:Depends}, rivendell-webapi (= @VERSION@-1)
+Description: Header files and example code for development with Rivendell C API
  This package contains header files and example code for development using
- Rivendell's Web C API, which can be used to integrate with Rivendell Web
- API Interface.
+ Rivendell's Web C API.
 
 Package: rivendell-select
 Architecture: any
