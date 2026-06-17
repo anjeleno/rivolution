@@ -1,5 +1,7 @@
 # 0001 — Selectable MP3 import format + passthrough
 
+**Date:** 2026-06-17
+
 ## Goal
 
 Allow MP3 source audio to be imported without being forced through the
