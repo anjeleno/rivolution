@@ -116,35 +116,45 @@ uploads the raw source file to `rdxport.cgi` and the **server**
 (`import.cpp`) performs the actual conversion. So passthrough has to be
 implemented server-side.
 
+**Second correction (made unconditional after live testing):** the first
+working version gated passthrough behind an explicit `--passthrough`
+CLI flag / `PASSTHROUGH` POST field, requiring it to be threaded through
+`rdimport` → `RDAudioImport` → `import.cpp`, with no way to request it
+from a Dropbox at all. After watching a real Dropbox-driven import
+needlessly re-encode an already-MP3 file (proving the `--audio-format`
+plumbing worked, but also exposing this gap), the decision was made:
+**there is never a legitimate reason to decode and re-encode an MP3
+file when the target format is also MP3.** So passthrough is now
+unconditional — no flag, no POST field, no Dropbox setting needed at
+all. The entire opt-in mechanism (`--passthrough` on `rdimport`,
+`RDAudioImport::setPassthrough()`/`conv_passthrough`, the `PASSTHROUGH`
+POST field) was removed as dead weight once the condition for honoring
+it no longer depends on any caller input.
+
 Implemented as:
 
-- `rdimport.cpp`: new `--passthrough` flag → `import_passthrough` bool →
-  `conv->setPassthrough(import_passthrough)` (mirrors the `setFormat()`
-  wiring).
-- `lib/rdaudioimport.h`/`.cpp`: new `setPassthrough(bool)` +
-  `conv_passthrough` member; `runImport()` sends a `PASSTHROUGH` POST
-  field only when set, so every other caller is unaffected.
-- `web/rdxport/import.cpp`: reads the optional `PASSTHROUGH` field.
-  After opening the uploaded file with `RDWaveFile` (already done today
-  for metadata), captures `wave->getHeadLayer()==3` — the actual decoded
-  MPEG audio layer, not just a container/extension guess — as
-  `source_is_mp3` *before* deleting that probe object. Passthrough is
-  honored only when `passthrough_requested && source_is_mp3 &&
-  (effective_format==3)`; otherwise it's silently ignored and the normal
-  `RDAudioConvert` path runs exactly as before. When honored: skip
-  `RDAudioConvert` entirely, `QFile::copy()` the uploaded file straight
-  to `RDCut::pathName(cartnum,cutnum)`, re-open *that* file with
-  `RDWaveFile` to get `msecs` (mirroring the existing post-convert
+- `web/rdxport/import.cpp`: after opening the uploaded file with
+  `RDWaveFile` (already done today for metadata), captures
+  `wave->getHeadLayer()==3` — the actual decoded MPEG audio layer, not
+  just a container/extension guess — as `source_is_mp3` *before*
+  deleting that probe object. `do_passthrough = source_is_mp3 &&
+  (effective_format==3)` — unconditional, no caller opt-in. When true:
+  skip `RDAudioConvert` entirely, `QFile::copy()` the uploaded file
+  straight to `RDCut::pathName(cartnum,cutnum)`, re-open *that* file
+  with `RDWaveFile` to get `msecs` (mirroring the existing post-convert
   duration read), and use the already-probed `wavedata` for cart/cut
-  metadata instead of `conv->sourceWaveData()` (there is no `conv` object
-  in this branch).
-- **Conflict rule (decided):** if passthrough is honored and
-  `autotrim_level!=0` was requested for the same file, log a warning via
-  `rda->syslog()` that the level is being ignored (audio-level changes
-  require decoding, which passthrough explicitly skips) and continue the
-  import via passthrough rather than failing it. `normalization_level`
-  is handled the same way implicitly — it's simply never applied in the
-  passthrough branch.
+  metadata instead of `conv->sourceWaveData()` (there is no `conv`
+  object in this branch). When false (source isn't really MP3, or the
+  target format isn't MP3): falls through to the normal
+  `RDAudioConvert` path exactly as before — a WAV file targeting MP3
+  still gets properly encoded.
+- **Conflict rule (decided):** since this now fires automatically on
+  every MP3-to-MP3 import rather than only when explicitly requested,
+  both `autotrim_level!=0` and `normalization_level!=0` are explicitly
+  warned via `rda->syslog()` (not just autotrim, as the first version
+  had it) when passthrough is honored — audio-level changes require
+  decoding, which passthrough explicitly skips, so the level is ignored
+  and the import continues rather than failing.
 
 ## Open items for implementation time
 

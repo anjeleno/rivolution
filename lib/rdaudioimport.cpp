@@ -71,7 +71,6 @@ RDAudioImport::RDAudioImport(QObject *parent)
   conv_settings=NULL;
   conv_format_set=false;
   conv_format=0;
-  conv_passthrough=false;
   conv_use_metadata=false;
   conv_aborting=false;
 }
@@ -111,12 +110,6 @@ void RDAudioImport::setFormat(unsigned format)
 {
   conv_format_set=true;
   conv_format=format;
-}
-
-
-void RDAudioImport::setPassthrough(bool state)
-{
-  conv_passthrough=state;
 }
 
 
@@ -178,10 +171,6 @@ RDAudioImport::ErrorCode RDAudioImport::runImport(const QString &username,
 		 CURLFORM_COPYCONTENTS,
 		 QString::asprintf("%u",conv_format).toUtf8().constData(),
 		 CURLFORM_END);
-  }
-  if(conv_passthrough) {
-    curl_formadd(&first,&last,CURLFORM_PTRNAME,"PASSTHROUGH",
-		 CURLFORM_COPYCONTENTS,"1",CURLFORM_END);
   }
   curl_formadd(&first,&last,CURLFORM_PTRNAME,"FILENAME",
 	       CURLFORM_FILE,conv_src_filename.toUtf8().constData(),

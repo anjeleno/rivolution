@@ -399,14 +399,14 @@ EditDropbox::EditDropbox(int id,bool duplicate,QWidget *parent)
   // Target Audio Format
   //
   box_coding_format_box=new QComboBox(this);
-  box_coding_format_box->setGeometry(140,606,140,20);
+  box_coding_format_box->setGeometry(175,606,140,20);
   box_coding_format_box->insertItem(0,tr("Use Host Default"));
   box_coding_format_box->insertItem(1,tr("PCM16"));
   box_coding_format_box->insertItem(2,tr("PCM24"));
   box_coding_format_box->insertItem(3,tr("MPEG Layer 2"));
   box_coding_format_box->insertItem(4,tr("MPEG Layer 3"));
   label=new QLabel(tr("Target Audio Format")+":",this);
-  label->setGeometry(10,606,125,20);
+  label->setGeometry(10,606,160,20);
   label->setFont(labelFont());
   label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 

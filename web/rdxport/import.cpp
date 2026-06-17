@@ -93,10 +93,6 @@ void Xport::Import()
   if(!xport_post->getValue("FORMAT",&format_override)) {
     format_override=-1;
   }
-  int passthrough_requested=0;
-  if(!xport_post->getValue("PASSTHROUGH",&passthrough_requested)) {
-    passthrough_requested=0;
-  }
   QString group_name;
   xport_post->getValue("GROUP_NAME",&group_name);
   QString title;
@@ -230,12 +226,12 @@ void Xport::Import()
   }
 
   //
-  // True passthrough: only when explicitly requested, the source is
-  // genuinely MP3 (MPEG audio layer 3), and the effective target format is
-  // also MP3. Otherwise fall through to the normal conversion path below.
+  // True passthrough: unconditional whenever the source is genuinely MP3
+  // (MPEG audio layer 3) and the effective target format is also MP3 --
+  // there is never a reason to decode and re-encode an MP3 back to MP3.
+  // Otherwise fall through to the normal conversion path below.
   //
-  bool do_passthrough=(passthrough_requested!=0)&&source_is_mp3&&
-    (effective_format==3);
+  bool do_passthrough=source_is_mp3&&(effective_format==3);
   RDAudioConvert::ErrorCode conv_err=RDAudioConvert::ErrorOk;
   RDAudioConvert *conv=NULL;
   if(do_passthrough) {
@@ -243,6 +239,11 @@ void Xport::Import()
       rda->syslog(LOG_WARNING,
 		 "rdxport: ignoring autotrim level for passthrough import "
 		 "of cart %d, cut %d",cartnum,cutnum);
+    }
+    if(normalization_level!=0) {
+      rda->syslog(LOG_WARNING,
+		 "rdxport: ignoring normalization level for passthrough "
+		 "import of cart %d, cut %d",cartnum,cutnum);
     }
     if(!QFile::copy(filename,RDCut::pathName(cartnum,cutnum))) {
       XmlExit("Unable to write imported file",500,"import.cpp",LINE_NUMBER);

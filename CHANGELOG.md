@@ -13,12 +13,16 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   the web import service (`rdxport.cgi`), a per-Dropbox "Target Audio
   Format" setting in RDAdmin, and an MP3 entry in the host-level default
   format dropdown. See `docs/specs/0001-mp3-import-format.md`.
-- Added a true passthrough import mode (`rdimport --passthrough`): when
-  the source file is already MP3 and the target format is MP3, the
-  server copies the file directly instead of decoding and re-encoding
-  it through LAME.
+- Added a true passthrough import mode: whenever the source file is
+  genuinely MP3 and the target format is also MP3, the server always
+  copies the file directly instead of decoding and re-encoding it
+  through LAME — unconditional, no flag or setting needed, since
+  there's never a reason to re-encode an MP3 to MP3.
 - Fixed: `utils/rdimport/rdimport.cpp`'s local format switch was missing
   a PCM24 case (present in the web import path and the RDAdmin UI but
   not the CLI tool) — added for consistency.
 - Schema: added `DROPBOXES.CODING_FORMAT` (database schema version
   377 → 378).
+- Fixed: the new "Target Audio Format" label on the Dropbox editor was
+  clipped on its left edge (right-aligned text in a box too narrow for
+  it) — widened and shifted the dropdown over to make room.
