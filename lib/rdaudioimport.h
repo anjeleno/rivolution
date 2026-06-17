@@ -40,6 +40,8 @@ class RDAudioImport : public QObject
   void setSourceFile(const QString &filename);
   void setUseMetadata(bool state);
   void setDestinationSettings(RDSettings *settings);
+  void setFormat(unsigned format);
+  void setPassthrough(bool state);
   RDAudioImport::ErrorCode runImport(const QString &username,
 				     const QString &password,
 				     RDAudioConvert::ErrorCode *conv_err);
@@ -55,6 +57,9 @@ class RDAudioImport : public QObject
   unsigned conv_cut_number;
   QString conv_src_filename;
   RDSettings *conv_settings;
+  bool conv_format_set;
+  unsigned conv_format;
+  bool conv_passthrough;
   bool conv_use_metadata;
   bool conv_aborting;
 };

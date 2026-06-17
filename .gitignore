@@ -51,6 +51,7 @@ debian/changelog
 debian/control
 debian/rules
 depcomp
+docs/handoff/
 docs/apis/*.html
 docs/apis/*.pdf
 docs/dtds/direct.html

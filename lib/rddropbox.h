@@ -86,6 +86,8 @@ class RDDropbox
   void setDropBoxScanCount(unsigned val) const;
   unsigned dropBoxScanInterval() const;
   void setDropBoxScanInterval(unsigned val) const;
+  int codingFormat() const;
+  void setCodingFormat(int format) const;
 
  private:
   void SetRow(const QString &param,int value) const;

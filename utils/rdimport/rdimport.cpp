@@ -622,6 +622,7 @@ MainObject::MainObject(QObject *parent)
   import_src_converter=rda->libraryConf()->srcConverter();
   import_segue_level=0;
   import_segue_length=0;
+  import_passthrough=false;
 
   for(unsigned i=0;i<rda->cmdSwitch()->keys()-2;i++) {
     if(rda->cmdSwitch()->key(i)=="--normalization-level") {
@@ -670,6 +671,21 @@ MainObject::MainObject(QObject *parent)
     }
     if(rda->cmdSwitch()->key(i)=="--single-cart") {
       import_single_cart=true;
+      rda->cmdSwitch()->setProcessed(i,true);
+    }
+    if(rda->cmdSwitch()->key(i)=="--audio-format") {
+      n=rda->cmdSwitch()->value(i).toInt(&ok);
+      if(ok&&(n>=0)&&(n<=3)) {
+        import_format=n;
+      }
+      else {
+        Log(LOG_ERR,QString("rdimport: invalid audio format\n"));
+        ErrorExit(RDApplication::ExitInvalidOption);
+      }
+      rda->cmdSwitch()->setProcessed(i,true);
+    }
+    if(rda->cmdSwitch()->key(i)=="--passthrough") {
+      import_passthrough=true;
       rda->cmdSwitch()->setProcessed(i,true);
     }
     if((!rda->cmdSwitch()->processed(i))&&
@@ -1440,6 +1456,8 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
   conv->setCartNumber(cart->number());
   conv->setCutNumber(cutnum);
   conv->setSourceFile(wavefile->getName());
+  conv->setFormat(import_format);
+  conv->setPassthrough(import_passthrough);
   RDSettings *settings=new RDSettings();
   settings->setChannels(import_channels);
   switch(import_format) {
@@ -1449,6 +1467,14 @@ MainObject::Result MainObject::ImportFile(const QString &filename,
 
   case 1:
     settings->setFormat(RDSettings::MpegL2Wav);
+    break;
+
+  case 2:
+    settings->setFormat(RDSettings::Pcm24);
+    break;
+
+  case 3:
+    settings->setFormat(RDSettings::MpegL3);
     break;
   }
   settings->setNormalizationLevel(import_normalization_level/100);

@@ -116,6 +116,7 @@ class MainObject : public QObject
   int import_persistent_dropbox_id;
   bool import_xml;
   unsigned import_format;
+  bool import_passthrough;
   unsigned import_samprate;
   unsigned import_bitrate;
   unsigned import_channels;
