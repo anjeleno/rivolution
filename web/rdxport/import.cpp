@@ -246,7 +246,8 @@ void Xport::Import()
 		 "import of cart %d, cut %d",cartnum,cutnum);
     }
     if(!QFile::copy(filename,RDCut::pathName(cartnum,cutnum))) {
-      XmlExit("Unable to write imported file",500,"import.cpp",LINE_NUMBER);
+      XmlExit("Unable to write imported file",500,"import.cpp",LINE_NUMBER,
+	      RDAudioConvert::ErrorNoDestination);
     }
     wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
     if(wave->openWave()) {
@@ -254,7 +255,8 @@ void Xport::Import()
     }
     else {
       delete wave;
-      XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER);
+      XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER,
+	      RDAudioConvert::ErrorNoDestination);
     }
     delete wave;
     cut->checkInRecording(rda->config()->stationName(),rda->user()->name(),

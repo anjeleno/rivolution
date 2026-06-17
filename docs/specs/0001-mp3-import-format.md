@@ -156,6 +156,64 @@ Implemented as:
   decoding, which passthrough explicitly skips, so the level is ignored
   and the import continues rather than failing.
 
+**Bug found and fixed (live testing, after the unconditional redesign):**
+the two new `XmlExit(...)` calls in the passthrough failure branches
+("Unable to write imported file", "Unable to access imported file")
+omitted the optional 5th `RDAudioConvert::ErrorCode` argument, which
+defaults to `ErrorOk`. The HTTP client (`lib/rdaudioimport.cpp:328-329`)
+builds its user-facing error text purely from that code whenever the
+response status isn't one of `200/400/401/404` — so any real passthrough
+failure surfaced to the user as the nonsensical "Audio Converter Error:
+OK" instead of a useful message. Fixed by passing
+`RDAudioConvert::ErrorNoDestination` explicitly on both calls. **Note
+for future review:** this exact omit-the-error-code pattern also exists
+in the pre-existing (non-passthrough) success path one switch-case up —
+`case RDAudioConvert::ErrorOk: ... XmlExit("Unable to access imported
+file",500,"import.cpp",LINE_NUMBER);` (no 5th argument either) — that's
+*upstream's* code, not ours, and was left untouched as out of scope, but
+it has the identical misleading-error-message bug. Worth a closer look
+if "Audio Converter Error: OK" ever resurfaces with passthrough already
+ruled out.
+
+### Feature B extended to export (per-cut "Import/Export" dialog)
+
+`lib/rdimport_audio.cpp` (the `RDImportAudio` dialog — despite the name,
+it handles both directions, opened from RDLibrary's per-cart "Import/
+Export" button at `rdlibrary/audio_cart.cpp:125`, and reused as-is by
+the voice tracker at `lib/rdtrackerwidget.cpp:2339`) was traced for both
+directions:
+
+- **Import direction:** goes through `RDAudioImport` → the same
+  `rdxport.cgi` `import.cpp` endpoint as the CLI/Dropbox path, so it
+  already inherits passthrough automatically once the *effective*
+  format is MP3. This dialog never calls `setFormat()`
+  (`lib/rdimport_audio.cpp:525-536`), so today that's governed entirely
+  by the host's `RDLIBRARY.DEFAULT_FORMAT` — identical to the gap
+  already documented for RDLibrary's "Add Cut" import. No code change
+  needed here; passthrough already applies whenever the host default is
+  MP3. **Not done:** a per-import format override control inside this
+  specific dialog (independent of the host default) — that would be new
+  UI scope, not yet requested.
+- **Export direction (the real gap, now fixed):** `web/rdxport/export.cpp`
+  had no passthrough shortcut at all — every export of an already-MP3
+  cut to MP3 went through the full `RDAudioConvert` decode/re-encode,
+  same problem as the original import-side issue. Added a passthrough
+  branch before the existing `RDTempDirectory`/`RDAudioConvert` setup:
+  probes the stored cut file's `RDWaveFile::getHeadLayer()==3` as
+  `source_is_mp3`, and honors passthrough only when
+  `source_is_mp3 && settings->format()==RDSettings::MpegL3 &&
+  start_point<0 && end_point<0 && speed_ratio==1.0 && wavedata==NULL &&
+  normalization_level==0`. Unlike the import side, this does **not**
+  warn-and-ignore on conflicts — it simply doesn't apply passthrough
+  whenever a partial range, forced-length speed adjustment, RDXL
+  metadata embedding (`conv->setDestinationRdxl()`,
+  `lib/rdaudioconvert.cpp:1635/1827/1871/1953`), or normalization is
+  requested, falling through to the exact existing `RDAudioConvert`
+  path with zero behavior change. This is stricter than import's gate
+  because a raw byte copy genuinely cannot trim, time-scale, or embed
+  RDXL metadata — there's no "ignore and continue" option here, only
+  "don't take the shortcut."
+
 ## Open items for implementation time
 
 - Re-grep for `codingFormat()`/`CODING_FORMAT` consumers immediately

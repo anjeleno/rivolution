@@ -26,3 +26,15 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 - Fixed: the new "Target Audio Format" label on the Dropbox editor was
   clipped on its left edge (right-aligned text in a box too narrow for
   it) — widened and shifted the dropdown over to make room.
+- Fixed: passthrough import failures (e.g. a write/access error) showed
+  the nonsensical "Audio Converter Error: OK" instead of a real message,
+  because the new error-exit calls left out the audio converter error
+  code. Now reports a correct error.
+- Added the same MP3-to-MP3 passthrough optimization to audio export
+  (RDLibrary's per-cut "Import/Export" dialog, and anywhere else that
+  uses the `rdxport.cgi` export service): exporting an already-MP3 cut
+  back to MP3 now copies the file directly instead of re-encoding it,
+  as long as the export is a plain, full-length, unmodified copy (no
+  trimming, forced-length speed adjustment, normalization, or embedded
+  metadata requested — any of those still go through the normal export
+  path exactly as before).
