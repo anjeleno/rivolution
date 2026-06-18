@@ -5,6 +5,16 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-18
+
+- Fixed: MP3 passthrough (import and export) could produce a file
+  whose real sample rate doesn't match the system's output rate,
+  which `caed`'s MPEG playback path doesn't resample — audible as
+  pitch/speed-shifted ("helium") playback. Passthrough now requires
+  the source's real sample rate to match the system rate; otherwise it
+  falls through to the existing, correct conversion path. See
+  `docs/specs/0001-mp3-import-format.md`.
+
 ## 2026-06-17
 
 - Added segue back-timing: when the outgoing element in a segue has

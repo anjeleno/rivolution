@@ -29,6 +29,7 @@
 .AppleDouble
 .deps
 .libs
+CLAUDE.md
 aclocal.m4
 apis/rivwebcapi/rivwebcapi.pc
 apis/rivwebcapi/tests/*_test

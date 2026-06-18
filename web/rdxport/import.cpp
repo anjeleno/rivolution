@@ -216,6 +216,7 @@ void Xport::Import()
     XmlExit("Format Not Supported",415,"import.cpp",LINE_NUMBER);
   }
   bool source_is_mp3=(wave->getHeadLayer()==3);
+  unsigned source_sample_rate=wave->getSamplesPerSec();
   delete wave;
   if(use_metadata) {
     if((!rda->system()->allowDuplicateCartTitles())&&
@@ -227,11 +228,18 @@ void Xport::Import()
 
   //
   // True passthrough: unconditional whenever the source is genuinely MP3
-  // (MPEG audio layer 3) and the effective target format is also MP3 --
+  // (MPEG audio layer 3), the effective target format is also MP3, and
+  // the source's real sample rate already matches the system rate --
   // there is never a reason to decode and re-encode an MP3 back to MP3.
-  // Otherwise fall through to the normal conversion path below.
+  // The sample-rate check matters because caed's MPEG playback path
+  // (cae/driver_alsa.cpp) does not resample mismatched-rate MPEG audio
+  // at playout time, unlike its PCM/Vorbis paths -- a passthrough copy
+  // of a file recorded at a different rate than the system's would
+  // play back pitch-shifted. When rates don't match, fall through to
+  // the normal conversion path below, which resamples correctly.
   //
-  bool do_passthrough=source_is_mp3&&(effective_format==3);
+  bool do_passthrough=source_is_mp3&&(effective_format==3)&&
+    (source_sample_rate==rda->system()->sampleRate());
   RDAudioConvert::ErrorCode conv_err=RDAudioConvert::ErrorOk;
   RDAudioConvert *conv=NULL;
   if(do_passthrough) {

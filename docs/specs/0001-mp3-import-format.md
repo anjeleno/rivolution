@@ -214,6 +214,50 @@ directions:
   RDXL metadata — there's no "ignore and continue" option here, only
   "don't take the shortcut."
 
+## Bugfix (2026-06-18): passthrough sample-rate gate
+
+A passthrough-imported MP3 (cart 10001, a real 144MB Dropbox import)
+played back pitch-shifted ("helium"). Traced to confirm the actual
+mechanism before fixing anything, per `lib/rdwavefile.cpp:3804` and
+`cae/driver_alsa.cpp:1841-1948`:
+
+- The file's real sample rate (44.1kHz) was correctly read from its own
+  MPEG frame header by `caed` at playback time — the database's
+  `CUTS.SAMPLE_RATE` field being stale (a separate, real bug:
+  `RDAudioImport`/`import.cpp` always records the system rate
+  unconditionally, before the passthrough branch even runs) turned out
+  to be a red herring, not the cause.
+- The actual cause: `DriverAlsa::FillAlsaOutputStream()`
+  (`cae/driver_alsa.cpp`) computes a `ratio` between the system output
+  rate and the file's real rate and applies it for `WAVE_FORMAT_PCM`/
+  `WAVE_FORMAT_VORBIS` (lines 1859, 1869), but never for
+  `WAVE_FORMAT_MPEG` (lines 1884-1945) — decoded MP3 PCM at the file's
+  real rate gets written straight to the ALSA ring buffer at the
+  system's clock rate, with no resampling at all.
+
+**Fix applied** (`web/rdxport/import.cpp`, `web/rdxport/export.cpp`):
+added a third condition to both `do_passthrough` gates — the source's
+real sample rate (`RDWaveFile::getSamplesPerSec()`, already available
+from the open probe) must equal `rda->system()->sampleRate()`. When it
+doesn't, passthrough is skipped and the normal `RDAudioConvert` path
+runs instead, which resamples correctly. This is a mitigation, not a
+fix for the underlying engine bug — see below.
+
+## Known issue, deferred: caed's MPEG playback path has no resampling
+
+The actual bug is in `cae/driver_alsa.cpp`'s `WAVE_FORMAT_MPEG` case —
+it should apply the same `ratio`-based handling that the PCM/Vorbis
+cases already do, but doesn't. This affects *any* MP3 file at a
+mismatched rate, not just passthrough-created ones; the gate above
+only prevents passthrough from being the thing that creates one.
+
+Deliberately not fixed yet — `cae/driver_alsa.cpp` is the live audio
+output path, the highest-risk code in this project (same reasoning
+that put segue back-timing on its own branch rather than bundling it
+into the import-feature work). Planned to revisit on its own branch
+once the current passthrough/segue work is merged to `v4` and the
+provisioning/debugging backlog clears.
+
 ## Open items for implementation time
 
 - Re-grep for `codingFormat()`/`CODING_FORMAT` consumers immediately

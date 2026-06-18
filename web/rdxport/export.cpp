@@ -136,19 +136,26 @@ void Xport::Export()
 
   //
   // True passthrough: unconditional whenever the stored cut is genuinely
-  // MP3 (MPEG audio layer 3) and the requested export format is also MP3,
-  // *and* nothing else was asked of the export (full cut, no forced-length
-  // speed adjustment, no normalization, no embedded RDXL metadata) -- any
-  // of those require the real RDAudioConvert pipeline, so passthrough
+  // MP3 (MPEG audio layer 3), the requested export format is also MP3,
+  // the stored file's real sample rate matches the system rate (see the
+  // matching comment in import.cpp -- caed's MPEG playback path doesn't
+  // resample mismatched-rate MPEG audio, so a passthrough copy of a
+  // mismatched-rate cut would play back pitch-shifted), *and* nothing
+  // else was asked of the export (full cut, no forced-length speed
+  // adjustment, no normalization, no embedded RDXL metadata) -- any of
+  // those require the real RDAudioConvert pipeline, so passthrough
   // simply doesn't apply and the normal path below runs exactly as before.
   //
   bool source_is_mp3=false;
+  unsigned source_sample_rate=0;
   RDWaveFile *srcwave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
   if(srcwave->openWave()) {
     source_is_mp3=(srcwave->getHeadLayer()==3);
+    source_sample_rate=srcwave->getSamplesPerSec();
   }
   delete srcwave;
   bool do_passthrough=source_is_mp3&&(settings->format()==RDSettings::MpegL3)&&
+    (source_sample_rate==rda->system()->sampleRate())&&
     (start_point<0)&&(end_point<0)&&(speed_ratio==1.0)&&
     (wavedata==NULL)&&(normalization_level==0);
   if(do_passthrough) {
