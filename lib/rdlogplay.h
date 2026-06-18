@@ -121,6 +121,7 @@ class RDLogPlay : public RDLogModel
   void playStateChangedData(int id,RDPlayDeck::State state);
   void onairFlagChangedData(bool state);
   void segueStartData(int);
+  void segueBacktimeData();
   void segueEndData(int);
   void talkStartData(int);
   void talkEndData(int);
@@ -224,6 +225,8 @@ class RDLogPlay : public RDLogModel
   bool play_refresh_pending;
   QTimer *play_trans_timer;
   QTimer *play_grace_timer;
+  QTimer *play_segue_backtime_timer;
+  int play_segue_backtime_id;
   int play_trans_line;
   int play_grace_line;
   int play_card[2];

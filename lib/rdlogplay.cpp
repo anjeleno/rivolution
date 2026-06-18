@@ -169,6 +169,10 @@ RDLogPlay::RDLogPlay(int id,RDEventPlayer *player,bool enable_cue,QObject *paren
   play_grace_timer->setSingleShot(true);
   connect(play_grace_timer,SIGNAL(timeout()),
 	  this,SLOT(graceTimerData()));
+  play_segue_backtime_timer=new QTimer(this);
+  play_segue_backtime_timer->setSingleShot(true);
+  connect(play_segue_backtime_timer,SIGNAL(timeout()),
+	  this,SLOT(segueBacktimeData()));
 }
 
 
@@ -1567,6 +1571,61 @@ void RDLogPlay::segueStartData(int id)
   }
   if((play_op_mode==RDAirPlayConf::Auto)&&
      ((next_logline->transType()==RDLogLine::Segue))&&
+     (logline->status()==RDLogLine::Playing)&&
+     (logline->id()!=-1)) {
+    //
+    // Segue back-timing: if A ("logline") has "No fade on segue out" set
+    // (segueGain()==0), delay firing B so B's intro lands when A's tail
+    // actually finishes, instead of firing B the instant A hits its
+    // segue marker. See docs/specs/0002-segue-backtiming.md.
+    //
+    int backtime=0;
+    if(logline->segueGain()==0) {
+      backtime=logline->segueTail(next_logline->transType())-
+	next_logline->talkStartPoint();
+      if(backtime<0) {
+	backtime=0;
+      }
+    }
+    if(backtime>0) {
+      play_segue_backtime_id=id;
+      play_segue_backtime_timer->start(backtime);
+      return;
+    }
+    if(!GetNextPlayable(&play_next_line,false)) {
+      return;
+    }
+    StartEvent(play_next_line,next_logline->transType(),
+	       logline->segueTail(next_logline->transType()),
+	       RDLogLine::StartSegue,-1,
+	       logline->segueTail(next_logline->transType()));
+    SetTransTimer();
+  }
+}
+
+
+void RDLogPlay::segueBacktimeData()
+{
+#ifdef SHOW_SLOTS
+  printf("segueBacktimeData()\n");
+#endif
+  int line=GetLineById(play_segue_backtime_id);
+  RDLogLine *logline;
+  RDLogLine *next_logline=nextEvent();
+  if(next_logline==NULL) {
+    return;
+  }
+  if((logline=logLine(line))==NULL) {
+    return;
+  }
+  //
+  // Re-validate: several seconds may have passed since the delay was
+  // armed in segueStartData() above -- the operator may have stopped A,
+  // skipped, or left Auto mode in the meantime. If anything no longer
+  // holds, do nothing rather than fire a stale transition.
+  //
+  if((play_op_mode==RDAirPlayConf::Auto)&&
+     (next_logline->transType()==RDLogLine::Segue)&&
      (logline->status()==RDLogLine::Playing)&&
      (logline->id()!=-1)) {
     if(!GetNextPlayable(&play_next_line,false)) {
