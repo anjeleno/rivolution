@@ -7,6 +7,13 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-17
 
+- Added segue back-timing: when the outgoing element in a segue has
+  "No fade on segue out" checked, the next element's start is now
+  delayed (when needed) so its intro lands exactly when the outgoing
+  element's tail finishes, instead of firing instantly at the segue
+  marker regardless of how much lead-in the next element has. No
+  effect when "No fade on segue out" is unchecked. See
+  `docs/specs/0002-segue-backtiming.md`.
 - Added selectable MP3 (MPEG Layer III) as an import coding format,
   alongside the existing PCM16/PCM24/MPEG Layer II options: a new
   `--audio-format=<0|1|2|3>` flag on `rdimport`, a matching override on
