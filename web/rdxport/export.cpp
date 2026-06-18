@@ -135,6 +135,42 @@ void Xport::Export()
   }
 
   //
+  // True passthrough: unconditional whenever the stored cut is genuinely
+  // MP3 (MPEG audio layer 3) and the requested export format is also MP3,
+  // *and* nothing else was asked of the export (full cut, no forced-length
+  // speed adjustment, no normalization, no embedded RDXL metadata) -- any
+  // of those require the real RDAudioConvert pipeline, so passthrough
+  // simply doesn't apply and the normal path below runs exactly as before.
+  //
+  bool source_is_mp3=false;
+  RDWaveFile *srcwave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
+  if(srcwave->openWave()) {
+    source_is_mp3=(srcwave->getHeadLayer()==3);
+  }
+  delete srcwave;
+  bool do_passthrough=source_is_mp3&&(settings->format()==RDSettings::MpegL3)&&
+    (start_point<0)&&(end_point<0)&&(speed_ratio==1.0)&&
+    (wavedata==NULL)&&(normalization_level==0);
+  if(do_passthrough) {
+    int pt_fd;
+    ssize_t pt_n;
+    uint8_t pt_data[2048];
+    printf("Content-type: audio/x-mpeg\n\n");
+    fflush(NULL);
+    if((pt_fd=open(RDCut::pathName(cartnum,cutnum).toUtf8(),O_RDONLY))<0) {
+      delete settings;
+      XmlExit("Unable to access source file",500,"export.cpp",LINE_NUMBER,
+	      RDAudioConvert::ErrorNoSource);
+    }
+    while((pt_n=read(pt_fd,pt_data,2048))>0) {
+      RDCheckReturnCode("Export() write",write(1,pt_data,pt_n),pt_n);
+    }
+    close(pt_fd);
+    delete settings;
+    Exit(0);
+  }
+
+  //
   // Export Cut
   //
   int fd;

@@ -100,6 +100,7 @@ class EditDropbox : public RDDialog
   QSpinBox *box_create_enddate_offset_spin;
   QLabel *box_create_enddate_label;
   QLabel *box_create_enddate_unit;
+  QComboBox *box_coding_format_box;
   QCheckBox *box_segue_box;
   QSpinBox *box_segue_level_spin;
   QLabel *box_segue_level_label;

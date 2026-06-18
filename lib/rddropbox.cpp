@@ -86,6 +86,7 @@ int RDDropbox::duplicate() const
   new_box->setCreateEnddateOffset(createEnddateOffset());
   new_box->setSegueLevel(segueLevel());
   new_box->setSegueLength(segueLength());
+  new_box->setCodingFormat(codingFormat());
 
   delete new_box;
 
@@ -409,6 +410,18 @@ int RDDropbox::segueLength() const
 void RDDropbox::setSegueLength(int length) const
 {
   SetRow("SEGUE_LENGTH",length);
+}
+
+
+int RDDropbox::codingFormat() const
+{
+  return RDGetSqlValue("DROPBOXES","ID",box_id,"CODING_FORMAT").toInt();
+}
+
+
+void RDDropbox::setCodingFormat(int format) const
+{
+  SetRow("CODING_FORMAT",format);
 }
 
 

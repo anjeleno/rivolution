@@ -252,7 +252,8 @@ bool MainObject::StartDropboxes(QString *err_msg)
     "`SEND_EMAIL`,"+               // 24
     "`UPDATE_METADATA`,"+          // 25
     "`DROP_BOX_SCAN_COUNT`,"+      // 26
-    "`DROP_BOX_SCAN_INTERVAL` "+   // 27
+    "`DROP_BOX_SCAN_INTERVAL`,"+   // 27
+    "`CODING_FORMAT` "+            // 28
     "from `DROPBOXES` where "+
     "`STATION_NAME`='"+RDEscapeString(rda->config()->stationName())+"'";
   q=new RDSqlQuery(sql);
@@ -318,6 +319,10 @@ bool MainObject::StartDropboxes(QString *err_msg)
     if(q->value(27).toUInt()>0) {
       args.push_back(QString::asprintf("--drop-box-scan-interval=%d",
 				       q->value(27).toUInt()));
+    }
+    if(q->value(28).toInt()>=0) {
+      args.push_back(QString::asprintf("--audio-format=%d",
+				       q->value(28).toInt()));
     }
     if(q->value(17).toString()=="Y") {
       args.push_back(QString::asprintf("--create-startdate-offset=%d",

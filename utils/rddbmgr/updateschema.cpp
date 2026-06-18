@@ -11911,6 +11911,16 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
   }
 
 
+  if((cur_schema<378)&&(set_schema>cur_schema)) {
+    sql=QString("alter table `DROPBOXES` ")+
+      "add column `CODING_FORMAT` int default -1 after `DROP_BOX_SCAN_INTERVAL`";
+    if(!RDSqlQuery::apply(sql,err_msg)) {
+      return false;
+    }
+
+    WriteSchemaVersion(++cur_schema);
+  }
+
 
   // NEW SCHEMA UPDATES GO HERE...
 

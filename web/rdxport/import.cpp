@@ -23,6 +23,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <QFile>
+
 #include <rdapplication.h>
 #include <rdaudioconvert.h>
 #include <rdcart.h>
@@ -86,6 +88,10 @@ void Xport::Import()
   int create=0;
   if(!xport_post->getValue("CREATE",&create)) {
     create=0;
+  }
+  int format_override=-1;
+  if(!xport_post->getValue("FORMAT",&format_override)) {
+    format_override=-1;
   }
   QString group_name;
   xport_post->getValue("GROUP_NAME",&group_name);
@@ -178,7 +184,11 @@ void Xport::Import()
   }
   RDLibraryConf *conf=new RDLibraryConf(rda->config()->stationName());
   RDSettings *settings=new RDSettings();
-  switch(conf->defaultFormat()) {
+  unsigned effective_format=conf->defaultFormat();
+  if((format_override>=0)&&(format_override<=3)) {
+    effective_format=format_override;
+  }
+  switch(effective_format) {
   case 0:
     settings->setFormat(RDSettings::Pcm16);
     break;
@@ -189,6 +199,10 @@ void Xport::Import()
 
   case 2:
     settings->setFormat(RDSettings::Pcm24);
+    break;
+
+  case 3:
+    settings->setFormat(RDSettings::MpegL3);
     break;
   }
   settings->setChannels(channels);
@@ -201,6 +215,7 @@ void Xport::Import()
     delete wave;
     XmlExit("Format Not Supported",415,"import.cpp",LINE_NUMBER);
   }
+  bool source_is_mp3=(wave->getHeadLayer()==3);
   delete wave;
   if(use_metadata) {
     if((!rda->system()->allowDuplicateCartTitles())&&
@@ -209,57 +224,106 @@ void Xport::Import()
       XmlExit("Duplicate Cart Title Not Allowed",404,"import.cpp",LINE_NUMBER);
     }
   }
-  RDAudioConvert *conv=new RDAudioConvert();
-  conv->setSourceFile(filename);
-  conv->setDestinationFile(RDCut::pathName(cartnum,cutnum));
-  conv->setDestinationSettings(settings);
-  RDAudioConvert::ErrorCode conv_err=conv->convert();
-  switch(conv_err) {
-  case RDAudioConvert::ErrorOk:
+
+  //
+  // True passthrough: unconditional whenever the source is genuinely MP3
+  // (MPEG audio layer 3) and the effective target format is also MP3 --
+  // there is never a reason to decode and re-encode an MP3 back to MP3.
+  // Otherwise fall through to the normal conversion path below.
+  //
+  bool do_passthrough=source_is_mp3&&(effective_format==3);
+  RDAudioConvert::ErrorCode conv_err=RDAudioConvert::ErrorOk;
+  RDAudioConvert *conv=NULL;
+  if(do_passthrough) {
+    if(autotrim_level!=0) {
+      rda->syslog(LOG_WARNING,
+		 "rdxport: ignoring autotrim level for passthrough import "
+		 "of cart %d, cut %d",cartnum,cutnum);
+    }
+    if(normalization_level!=0) {
+      rda->syslog(LOG_WARNING,
+		 "rdxport: ignoring normalization level for passthrough "
+		 "import of cart %d, cut %d",cartnum,cutnum);
+    }
+    if(!QFile::copy(filename,RDCut::pathName(cartnum,cutnum))) {
+      XmlExit("Unable to write imported file",500,"import.cpp",LINE_NUMBER,
+	      RDAudioConvert::ErrorNoDestination);
+    }
     wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
     if(wave->openWave()) {
       msecs=wave->getExtTimeLength();
     }
     else {
       delete wave;
-      XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER);
+      XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER,
+	      RDAudioConvert::ErrorNoDestination);
     }
     delete wave;
     cut->checkInRecording(rda->config()->stationName(),rda->user()->name(),
 			  remote_host,settings,msecs);
     if(use_metadata>0) {
-      cart->setMetadata(conv->sourceWaveData());
+      cart->setMetadata(&wavedata);
     }
-    cut->setMetadata(conv->sourceWaveData(),use_metadata);
-    if(autotrim_level!=0) {
-      cut->autoTrim(RDCut::AudioBoth,100*autotrim_level);
-    }
+    cut->setMetadata(&wavedata,use_metadata);
     cart->updateLength();
     cart->resetRotation();
     cart->calculateAverageLength(&length_deviation);
     cart->setLengthDeviation(length_deviation);
     resp_code=200;
-    break;
+  }
+  else {
+    conv=new RDAudioConvert();
+    conv->setSourceFile(filename);
+    conv->setDestinationFile(RDCut::pathName(cartnum,cutnum));
+    conv->setDestinationSettings(settings);
+    conv_err=conv->convert();
+    switch(conv_err) {
+    case RDAudioConvert::ErrorOk:
+      wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
+      if(wave->openWave()) {
+	msecs=wave->getExtTimeLength();
+      }
+      else {
+	delete wave;
+	XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER);
+      }
+      delete wave;
+      cut->checkInRecording(rda->config()->stationName(),rda->user()->name(),
+			    remote_host,settings,msecs);
+      if(use_metadata>0) {
+	cart->setMetadata(conv->sourceWaveData());
+      }
+      cut->setMetadata(conv->sourceWaveData(),use_metadata);
+      if(autotrim_level!=0) {
+	cut->autoTrim(RDCut::AudioBoth,100*autotrim_level);
+      }
+      cart->updateLength();
+      cart->resetRotation();
+      cart->calculateAverageLength(&length_deviation);
+      cart->setLengthDeviation(length_deviation);
+      resp_code=200;
+      break;
 
-  case RDAudioConvert::ErrorFormatNotSupported:
-  case RDAudioConvert::ErrorInvalidSettings:
-    resp_code=415;
-    break;
+    case RDAudioConvert::ErrorFormatNotSupported:
+    case RDAudioConvert::ErrorInvalidSettings:
+      resp_code=415;
+      break;
 
-  case RDAudioConvert::ErrorNoSource:
-  case RDAudioConvert::ErrorNoDestination:
-  case RDAudioConvert::ErrorInvalidSource:
-  case RDAudioConvert::ErrorInternal:
-  case RDAudioConvert::ErrorNoSpace:
-  case RDAudioConvert::ErrorNoDisc:
-  case RDAudioConvert::ErrorNoTrack:
-  case RDAudioConvert::ErrorInvalidSpeed:
-    resp_code=500;
-    break;
+    case RDAudioConvert::ErrorNoSource:
+    case RDAudioConvert::ErrorNoDestination:
+    case RDAudioConvert::ErrorInvalidSource:
+    case RDAudioConvert::ErrorInternal:
+    case RDAudioConvert::ErrorNoSpace:
+    case RDAudioConvert::ErrorNoDisc:
+    case RDAudioConvert::ErrorNoTrack:
+    case RDAudioConvert::ErrorInvalidSpeed:
+      resp_code=500;
+      break;
 
-  case RDAudioConvert::ErrorFormatError:
-    resp_code=400;
-    break;
+    case RDAudioConvert::ErrorFormatError:
+      resp_code=400;
+      break;
+    }
   }
   if(resp_code==200) {
     cut->setSha1Hash(RDSha1HashFile(RDCut::pathName(cut->cutName())));

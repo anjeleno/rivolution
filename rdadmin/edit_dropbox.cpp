@@ -395,6 +395,21 @@ EditDropbox::EditDropbox(int id,bool duplicate,QWidget *parent)
   connect(box_create_dates_box,SIGNAL(toggled(bool)),
           this,SLOT(createDatesToggledData(bool)));
 
+  //
+  // Target Audio Format
+  //
+  box_coding_format_box=new QComboBox(this);
+  box_coding_format_box->setGeometry(175,606,140,20);
+  box_coding_format_box->insertItem(0,tr("Use Host Default"));
+  box_coding_format_box->insertItem(1,tr("PCM16"));
+  box_coding_format_box->insertItem(2,tr("PCM24"));
+  box_coding_format_box->insertItem(3,tr("MPEG Layer 2"));
+  box_coding_format_box->insertItem(4,tr("MPEG Layer 3"));
+  label=new QLabel(tr("Target Audio Format")+":",this);
+  label->setGeometry(10,606,160,20);
+  label->setFont(labelFont());
+  label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+
 
   //
   //  Reset Button
@@ -469,6 +484,27 @@ EditDropbox::EditDropbox(int id,bool duplicate,QWidget *parent)
   box_segue_box->setChecked(box_dropbox->segueLevel()<1);
   box_segue_level_spin->setValue(box_dropbox->segueLevel()/100);
   box_segue_length_spin->setValue(box_dropbox->segueLength());
+  switch(box_dropbox->codingFormat()) {
+  case 0:  // PCM16
+    box_coding_format_box->setCurrentIndex(1);
+    break;
+
+  case 1:  // MPEG L2
+    box_coding_format_box->setCurrentIndex(3);
+    break;
+
+  case 2:  // PCM24
+    box_coding_format_box->setCurrentIndex(2);
+    break;
+
+  case 3:  // MPEG L3
+    box_coding_format_box->setCurrentIndex(4);
+    break;
+
+  default:  // -1, use host default
+    box_coding_format_box->setCurrentIndex(0);
+    break;
+  }
 
   sql=QString("select `SCHED_CODE` from `DROPBOX_SCHED_CODES` ")+
     QString::asprintf("where `DROPBOX_ID`=%d",box_dropbox->id());
@@ -489,7 +525,7 @@ EditDropbox::EditDropbox(int id,bool duplicate,QWidget *parent)
 
 QSize EditDropbox::sizeHint() const
 {
-  return QSize(490,666);
+  return QSize(490,696);
 } 
 
 
@@ -677,6 +713,27 @@ void EditDropbox::okData()
   else{
     box_dropbox->setSegueLevel(1);
     box_dropbox->setSegueLength(0);
+  }
+  switch(box_coding_format_box->currentIndex()) {
+  case 1:  // PCM16
+    box_dropbox->setCodingFormat(0);
+    break;
+
+  case 2:  // PCM24
+    box_dropbox->setCodingFormat(2);
+    break;
+
+  case 3:  // MPEG L2
+    box_dropbox->setCodingFormat(1);
+    break;
+
+  case 4:  // MPEG L3
+    box_dropbox->setCodingFormat(3);
+    break;
+
+  default:  // Use Host Default
+    box_dropbox->setCodingFormat(-1);
+    break;
   }
 
   sql=QString("delete from `DROPBOX_SCHED_CODES` where ")+

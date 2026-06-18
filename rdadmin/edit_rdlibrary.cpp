@@ -385,6 +385,7 @@ EditRDLibrary::EditRDLibrary(RDStation *station,RDStation *cae_station,
   lib_format_box->insertItem(0,tr("PCM16"));
   lib_format_box->insertItem(1,tr("PCM24"));
   lib_format_box->insertItem(2,tr("MPEG Layer 2"));
+  lib_format_box->insertItem(3,tr("MPEG Layer 3"));
   switch(lib_lib->defaultFormat()) {
   case 0:  // PCM16
     lib_format_box->setCurrentIndex(0);
@@ -399,6 +400,11 @@ EditRDLibrary::EditRDLibrary(RDStation *station,RDStation *cae_station,
   case 2:  // PCM24
     lib_format_box->setCurrentIndex(1);
     ShowBitRates(1,lib_lib->defaultBitrate());
+    break;
+
+  case 3:  // MPEG L3
+    lib_format_box->setCurrentIndex(3);
+    ShowBitRates(3,lib_lib->defaultBitrate());
     break;
   }
   lib_recmode_box->insertItem(0,tr("Manual"));
@@ -518,10 +524,14 @@ void EditRDLibrary::okData()
   case 2:  // MPEG L2
     lib_lib->setDefaultFormat(1);
     break;
+
+  case 3:  // MPEG L3
+    lib_lib->setDefaultFormat(3);
+    break;
   }
   lib_lib->setDefaultChannels(lib_channels_box->currentIndex()+1);
   rate=0;
-  if(lib_format_box->currentIndex()==2) {
+  if((lib_format_box->currentIndex()==2)||(lib_format_box->currentIndex()==3)) {
     rate=lib_bitrate_box->currentText().toInt();
   }
   lib_lib->setDefaultBitrate(rate*1000);
@@ -570,6 +580,7 @@ void EditRDLibrary::ShowBitRates(int layer,int rate)
     lib_bitrate_box->setDisabled(true);
     break;
 
+  case 3:  // MPEG-1 Layer 3 (MP3)
   case 2:  // MPEG-1 Layer 2
     lib_bitrate_box->setEnabled(true);
     lib_bitrate_box->insertItem(lib_bitrate_box->count(),"32");
