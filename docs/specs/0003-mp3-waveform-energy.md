@@ -234,13 +234,59 @@ migration of already-imported MP3 cuts. Any MP3 imported before this
 change simply gets a real waveform the next time it's re-imported,
 same as the existing behavior for any other format gap.
 
-## Open items for implementation time
+## Implementation deviations from this spec
 
-- Confirm `createWave()`'s existing `WAVE_FORMAT_MPEG` case
-  (`rdwavefile.cpp:526`) handles the `MPEGLAYER3`-specific `fmt ` chunk
-  layout correctly, or whether it needs its own case alongside the
-  existing one — re-verify against the 2014 commit's actual chunk
-  layout at implementation time.
-- Re-confirm `RDAudioConvert::Stage3Lame()`'s exact function name/line
-  range immediately before implementing (referenced here from search
-  results, not re-read in full).
+Anything that ends up different from what's written above, with the
+reasoning, goes here — so there's a real reference point if this needs
+revisiting later, rather than relying on chat history.
+
+- **On-disk format code: `WAVE_FORMAT_MPEG` (`0x0050`), not
+  `WAVE_FORMAT_MPEGLAYER3` (`0x0055`).** `createWave()` only has a
+  `WAVE_FORMAT_MPEG` case (`rdwavefile.cpp:530-532`) — there's no
+  separate `MPEGLAYER3` case to use. The existing Layer II encoder path
+  (`rdaudioconvert.cpp:1616-1635`, the `TwoLame` destination) already
+  establishes the precedent for this codebase: write
+  `format_tag=WAVE_FORMAT_MPEG` directly with `setHeadLayer()` set
+  explicitly, rather than using the `MPEGLAYER3` code at all.
+  `GetFmt()`'s read-back path (`rdwavefile.cpp:2630`) then reads
+  `head_layer` straight from the embedded `fmt ` chunk bytes for
+  `WAVE_FORMAT_MPEG` — no frame-sniffing needed, since this code wrote
+  those bytes correctly itself. The `MPEGLAYER3` code (`0x0055`) stays
+  relevant only for *reading* files some other, external encoder
+  produced with that code — `GetFmt()` still frame-sniffs and
+  normalizes those to `WAVE_FORMAT_MPEG` internally, per the original
+  2014 support. Functionally equivalent either way for everything that
+  matters here; this is a closed, verified decision now, not still
+  open.
+- **No `cart`/`bext`/`mext`/`rdxl` chunks embedded in the new
+  WAV-wrapped file.** Checked against every existing import path before
+  deciding, not assumed: `web/rdxport/import.cpp`'s normal
+  (non-passthrough) `RDAudioConvert`-based path never calls
+  `setDestinationWaveData()`, `setDestinationRdxl()`,
+  `setCartChunk()`, or `setBextChunk()` either — for every import path
+  that exists today, PCM or Vorbis included, cart/cut metadata lives
+  only in the SQL database, never embedded in the file. Leaving them
+  off here matches that existing precedent exactly rather than
+  introducing new behavior. `mext` specifically isn't a real option at
+  all for Layer III — it's the Layer-II-specific ancillary-energy
+  byte-position convention from item 1 above, with no defined meaning
+  outside Layer II. Decided explicitly (2026-06-20), after being raised
+  as an open question rather than decided unilaterally.
+
+  **Declined for now, left here for potential future expansion** —
+  two narrower options exist if file-embedded metadata is ever wanted
+  for MP3 imports specifically (this would still be new behavior versus
+  every other import path, not something to slip in quietly):
+  - *Add `cart` + `bext` only*: embeds Rivendell's own cart/cut fields
+    plus the industry-standard Broadcast Wave Format chunk, so the
+    metadata travels with the file if it's copied or exported
+    elsewhere. Both already have working setters
+    (`setCartChunk()`/`setBextChunk()`) and populate from `wavedata`,
+    which `import.cpp` already parses from the source file — no new
+    parsing needed, just two setter calls before `createWave()`.
+  - *Add `cart` + `bext` + `rdxl`*: also includes a full XML snapshot
+    of the cart's database record, mirroring what
+    `export.cpp:132` already does on the export side
+    (`cart->xml(true,...)` via `setDestinationRdxl()`). The more
+    complete option, and the largest deviation from current import
+    behavior of the three.
