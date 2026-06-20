@@ -67,6 +67,38 @@ than bundling it into the import-feature work).
 **Needs to be fixed before any public install** — can't assume every
 future submitter/station will always encode at the system rate.
 
+## Log generation doesn't exclude kill-dated carts from rotation — likely a regression
+
+**High priority** — flagged 2026-06-19 as needing a fix soon, not
+deferred indefinitely like the other entries here.
+
+A promo cart (cart 064721, "Live at Swan Dive LV") had a kill date of
+8PM the next day. A script that auto-generates the music log three
+days out kept scheduling that same cart into logs for days *after* its
+kill date had already passed, instead of excluding it from rotation
+and picking another active cart in the same category. The result
+wasn't a quiet skip — the scheduler placed the expired cart into the
+log anyway, and the Log Exception Report then flagged every one of
+those slots as "is not playable" (20 exceptions in one observed case,
+for log `2026_06_23`).
+
+Manually swapping the expired promo for an active one in the rotation
+fixed the report for logs generated *after* the swap — but the
+underlying bug isn't really about any one already-generated log: as
+long as an expired cart remains a member of a category's rotation, the
+scheduler will keep selecting it for any newly-generated log, kill date
+or not. Suspected regression — reported as not happening in earlier
+Rivendell versions, though not yet bisected to confirm or to a specific
+upstream change.
+
+**Current mitigation:** manually remove/replace kill-dated carts from
+their rotation category before they expire, rather than relying on the
+scheduler to skip them automatically. See `KNOWN_ISSUES.md` for the
+user-facing version.
+
+**Deferred for now** at the reporter's request — not investigated yet,
+but tracked here as the next thing to pick up given the priority.
+
 ## xrdp/dbus session-bus bug after a host reboot or xrdp restart
 
 "Could not acquire name on session bus" black-screen error, hit

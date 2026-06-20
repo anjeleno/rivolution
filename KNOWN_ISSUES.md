@@ -38,6 +38,26 @@ the server for a long-running `rdxport.cgi` process consuming CPU and
 kill it manually; any partial cart/cut it left behind should be deleted
 through RDLibrary (not raw SQL) to keep bookkeeping consistent.
 
+## Log Exception Report shows "is not playable" for kill-dated carts
+
+**Symptom:** generating a log for a date after a cart's kill date has
+passed produces validation exceptions like
+`cart 064721 [...] is not playable`, repeated for every slot the
+scheduler tried to place it in — rather than the scheduler simply
+skipping that cart and rotating in another active one from the same
+category.
+
+**Cause:** the log scheduler isn't excluding kill-dated carts from
+rotation before generating the log. Suspected regression (see
+`BACKLOG.md`) — flagged high priority, not yet fixed.
+
+**Workaround:** before a cart's kill date arrives, manually remove or
+replace it in its rotation category rather than relying on the
+scheduler to exclude it automatically. If a log was already generated
+with the exceptions present, replacing the cart and regenerating the
+log clears that specific report — but the underlying rotation will keep
+selecting any other not-yet-removed expired cart the same way.
+
 ## No waveform/peak display for MP3 cuts
 
 **Symptom:** carts containing MP3-format audio show no waveform in
