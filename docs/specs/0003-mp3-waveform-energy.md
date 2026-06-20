@@ -155,7 +155,60 @@ differently:
   function; nothing about the passthrough principle (no decode/
   re-encode) or playback is at risk anywhere.
 
-### 5. Tests
+**Why `format=MpegL3` keeps meaning "real, standalone MP3," not
+negotiable here:** `RD_Export`'s `format` parameter is part of
+Rivendell's documented, externally-facing Web API
+(`docs/rivwebcapi/rd_export.xml`) — not an internal-only call. Any
+third-party integrator calling this API today with `format=MpegL3` is
+relying on getting back literal MP3 bytes, because that's what the
+documented format name means. Changing what that specific, named,
+already-public format value returns would silently break that contract
+for any unknown external caller. The wrapped-file-with-embedded-peaks
+benefit is real, but it doesn't require bending this contract to get
+it — see below.
+
+### 5. Future extension (not in this pass): a distinct `MpegL3Wav` export option
+
+A WAV-wrapped MP3 with its LEVL chunk intact is genuinely more useful
+than a bare MP3 for system-to-system transfer — any Rivendell-aware
+consumer that already has direct access to the audio store (a sync,
+backup, or migration tool) gets this for free once storage is
+WAV-wrapped, with no API involved. For HTTP `RD_Export` callers who
+specifically want that richer file instead of a bare one, the right
+shape is a **new, distinct, opt-in format value** — not a change to
+what `MpegL3` already means.
+
+The naming convention for exactly this already exists in this
+codebase: `RDSettings::Format` (`lib/rdsettings.h:31-32`) already has
+`MpegL2Wav=6` alongside `MpegL2=2`. A new `MpegL3Wav` value would
+follow that precedent.
+
+**Important distinction, checked against the existing code rather than
+assumed:** `MpegL2Wav` is *not* a passthrough option today — confirmed
+at `web/rdxport/export.cpp:200-213`, requesting it runs the full
+`RDAudioConvert::convert()` transcode pipeline, a general "encode to
+this target format from any source" path. Mirroring that fully for
+`MpegL3Wav` is **not trivial**: Rivendell has no MP3 *encoder* path
+that writes through `RDWaveFile` at all (LAME's output is raw
+`open()`/`write()`, bypassing the WAV-wrapping machinery entirely —
+see item 1 above — and even fixing that only covers encoding from PCM,
+not a generic "wrap arbitrary source content as Layer III" target,
+which doesn't exist).
+
+What *would* be small, once the core mechanism in this spec is built
+and verified: a narrower, passthrough-only version of `MpegL3Wav` —
+when requested *and* the cut is already stored WAV-wrapped (true for
+any MP3 imported after this spec lands), serve the raw stored bytes
+exactly as today's `MpegL3` passthrough does, just without the unwrap
+step. Same byte-copy loop already in this spec, gated on a different
+format value. If the cut isn't already in that shape, there's no
+sensible fallback — no encode target exists to produce one on demand.
+
+Deliberately sequenced *after* the rest of this spec, not alongside
+it — it depends entirely on the storage-wrapping and LEVL-extension
+work actually landing and being verified correct first.
+
+### 6. Tests
 
 `tests/audio_peaks_test.cpp` currently has no MP3 case (no existing
 automated test covers `LoadEnergy()` directly for any format). Add one
