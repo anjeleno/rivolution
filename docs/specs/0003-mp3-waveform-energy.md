@@ -208,11 +208,18 @@ Deliberately sequenced *after* the rest of this spec, not alongside
 it — it depends entirely on the storage-wrapping and LEVL-extension
 work actually landing and being verified correct first.
 
-### 6. Tests
+### 6. Verification
 
-`tests/audio_peaks_test.cpp` currently has no MP3 case (no existing
-automated test covers `LoadEnergy()` directly for any format). Add one
-alongside the implementation.
+Corrected after actually reading the file (2026-06-20) — the original
+wording here ("add an MP3 case") assumed `tests/audio_peaks_test.cpp`
+was a unit test with assertions. It isn't: it's a manual diagnostic
+CLI (`--filename`, `--frame`), already fully format-agnostic, since it
+only calls the generic `hasEnergy()`/`energySize()`/`energy()` API —
+no format-specific code exists in it to extend. Nothing to add here;
+once a real WAV-wrapped MP3 exists (imported or LAME-encoded through
+the new code), running this existing tool against it is the
+verification step, exercising `LoadEnergyMpegLayer3()` automatically
+with zero changes to the tool itself.
 
 ## Confirmed out of scope
 
