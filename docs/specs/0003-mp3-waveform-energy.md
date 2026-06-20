@@ -131,16 +131,29 @@ the file's own LEVL chunk exactly as it already does for PCM and
 Layer II — read back on next open via `GetLevl()`, no re-decode needed
 after the first computation.
 
-### 4. Export-side follow-on (required, not optional)
+### 4. Export-side follow-on (required, not optional) — and why playback is unaffected
 
-`web/rdxport/export.cpp`'s passthrough branch currently streams the
-stored file's raw bytes directly as `audio/x-mpeg`. Once storage is
-WAV-wrapped, this must change to strip the wrapper and stream only the
-inner MPEG frame data — otherwise a passthrough export hands back a
-RIFF-wrapped file instead of a real, standalone, playable `.mp3`. This
-preserves "export gives you back a real MP3" exactly as it behaves
-today; only the *on-disk storage* format changes, not what a client
-requesting an export receives.
+Two genuinely different consumers of the stored file, affected
+differently:
+
+- **Playback** (`cae/driver_alsa.cpp`'s MPEG path, via `RDWaveFile`):
+  no change needed. `RDWaveFile` already parses the WAV wrapper and
+  locates `data_start` before handing frame bytes to the decoder —
+  exactly what the existing `WAVE_FORMAT_MPEGLAYER3` support already
+  does. Playback never sees or cares about the wrapper.
+- **`web/rdxport/export.cpp`'s passthrough branch** does not go
+  through `RDWaveFile` at all — it's a container-unaware byte-range
+  copy (`open()`/`read()`/`write(1,...)` of the stored file from byte
+  0 to EOF, labeled `Content-type: audio/x-mpeg`). Once storage is
+  WAV-wrapped, this one function would ship the entire wrapped file —
+  RIFF header, `fmt ` chunk, and a LEVL chunk that could be hundreds of
+  KB on a long file — to whatever external client requested "an MP3
+  export," mislabeled as a bare MPEG stream. This needs to change to
+  strip the wrapper and stream only the inner MPEG frame data, so a
+  passthrough export still hands back a real, standalone, playable
+  `.mp3` exactly as it does today. Narrowly scoped to this one
+  function; nothing about the passthrough principle (no decode/
+  re-encode) or playback is at risk anywhere.
 
 ### 5. Tests
 
@@ -159,16 +172,17 @@ alongside the implementation.
 - The MEXT/ancillary-energy-read mechanism for third-party-encoded
   Layer II files — separate, pre-existing, untouched by this work.
 
+## Confirmed decision: no migration path
+
+This is a pre-production dev environment on a private repo, not yet
+used anywhere in production — there are no existing MP3 cuts that need
+preserving or migrating. Decided explicitly (2026-06-20): no one-time
+migration of already-imported MP3 cuts. Any MP3 imported before this
+change simply gets a real waveform the next time it's re-imported,
+same as the existing behavior for any other format gap.
+
 ## Open items for implementation time
 
-- **Backward compatibility for already-imported MP3 cuts**: cuts
-  imported via passthrough *before* this change are bare elementary
-  streams with no LEVL chunk. Decide explicitly whether to (a) leave
-  them with no waveform until re-imported/re-saved, matching today's
-  behavior for any pre-existing MP3, or (b) write a one-time migration
-  that re-wraps existing passthrough MP3 cuts in place. Not yet
-  decided — needs a decision before implementation, not an assumption
-  made during it.
 - Confirm `createWave()`'s existing `WAVE_FORMAT_MPEG` case
   (`rdwavefile.cpp:526`) handles the `MPEGLAYER3`-specific `fmt ` chunk
   layout correctly, or whether it needs its own case alongside the
