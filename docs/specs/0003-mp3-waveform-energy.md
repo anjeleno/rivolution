@@ -290,3 +290,27 @@ revisiting later, rather than relying on chat history.
     (`cart->xml(true,...)` via `setDestinationRdxl()`). The more
     complete option, and the largest deviation from current import
     behavior of the three.
+
+- **New public method: `RDWaveFile::updateEnergy(const int16_t *pcm)`.**
+  Item 1's LAME-encoder change (`RDAudioConvert::Stage3Layer3()`)
+  needed a way to measure energy from the *source* PCM as LAME
+  consumes it, rather than by decoding the encoded MP3 back afterward
+  (chosen explicitly over the redecode approach: more efficient, no
+  redundant decode pass, and measures the true source signal rather
+  than the lossy-recompressed one). `RDWaveFile` had no existing way
+  for an external caller to feed it pre-computed samples — every other
+  energy path either reads its own file (`LoadEnergy()`) or tracks
+  bytes as they're written internally (`writeWave()`'s Layer II
+  branch). This is a genuinely new piece of public API surface on
+  `RDWaveFile`, raised and confirmed explicitly (2026-06-20) rather than
+  added silently. Mirrors `LoadEnergy()`'s existing PCM16
+  peak-comparison convention exactly (one call per full 1152-frame
+  block; a trailing partial block is simply never measured, matching
+  every other format), just fed from outside instead of read from the
+  file. `Stage3Layer3()` also now mirrors `Stage3Layer2Wav()`'s
+  existing `cart`/`bext`/`rdxl` embedding pattern (confirmed
+  2026-06-20) and, since it's WAV-wrapped now rather than a bare
+  stream, no longer calls `ApplyId3Tag()` — confirmed against
+  `Stage3Layer2Wav()`, which never called it either, since
+  `TagLib::MPEG::File` expects a bare elementary stream and would not
+  behave correctly against a RIFF container.
