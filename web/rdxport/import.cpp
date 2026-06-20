@@ -253,10 +253,48 @@ void Xport::Import()
 		 "rdxport: ignoring normalization level for passthrough "
 		 "import of cart %d, cut %d",cartnum,cutnum);
     }
-    if(!QFile::copy(filename,RDCut::pathName(cartnum,cutnum))) {
+    //
+    // Copy the source's MPEG frame data verbatim into a WAV-wrapped
+    // destination -- the audio bitstream itself is never decoded or
+    // re-encoded, only the container changes, so this stays a true
+    // passthrough. Wrapping it lets LEVL energy data (computed below)
+    // persist in the file's own header, the same mechanism PCM/Layer II
+    // already use -- a bare elementary stream has no header to put it in.
+    //
+    RDWaveFile *src_wave=new RDWaveFile(filename);
+    if(!src_wave->openWave()) {
+      delete src_wave;
+      XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER,
+	      RDAudioConvert::ErrorNoDestination);
+    }
+    RDWaveFile *dst_wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
+    dst_wave->setFormatTag(WAVE_FORMAT_MPEG);
+    dst_wave->setChannels(src_wave->getChannels());
+    dst_wave->setSamplesPerSec(src_wave->getSamplesPerSec());
+    dst_wave->setHeadLayer(3);
+    dst_wave->setHeadBitRate(src_wave->getHeadBitRate());
+    dst_wave->setHeadMode(src_wave->getHeadMode());
+    dst_wave->setLevlChunk(true);
+    if(!dst_wave->createWave(&wavedata)) {
+      delete src_wave;
+      delete dst_wave;
       XmlExit("Unable to write imported file",500,"import.cpp",LINE_NUMBER,
 	      RDAudioConvert::ErrorNoDestination);
     }
+    char passthrough_buffer[65536];
+    int passthrough_n;
+    while((passthrough_n=
+	   src_wave->readWave(passthrough_buffer,sizeof(passthrough_buffer)))>
+	  0) {
+      dst_wave->writeWave(passthrough_buffer,passthrough_n);
+    }
+    delete src_wave;
+    dst_wave->hasEnergy();  // Forces the decode-and-measure pass now,
+                            // while we're already paying the I/O cost,
+                            // so closeWave() below has real peak data to
+                            // persist instead of an empty LEVL chunk.
+    dst_wave->closeWave();
+    delete dst_wave;
     wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
     if(wave->openWave()) {
       msecs=wave->getExtTimeLength();

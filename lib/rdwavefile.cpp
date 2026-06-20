@@ -33,6 +33,9 @@
 #include <errno.h>
 #include <assert.h>
 #include <arpa/inet.h>
+#ifdef HAVE_MAD
+#include <dlfcn.h>
+#endif  // HAVE_MAD
 
 #include <typeinfo>
 
@@ -92,6 +95,9 @@ RDWaveFile::RDWaveFile(QString file_name)
   has_energy=false;
   energy_loaded=false;
   energy_ptr=0;
+#ifdef HAVE_MAD
+  mad_handle=NULL;
+#endif  // HAVE_MAD
   for(int i=0;i<FMT_CHUNK_SIZE;i++) {
     fmt_chunk_data[i]=0;
   }
@@ -642,7 +648,8 @@ void RDWaveFile::closeWave(int samples)
 	  // Write levl chunk
 	  //
 	  if(levl_chunk&&((format_tag==WAVE_FORMAT_PCM)||
-			  ((format_tag==WAVE_FORMAT_MPEG)&&(head_layer==2)))) {
+			  ((format_tag==WAVE_FORMAT_MPEG)&&
+			   ((head_layer==2)||(head_layer==3))))) {
 	    levl_version=0;
 	    levl_format=2;
 	    levl_points=1;
@@ -1246,6 +1253,30 @@ int RDWaveFile::readEnergy(unsigned short buf[],int count)
     }
   }
   return 0;
+}
+
+
+void RDWaveFile::updateEnergy(const int16_t *pcm)
+{
+  // Lets a caller that already has raw PCM in hand (e.g. an encoder
+  // feeding a compressed destination, where the encoded bytes alone
+  // can't be measured this way) supply energy data directly, instead
+  // of RDWaveFile computing it by reading its own file. Mirrors the
+  // same per-1152-frame-block peak-comparison convention LoadEnergy()
+  // uses for PCM16 -- callers are expected to call this once per full
+  // 1152-frame block only, same as every other format.
+  for(int j=0;j<channels;j++) {
+    energy_data.push_back(0);
+  }
+  unsigned ei=energy_data.size()-channels;
+  for(int k=0;k<1152;k++) {
+    for(int j=0;j<channels;j++) {
+      if(pcm[k*channels+j]>(int16_t)energy_data[ei+j]) {
+	energy_data[ei+j]=pcm[k*channels+j];
+      }
+    }
+  }
+  has_energy=true;
 }
 
 
@@ -3895,6 +3926,28 @@ bool RDWaveFile::GetMpegHeader(int fd,int offset)
 }
 
 
+#ifdef HAVE_MAD
+bool RDWaveFile::LoadMad()
+{
+  if(mad_handle==NULL) {
+    mad_handle=dlopen("libmad.so.0",RTLD_LAZY);
+  }
+  if(mad_handle==NULL) {
+    return false;
+  }
+  *(void **)(&mad_stream_init)=dlsym(mad_handle,"mad_stream_init");
+  *(void **)(&mad_frame_init)=dlsym(mad_handle,"mad_frame_init");
+  *(void **)(&mad_synth_init)=dlsym(mad_handle,"mad_synth_init");
+  *(void **)(&mad_stream_buffer)=dlsym(mad_handle,"mad_stream_buffer");
+  *(void **)(&mad_frame_decode)=dlsym(mad_handle,"mad_frame_decode");
+  *(void **)(&mad_synth_frame)=dlsym(mad_handle,"mad_synth_frame");
+  *(void **)(&mad_frame_finish)=dlsym(mad_handle,"mad_frame_finish");
+  *(void **)(&mad_stream_finish)=dlsym(mad_handle,"mad_stream_finish");
+  return true;
+}
+#endif  // HAVE_MAD
+
+
 int RDWaveFile::GetAtxOffset(int fd)
 {
   unsigned char buffer[MAX_ATX_HEADER_SIZE];
@@ -4470,10 +4523,13 @@ unsigned RDWaveFile::LoadEnergy()
       has_energy=true;
       return i;
     }
-    else {
-      has_energy=false;
-      return 0;
+#ifdef HAVE_MAD
+    if(head_layer==3) {
+      return LoadEnergyMpegLayer3(energy_size);
     }
+#endif  // HAVE_MAD
+    has_energy=false;
+    return 0;
     break;
 
   case WAVE_FORMAT_PCM:
@@ -4551,6 +4607,113 @@ unsigned RDWaveFile::LoadEnergy()
   }
   return 0;
 }
+
+
+#ifdef HAVE_MAD
+#define LOADENERGY_MAD_BUFSIZE 16384
+unsigned RDWaveFile::LoadEnergyMpegLayer3(unsigned energy_size)
+{
+  unsigned i=0;
+  struct mad_stream mad_stream;
+  struct mad_frame mad_frame;
+  struct mad_synth mad_synth;
+  unsigned char buffer[LOADENERGY_MAD_BUFSIZE];
+  int left_over=0;
+  int fsize;
+  int n;
+  std::vector<short> accum_peak(channels,0);
+  unsigned accum_count=0;
+
+  if(!LoadMad()) {
+    has_energy=false;
+    return 0;
+  }
+
+  mad_stream_init(&mad_stream);
+  mad_frame_init(&mad_frame);
+  mad_synth_init(&mad_synth);
+  fsize=144*head_bit_rate/samples_per_sec;
+
+  while((i<energy_size)&&
+	((n=readWave((char *)buffer+left_over,fsize))>0)) {
+    if((buffer[left_over]==0xff)&&(buffer[2+left_over]&0x02)!=0) {
+      n+=readWave((char *)buffer+left_over+n,1);  // Padding slot
+    }
+    mad_stream_buffer(&mad_stream,buffer,n+left_over);
+    while(i<energy_size) {
+      int thiserr=mad_frame_decode(&mad_frame,&mad_stream);
+      if(thiserr!=0) {
+	if(!MAD_RECOVERABLE(mad_stream.error)) {
+	  break;
+	}
+	continue;
+      }
+      mad_synth_frame(&mad_synth,&mad_frame);
+      for(int s=0;(s<mad_synth.pcm.length)&&(i<energy_size);s++) {
+	for(int ch=0;(ch<channels)&&(ch<mad_synth.pcm.channels);ch++) {
+	  short sample=(short)(mad_f_todouble(mad_synth.pcm.samples[ch][s])*
+				32767.0);
+	  if(sample>accum_peak[ch]) {
+	    accum_peak[ch]=sample;
+	  }
+	}
+	accum_count++;
+	if(accum_count>=1152) {
+	  for(int ch=0;ch<channels;ch++) {
+	    energy_data.push_back(accum_peak[ch]);
+	    accum_peak[ch]=0;
+	    i++;
+	  }
+	  accum_count=0;
+	}
+      }
+    }
+    left_over=mad_stream.bufend-mad_stream.next_frame;
+
+    // Prevent buffer overflow on malformed files. Mirrors the equivalent
+    // guard in RDAudioConvert::Stage1Mpeg().
+    if(left_over+fsize+1>LOADENERGY_MAD_BUFSIZE) {
+      has_energy=true;
+      return i;
+    }
+    memmove(buffer,mad_stream.next_frame,left_over);
+  }
+
+  // Flush the final, sub-frame-sized tail, same as Stage1Mpeg() does.
+  if(i<energy_size) {
+    memset(buffer+left_over,0,MAD_BUFFER_GUARD);
+    mad_stream_buffer(&mad_stream,buffer,MAD_BUFFER_GUARD+left_over);
+    if(mad_frame_decode(&mad_frame,&mad_stream)==0) {
+      mad_synth_frame(&mad_synth,&mad_frame);
+      for(int s=0;(s<mad_synth.pcm.length)&&(i<energy_size);s++) {
+	for(int ch=0;(ch<channels)&&(ch<mad_synth.pcm.channels);ch++) {
+	  short sample=(short)(mad_f_todouble(mad_synth.pcm.samples[ch][s])*
+				32767.0);
+	  if(sample>accum_peak[ch]) {
+	    accum_peak[ch]=sample;
+	  }
+	}
+	accum_count++;
+	if(accum_count>=1152) {
+	  for(int ch=0;ch<channels;ch++) {
+	    energy_data.push_back(accum_peak[ch]);
+	    accum_peak[ch]=0;
+	    i++;
+	  }
+	  accum_count=0;
+	}
+      }
+    }
+  }
+
+  mad_synth_finish(&mad_synth);
+  mad_frame_finish(&mad_frame);
+  mad_stream_finish(&mad_stream);
+
+  has_energy=true;
+  return i;
+}
+#endif  // HAVE_MAD
 
 
 bool RDWaveFile::ReadEnergyFile(QString wave_file_name)

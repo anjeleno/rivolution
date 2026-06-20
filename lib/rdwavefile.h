@@ -38,6 +38,10 @@
 #include <vorbis/vorbisenc.h>
 #endif  // HAVE_VORBIS
 
+#ifdef HAVE_MAD
+#include <mad.h>
+#endif  // HAVE_MAD
+
 #include <rdmp4.h>
 #include <rdringbuffer.h>
 #include <rdsettings.h>
@@ -125,6 +129,7 @@ class RDWaveFile
   unsigned energySize();
   unsigned short energy(unsigned frame);
   int readEnergy(unsigned short buf[],int count);
+  void updateEnergy(const int16_t *pcm);
   int startTrim(int level);
   int endTrim(int level);
   QString getName() const;
@@ -283,6 +288,10 @@ class RDWaveFile
    void ReadId3Metadata();
    bool GetMpegHeader(int fd,int offset);
    int GetAtxOffset(int fd);
+#ifdef HAVE_MAD
+   bool LoadMad();
+   unsigned LoadEnergyMpegLayer3(unsigned energy_size);
+#endif  // HAVE_MAD
    bool GetFlacStreamInfo();
    void ReadFlacMetadata();
    bool MakeFmt();
@@ -390,6 +399,19 @@ class RDWaveFile
    bool mext_ancillary_private;       // Does anc data contain private data?
    unsigned char mext_chunk_data[MEXT_CHUNK_SIZE];
    bool has_energy;                   // Can we produce energy data?
+
+#ifdef HAVE_MAD
+   void *mad_handle;                  // Lazily dlopen()'d -- see LoadMad()
+   void (*mad_stream_init)(struct mad_stream *);
+   void (*mad_frame_init)(struct mad_frame *);
+   void (*mad_synth_init)(struct mad_synth *);
+   void (*mad_stream_buffer)(struct mad_stream *,unsigned char const *,
+			      unsigned long);
+   int (*mad_frame_decode)(struct mad_frame *, struct mad_stream *);
+   void (*mad_synth_frame)(struct mad_synth *, struct mad_frame const *);
+   void (*mad_frame_finish)(struct mad_frame *);
+   void (*mad_stream_finish)(struct mad_stream *);
+#endif  // HAVE_MAD
 
    unsigned char levl_chunk_data[LEVL_CHUNK_SIZE];
    unsigned levl_size;                // Size of LEVL chunk
