@@ -275,6 +275,7 @@ class RDWaveFile
    bool GetBext(int fd);
    bool GetMext(int fd);
    bool GetLevl(int fd);
+   bool PutLevl();
    bool GetList(int fd);
    bool GetScot(int fd);
    bool GetAv10(int fd);

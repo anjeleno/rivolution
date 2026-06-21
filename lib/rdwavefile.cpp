@@ -4469,12 +4469,57 @@ unsigned short RDWaveFile::ReadSword(unsigned char *buffer,unsigned offset)
 }
 
 
+bool RDWaveFile::PutLevl()
+{
+  // Persists energy_data computed on demand by LoadEnergy() back into
+  // the file's own levl chunk, so the next openWave() on this file
+  // finds it via GetLevl() instead of paying the decode-and-measure
+  // cost again. Mirrors closeWave()'s levl-chunk-append byte layout
+  // exactly, but -- unlike closeWave() -- doesn't touch the RIFF/data/
+  // fact chunk sizes, since this file isn't being actively recorded;
+  // it's an existing file just being read.
+  int fd=open(wave_file_name.toUtf8(),O_WRONLY);
+  if(fd<0) {
+    return false;
+  }
+  levl_version=0;
+  levl_format=2;
+  levl_points=1;
+  levl_block_size=1152;
+  levl_channels=channels;
+  levl_frames=energy_data.size()/channels;
+  levl_peak_offset=0xFFFFFFFF;
+  levl_peak_value=0;
+  MakeLevl();
+  lseek(fd,0,SEEK_END);
+  CheckExitCode("RDWaveFile::PutLevl()",write(fd,"levl",4));
+  unsigned lsize=LEVL_CHUNK_SIZE+energy_data.size()*2-8;
+  unsigned char size_buf[4];
+  size_buf[0]=lsize&0xff;
+  size_buf[1]=(lsize>>8)&0xff;
+  size_buf[2]=(lsize>>16)&0xff;
+  size_buf[3]=(lsize>>24)&0xff;
+  CheckExitCode("RDWaveFile::PutLevl()",write(fd,size_buf,4));
+  CheckExitCode("RDWaveFile::PutLevl()",
+		write(fd,levl_chunk_data,LEVL_CHUNK_SIZE-8));
+  unsigned char *sbuf=new unsigned char[2*energy_data.size()];
+  for(unsigned i=0;i<energy_data.size();i++) {
+    WriteSword(sbuf,2*i,(unsigned short)energy_data[i]);
+  }
+  CheckExitCode("RDWaveFile::PutLevl()",write(fd,sbuf,2*energy_data.size()));
+  delete [] sbuf;
+  close(fd);
+  levl_chunk=true;
+  return true;
+}
+
+
 void RDWaveFile::GetEnergy()
 {
   int file_ptr;
 
   ReadEnergyFile(wave_file_name);
-  
+
   if(!levl_chunk) {
     GetLevl(wave_file.handle());
   }
@@ -4486,6 +4531,16 @@ void RDWaveFile::GetEnergy()
   LoadEnergy();
   energy_loaded=true;
   lseek(wave_file.handle(),file_ptr,SEEK_SET);
+
+  // LoadEnergy() only runs when GetLevl() just failed to find an
+  // existing chunk above, so any fresh result here is always new --
+  // persist it so the next view of this cut is fast instead of
+  // re-decoding from scratch every time.
+  if(has_energy&&((format_tag==WAVE_FORMAT_PCM)||
+		  ((format_tag==WAVE_FORMAT_MPEG)&&
+		   ((head_layer==2)||(head_layer==3))))) {
+    PutLevl();
+  }
 }
 
 
@@ -4621,7 +4676,7 @@ unsigned RDWaveFile::LoadEnergyMpegLayer3(unsigned energy_size)
   int left_over=0;
   int fsize;
   int n;
-  std::vector<short> accum_peak(channels,0);
+  std::vector<unsigned short> accum_peak(channels,0);
   unsigned accum_count=0;
 
   if(!LoadMad()) {
@@ -4653,8 +4708,9 @@ unsigned RDWaveFile::LoadEnergyMpegLayer3(unsigned energy_size)
 	for(int ch=0;(ch<channels)&&(ch<mad_synth.pcm.channels);ch++) {
 	  short sample=(short)(mad_f_todouble(mad_synth.pcm.samples[ch][s])*
 				32767.0);
-	  if(sample>accum_peak[ch]) {
-	    accum_peak[ch]=sample;
+	  unsigned short abs_sample=(unsigned short)((sample<0)?-sample:sample);
+	  if(abs_sample>accum_peak[ch]) {
+	    accum_peak[ch]=abs_sample;
 	  }
 	}
 	accum_count++;
@@ -4689,8 +4745,9 @@ unsigned RDWaveFile::LoadEnergyMpegLayer3(unsigned energy_size)
 	for(int ch=0;(ch<channels)&&(ch<mad_synth.pcm.channels);ch++) {
 	  short sample=(short)(mad_f_todouble(mad_synth.pcm.samples[ch][s])*
 				32767.0);
-	  if(sample>accum_peak[ch]) {
-	    accum_peak[ch]=sample;
+	  unsigned short abs_sample=(unsigned short)((sample<0)?-sample:sample);
+	  if(abs_sample>accum_peak[ch]) {
+	    accum_peak[ch]=abs_sample;
 	  }
 	}
 	accum_count++;

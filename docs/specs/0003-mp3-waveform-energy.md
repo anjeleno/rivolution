@@ -321,3 +321,49 @@ revisiting later, rather than relying on chat history.
   `Stage3Layer2Wav()`, which never called it either, since
   `TagLib::MPEG::File` expects a bare elementary stream and would not
   behave correctly against a RIFF container.
+
+- **Found via real testing (2026-06-20): the on-demand fallback never
+  persisted what it computed.** `Xport::ExportPeaks()` (the handler
+  behind the "Edit Markers" waveform display) opens the cut's file via
+  the plain `openWave()` overload, which is hardcoded to `O_RDONLY` at
+  the OS level, and calls `hasEnergy()` → `GetEnergy()` →
+  `LoadEnergy()`/`LoadEnergyMpegLayer3()` when no existing `levl` chunk
+  is found. The only place that wrote the `levl` chunk was
+  `closeWave()`, gated behind `if(recordable)` — a flag only ever true
+  on the actively-encoding import path (`openWave(RDWaveData*)`), never
+  on this read-only view path. So every MP3 imported via a path that
+  doesn't already call `updateEnergy()` during encode (e.g. a
+  same-format passthrough import, which never enters
+  `RDAudioConvert`'s LAME-encode loop at all) silently recomputed its
+  full energy data via MAD decode on *every single view*, ~45 seconds
+  for an hour-long file, with nothing ever written back. Fixed by
+  adding `RDWaveFile::PutLevl()` — a narrow extraction of just
+  `closeWave()`'s `levl`-chunk-append byte layout, deliberately
+  *without* the RIFF/data/fact chunk size updates that surround it
+  there (those assume an actively-recorded file being finalized; wrong
+  and unsafe to redo on an existing file just being read) — called from
+  `GetEnergy()` immediately after a fresh `LoadEnergy()` result, for
+  the same format/layer combination `closeWave()` already gates on.
+  Reaching that call always means `GetLevl()` just failed to find an
+  existing chunk, so any successful result there is guaranteed fresh
+  and safe to persist unconditionally.
+  - Not handled: concurrent first-views of the same freshly-imported
+    cut (two simultaneous `ExportPeaks()` requests both passing the
+    `!levl_chunk` check before either writes) could race and append a
+    chunk twice. Low-probability, low-stakes (worst case: redundant
+    data appended, not corruption of the audio data itself), and no
+    existing locking convention elsewhere in this file to match —
+    deliberately not engineered around.
+
+- **Found via real testing (2026-06-20): `LoadEnergyMpegLayer3()`
+  tracked the wrong thing.** `accum_peak` was `std::vector<short>`
+  initialized to 0, updated only via `if(sample>accum_peak[ch])` — a
+  running maximum of the *signed* sample value, never considering
+  negative excursions, not a true peak/amplitude measurement
+  (`max(abs(sample))`). Changed `accum_peak` to
+  `std::vector<unsigned short>` and the comparison to track
+  `abs(sample)`. (Separately: the near-solid-block waveform appearance
+  reported in the same test session is most likely explained by the
+  source audio genuinely being hot/near-full-scale throughout — a
+  missing-normalization issue upstream of this code, not a bug in peak
+  tracking itself — flagged separately, not fixed here.)
