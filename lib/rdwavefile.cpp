@@ -1262,17 +1262,19 @@ void RDWaveFile::updateEnergy(const int16_t *pcm)
   // feeding a compressed destination, where the encoded bytes alone
   // can't be measured this way) supply energy data directly, instead
   // of RDWaveFile computing it by reading its own file. Mirrors the
-  // same per-1152-frame-block peak-comparison convention LoadEnergy()
-  // uses for PCM16 -- callers are expected to call this once per full
-  // 1152-frame block only, same as every other format.
+  // same per-1152-frame-block abs-value peak-comparison convention
+  // LoadEnergyMpegLayer3() uses -- callers are expected to call this
+  // once per full 1152-frame block only, same as every other format.
   for(int j=0;j<channels;j++) {
     energy_data.push_back(0);
   }
   unsigned ei=energy_data.size()-channels;
   for(int k=0;k<1152;k++) {
     for(int j=0;j<channels;j++) {
-      if(pcm[k*channels+j]>(int16_t)energy_data[ei+j]) {
-	energy_data[ei+j]=pcm[k*channels+j];
+      int16_t sample=pcm[k*channels+j];
+      unsigned short abs_sample=(unsigned short)((sample<0)?-sample:sample);
+      if(abs_sample>energy_data[ei+j]) {
+	energy_data[ei+j]=abs_sample;
       }
     }
   }

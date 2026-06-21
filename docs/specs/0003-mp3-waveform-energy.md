@@ -367,3 +367,42 @@ revisiting later, rather than relying on chat history.
   source audio genuinely being hot/near-full-scale throughout — a
   missing-normalization issue upstream of this code, not a bug in peak
   tracking itself — flagged separately, not fixed here.)
+
+- **Found via pre-build review (2026-06-21): `updateEnergy()` had the
+  same signed-peak bug just fixed in `LoadEnergyMpegLayer3()`, in the
+  one place that bug-fix commit didn't touch.** It compared the raw
+  signed PCM sample against the accumulated peak directly
+  (`pcm[...]>(int16_t)energy_data[ei+j]`), so a block whose loudest
+  excursion was negative-going never registered — worst case, an
+  all-negative block records as silence. This is the function
+  `Stage3Layer3()` calls per-block during LAME encoding, so every
+  MP3 produced via the encode path (not passthrough) had
+  systematically undercounted peaks. Fixed the same way as
+  `LoadEnergyMpegLayer3()`: track `abs(sample)` against an
+  `unsigned short` accumulator.
+
+- **Found via pre-build review (2026-06-21): the passthrough import
+  path's `hasEnergy()` call ran before sample/frame counts existed,
+  silently persisting an empty `levl` chunk forever.** `import.cpp`
+  called `dst_wave->hasEnergy()` right after the raw MPEG-frame copy,
+  while `dst_wave` was still the just-`createWave()`'d, not-yet-closed
+  handle. `LoadEnergy()` needs `getSampleLength()` to compute
+  `energy_size`, but `sample_length` is only ever populated by
+  `openWave()`'s read-side header parsing (`GetFact()`/the
+  `data_length/mpeg_frame_size` fallback) — `createWave()`/`writeWave()`
+  never touch it, so it was still 0. `LoadEnergyMpegLayer3()` therefore
+  returned immediately with zero frames, and `GetEnergy()`'s new
+  persistence step (the previous fix above) wrote that empty result to
+  disk unconditionally via `PutLevl()`. Worse, because `GetEnergy()`'s
+  gate is `if(!levl_chunk)`, once that empty chunk existed on disk, no
+  later view of the cut — including the "Edit Markers" on-demand
+  fallback the previous fix was built to make reliable — would ever
+  retrigger recomputation. Every passthrough-imported MP3 would end up
+  with a permanently blank waveform. Fixed by dropping
+  `dst_wave->setLevlChunk(true)` (so `closeWave()` doesn't write a
+  chunk off of `dst_wave`'s always-empty `energy_data` at all) and
+  moving the forced `hasEnergy()` call to the `wave` handle that
+  already gets opened immediately afterward via plain `openWave()` —
+  by then the file is closed and reopened, so `sample_length` is
+  correctly parsed and the decode-and-measure pass has real data to
+  persist.

@@ -274,7 +274,6 @@ void Xport::Import()
     dst_wave->setHeadLayer(3);
     dst_wave->setHeadBitRate(src_wave->getHeadBitRate());
     dst_wave->setHeadMode(src_wave->getHeadMode());
-    dst_wave->setLevlChunk(true);
     if(!dst_wave->createWave(&wavedata)) {
       delete src_wave;
       delete dst_wave;
@@ -289,15 +288,17 @@ void Xport::Import()
       dst_wave->writeWave(passthrough_buffer,passthrough_n);
     }
     delete src_wave;
-    dst_wave->hasEnergy();  // Forces the decode-and-measure pass now,
-                            // while we're already paying the I/O cost,
-                            // so closeWave() below has real peak data to
-                            // persist instead of an empty LEVL chunk.
     dst_wave->closeWave();
     delete dst_wave;
     wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
     if(wave->openWave()) {
       msecs=wave->getExtTimeLength();
+      // dst_wave above never had real sample/frame counts (those are
+      // only known once a file is closed and reopened), so the
+      // decode-and-measure pass has to happen here instead, against
+      // this freshly-reopened handle, for hasEnergy() (via PutLevl())
+      // to persist real peak data rather than an empty LEVL chunk.
+      wave->hasEnergy();
     }
     else {
       delete wave;
