@@ -5,6 +5,22 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-22
+
+- Fixed: MP3 gain-patch normalization (added 2026-06-21) silently never
+  applied any gain shift. The requested level was read as hundredths of
+  a dB, but every consumer of this setting elsewhere in the pipeline
+  (`RDAudioConvert`'s own normalization, and `rdimport`'s own conversion
+  before sending it over the wire) has always used plain whole dB —
+  e.g. a Dropbox configured for -13dBFS was read as -0.13dB, rounding
+  the computed gain-patch step to zero. `mp3gain` still ran and rewrote
+  some header bytes, so the import completed normally with no error,
+  just a still-unnormalized file. See
+  `docs/specs/0004-mp3-gain-patch.md`.
+- Added the configured Target Audio Format (PCM16/PCM24/MPEG Layer 2/
+  MPEG Layer 3) to the Dropbox-flags dump at the top of `rdimport.log`,
+  alongside the other already-logged per-Dropbox settings.
+
 ## 2026-06-21
 
 - Added MP3 gain-patch normalization: a same-format MP3-to-MP3 import

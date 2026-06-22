@@ -718,6 +718,23 @@ MainObject::MainObject(QObject *parent)
   else {
     Log(LOG_INFO,QString::asprintf(" AutoTrim level = %d dB\n",import_autotrim_level/100));
   }
+  switch(import_format) {
+  case 0:
+    Log(LOG_INFO,QString(" Target Audio Format is PCM16\n"));
+    break;
+
+  case 1:
+    Log(LOG_INFO,QString(" Target Audio Format is MPEG Layer 2\n"));
+    break;
+
+  case 2:
+    Log(LOG_INFO,QString(" Target Audio Format is PCM24\n"));
+    break;
+
+  case 3:
+    Log(LOG_INFO,QString(" Target Audio Format is MPEG Layer 3\n"));
+    break;
+  }
   if(import_cart_number==0) {
     if(import_use_cartchunk_cutid) {
       Log(LOG_INFO,QString(" Destination cart is taken from CartChunk CutID\n"));

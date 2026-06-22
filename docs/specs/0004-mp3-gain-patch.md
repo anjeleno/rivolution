@@ -32,8 +32,8 @@ ratio = exp10f(gain/20.0);
 ```
 
 `normalizationLevel()` (`lib/rdsettings.cpp:161-167`) is a plain `int`,
-hundredths of a dB — e.g. `-1300` means -13.00dBFS — set per-Dropbox via
-the existing RDAdmin UI, never hardcoded anywhere in the pipeline. Peak
+whole dB — e.g. `-13` means -13dBFS — set per-Dropbox via the existing
+RDAdmin UI, never hardcoded anywhere in the pipeline. Peak
 measurement is `fabsf`-based, tracked via `UpdatePeak()`
 (`lib/rdaudioconvert.cpp:2017-2038`), peak-relative dBFS — **not** a
 loudness/RMS measure. Any new normalization mechanism must target the
@@ -131,11 +131,11 @@ decode/convert/encode stage).
 
 API:
 - `setSourceFile(QString)` / `setDestinationFile(QString)`
-- `setNormalizationLevel(int)` — hundredths of dB, same contract as
+- `setNormalizationLevel(int)` — whole dB, same contract as
   `RDSettings::normalizationLevel()`
 - `patch()` → `ErrorCode` (`Ok`, `NotApplicable`, `ClippingRisk`,
   `ToolNotFound`, `ToolError`)
-- `achievedLevel()` — actual level reached (hundredths of dB), valid
+- `achievedLevel()` — actual level reached (whole dB), valid
   after `Ok`, for honest reporting
 
 `patch()` flow (verified against the real installed `mp3gain` 1.6.2,
@@ -316,11 +316,30 @@ per-cut there too rather than only logging it.
     gets `rmdir()`'d at the very end of `Import()`, which fails if
     anything besides the original upload is left in it.
   - Achieved-level logging only fires when the deviation from the
-    requested level exceeds 100 (hundredths of a dB, i.e. >1.00dB) —
-    deliberately above the ~0.75dB (half a `global_gain` step) maximum
-    possible from ordinary discrete-step rounding alone, so the log line
-    only fires on a genuine clipping-safety cap, not on the routine
-    quantization every single gain-patched import has. A
-    successfully-applied, non-capped gain-patch logs nothing at all —
-    consistent with this fork's general preference for quiet success
-    paths.
+    requested level exceeds 1 whole dB — deliberately above the
+    ~0.75dB (half a `global_gain` step) maximum possible from ordinary
+    discrete-step rounding alone, so the log line only fires on a
+    genuine clipping-safety cap, not on the routine quantization every
+    single gain-patched import has. A successfully-applied, non-capped
+    gain-patch logs nothing at all — consistent with this fork's
+    general preference for quiet success paths.
+
+- **Unit bug found and fixed during real-world verification:** the
+  first implementation divided the incoming normalization level by 100
+  before using it, on the mistaken belief that it carried hundredths-
+  of-a-dB precision (an earlier draft of this very spec stated that
+  incorrectly, immediately below the correctly-quoted whole-dB
+  `RDAudioConvert` formula it was supposed to match). The real value is
+  plain whole dB end-to-end, with no hundredths anywhere in this
+  pipeline. The practical effect: a `-13` target was read as `-0.13`,
+  so the computed `global_gain` step count rounded to `0` on this
+  fork's actual test file — `mp3gain -g 0` still ran and rewrote some
+  header/tag bytes (confirmed via a byte-for-byte diff against the
+  original upload), but never touched the audio's actual gain, leaving
+  the stored file exactly as hot as the original. Confirmed root cause
+  directly: extracted the real stored MPEG stream from a completed
+  import and measured its peak with `mp3gain`'s own analysis — both
+  `Max Amplitude` and the `Max`/`Min global_gain` range were bit-for-bit
+  identical to the original file's. Fixed by removing the `/100.0` (and
+  the matching `*100.0` in `achievedLevel()`'s calculation) so both
+  match `RDAudioConvert`'s existing whole-dB convention exactly.

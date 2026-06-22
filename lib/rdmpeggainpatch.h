@@ -42,17 +42,16 @@ class RDMpegGainPatch : public QObject
   void setSourceFile(const QString &filename);
   void setDestinationFile(const QString &filename);
 
-  // Hundredths of a dB, same contract as RDSettings::normalizationLevel()
-  // -- e.g. -1300 means a target peak of -13.00dBFS. Never hardcoded by
-  // this class.
+  // Whole dB, same contract as RDSettings::normalizationLevel() -- e.g.
+  // -13 means a target peak of -13dBFS. Never hardcoded by this class.
   void setNormalizationLevel(int level);
 
   RDMpegGainPatch::ErrorCode patch();
 
-  // The level actually reached (hundredths of a dB), valid after a
-  // successful patch(). May differ from the requested level: gain only
-  // lands on mp3gain's discrete ~1.505dB global_gain steps, and a gain
-  // increase may be capped short of the request to avoid clipping.
+  // The level actually reached (whole dB), valid after a successful
+  // patch(). May differ from the requested level: gain only lands on
+  // mp3gain's discrete ~1.505dB global_gain steps, and a gain increase
+  // may be capped short of the request to avoid clipping.
   int achievedLevel() const;
 
   static QString errorText(RDMpegGainPatch::ErrorCode err);

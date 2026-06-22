@@ -143,7 +143,7 @@ RDMpegGainPatch::ErrorCode RDMpegGainPatch::patch()
   //
   double peak_sample=max_amplitude/MP3GAIN_FULL_SCALE;
   double peak_dbfs=20.0*log10(peak_sample);
-  double gain_db=((double)patch_normalization_level)/100.0-peak_dbfs;
+  double gain_db=(double)patch_normalization_level-peak_dbfs;
   int step_count=(int)lround(gain_db/MP3GAIN_STEP_DB);
 
   //
@@ -188,7 +188,7 @@ RDMpegGainPatch::ErrorCode RDMpegGainPatch::patch()
     return RDMpegGainPatch::ErrorToolError;
   }
 
-  patch_achieved_level=(int)lround((peak_dbfs+step_count*MP3GAIN_STEP_DB)*100.0);
+  patch_achieved_level=(int)lround(peak_dbfs+step_count*MP3GAIN_STEP_DB);
 
   return RDMpegGainPatch::ErrorOk;
 }

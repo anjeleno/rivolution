@@ -267,15 +267,15 @@ void Xport::Import()
     if(gainpatch_err==RDMpegGainPatch::ErrorOk) {
       passthrough_source_file=patched_file;
       do_passthrough=true;  // Reuses the WAV-wrap-and-finish block below.
-      if(abs(gainpatch->achievedLevel()-normalization_level)>100) {
+      if(abs(gainpatch->achievedLevel()-normalization_level)>1) {
 	// More than a single ~1.5dB global_gain step off the requested
 	// level -- a real clipping-safety cap, not just the ordinary
 	// (at most half-a-step) discrete-step rounding every gain-patch
 	// import has. Worth a log line; routine rounding isn't.
 	rda->syslog(LOG_INFO,
 		   "rdxport: MP3 gain-patch normalization capped for cart "
-		   "%d, cut %d -- requested %d, achieved %d (hundredths "
-		   "of a dB)",cartnum,cutnum,normalization_level,
+		   "%d, cut %d -- requested %ddBFS, achieved %ddBFS",
+		   cartnum,cutnum,normalization_level,
 		   gainpatch->achievedLevel());
       }
     }
