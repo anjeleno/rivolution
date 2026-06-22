@@ -321,7 +321,7 @@ void SoftwareAuthority::DispatchCommand()
       RDSqlQuery::apply(sql);
       return;
     }
-    f0=line_in.split("\t",QString::KeepEmptyParts);
+    f0=line_in.split("\t",Qt::KeepEmptyParts);
 
     //
     // Insert null zero or more '[null]' entries to cover holes
@@ -378,7 +378,7 @@ void SoftwareAuthority::DispatchCommand()
       }
       return;
     }
-    f0=line_in.split("\t",QString::KeepEmptyParts);
+    f0=line_in.split("\t",Qt::KeepEmptyParts);
 
     //
     // Insert null zero or more '[null]' entries to cover holes

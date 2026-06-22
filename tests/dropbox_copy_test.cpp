@@ -114,7 +114,7 @@ void MainObject::CopyFile(const QString &filename) const
     if(outfile.right(1)!="/") {
       outfile+="/";
     }
-    outfile+=d_input_filenames.at(i).split("/",QString::SkipEmptyParts).last();
+    outfile+=d_input_filenames.at(i).split("/",Qt::SkipEmptyParts).last();
     printf("=> %s ",outfile.toUtf8().constData());
     fflush(stdout);
     if((dst_fd=open(outfile.toUtf8(),O_CREAT|O_TRUNC|O_WRONLY,statbuf.st_mode))<0) {

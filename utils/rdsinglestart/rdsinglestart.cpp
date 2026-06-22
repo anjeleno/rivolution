@@ -42,7 +42,7 @@ MainObject::MainObject(QObject *parent)
   }
   for(unsigned i=0;i<(cmd->keys()-1);i++) {
   }
-  QStringList f0=cmd->key(cmd->keys()-1).split("/",QString::SkipEmptyParts);
+  QStringList f0=cmd->key(cmd->keys()-1).split("/",Qt::SkipEmptyParts);
   QString program=f0.last().trimmed();
 
   //
@@ -70,9 +70,9 @@ MainObject::MainObject(QObject *parent)
   }
   bool found=false;
   f0=QString::fromUtf8(proc->readAllStandardOutput()).
-    split("\n",QString::SkipEmptyParts);
+    split("\n",Qt::SkipEmptyParts);
   for(int i=0;i<f0.size();i++) {
-    QStringList f1=f0.at(i).split(" ",QString::SkipEmptyParts);
+    QStringList f1=f0.at(i).split(" ",Qt::SkipEmptyParts);
     if(f1.size()>=4) {
       if(f1.at(3).trimmed().toLower()==program) {
 	Raise(f1.at(0));

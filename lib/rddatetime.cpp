@@ -234,7 +234,7 @@ QString RDWriteXmlDateTime(const QDateTime &dt)
 //
 QDateTime RDParseRfc822DateTime(const QString &str,bool *ok)
 {
-  QStringList f0=str.trimmed().split(" ",QString::SkipEmptyParts);
+  QStringList f0=str.trimmed().split(" ",Qt::SkipEmptyParts);
 
   //
   // Remove useless day-of-the-week tag

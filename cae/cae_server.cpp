@@ -231,7 +231,7 @@ bool CaeServer::ProcessCommand(int id,const QString &cmd)
   CaeServerConnection *conn=cae_connections.value(id);
   bool ok=false;
   QString cmdstr=cmd;
-  QStringList f0=cmd.split(" ",QString::SkipEmptyParts);
+  QStringList f0=cmd.split(" ",Qt::SkipEmptyParts);
 
 #ifdef __CAE_SERVER_LOG_PROTOCOL_MESSAGES
   rda->syslog(LOG_DEBUG,"from connection %d [%s:%u]: \"%s!\"",

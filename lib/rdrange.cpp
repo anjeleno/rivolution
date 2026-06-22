@@ -44,7 +44,7 @@ int RDRange::end() const
 
 bool RDRange::parse(const QString &str)
 {
-  QStringList f0=str.split(":",QString::KeepEmptyParts);
+  QStringList f0=str.split(":",Qt::KeepEmptyParts);
   bool ok1=false;
   bool ok2=false;
 

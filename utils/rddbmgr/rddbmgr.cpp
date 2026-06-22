@@ -175,7 +175,7 @@ MainObject::MainObject(QObject *parent)
     if(cmd->key(i)=="--set-version") {
       bool ok2=false;
       set_version=cmd->value(i);
-      QStringList f0=set_version.split(".",QString::KeepEmptyParts);
+      QStringList f0=set_version.split(".",Qt::KeepEmptyParts);
       if(f0.size()==3) {
 	ok2=true;
 	for(int i=0;i<3;i++) {

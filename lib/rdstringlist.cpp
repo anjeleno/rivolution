@@ -42,7 +42,7 @@ RDStringList RDStringList::split(const QChar &sep,const QString &str,
 				 const QString &esc)
 {
   if(esc.isEmpty()) {
-    return (RDStringList)str.split(sep,QString::KeepEmptyParts);
+    return (RDStringList)str.split(sep,Qt::KeepEmptyParts);
   }
   RDStringList list;
   bool escape=false;

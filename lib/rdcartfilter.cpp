@@ -617,7 +617,7 @@ QString RDCartFilter::phraseFilter(QString phrase, bool incl_cuts)
     //
     // Separate Out Cart Numbers
     //
-    QStringList words=phrase.split(" ",QString::KeepEmptyParts);
+    QStringList words=phrase.split(" ",Qt::KeepEmptyParts);
     for(int i=0;i<words.size();i++) {
       unsigned cartnum=words.at(i).toUInt(&ok);
       if(ok&&(cartnum>0)&&(cartnum<=RD_MAX_CART_NUMBER)) {

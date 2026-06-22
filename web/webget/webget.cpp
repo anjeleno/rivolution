@@ -416,8 +416,8 @@ void MainObject::PutAudio()
   //
   // Generate Title
   //
-  QStringList f0=filename.split("/",QString::SkipEmptyParts);
-  QStringList f1=f0.last().split(".",QString::KeepEmptyParts);
+  QStringList f0=filename.split("/",Qt::SkipEmptyParts);
+  QStringList f1=f0.last().split(".",Qt::KeepEmptyParts);
   QString short_name=f0.last();
   f1.removeLast();
   QString title=f1.join(".");
@@ -789,7 +789,7 @@ void MainObject::SaveSourceFile(const QString &filepath) const
     return;
   }
   QDateTime now=QDateTime::currentDateTime();
-  QStringList f0=filepath.split("/",QString::SkipEmptyParts);
+  QStringList f0=filepath.split("/",Qt::SkipEmptyParts);
   QString filename=rda->config()->saveWebgetFilesDirectory()+"/"+
     now.toString("yyyyMMdd-hhmmss-")+f0.last();
 

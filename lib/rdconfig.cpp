@@ -30,7 +30,7 @@
 
 #include <QDateTime>
 #include <QObject>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QStringList>
 
@@ -255,10 +255,9 @@ QHostAddress RDConfig::provisioningHostIpAddress() const
 
 QString RDConfig::provisioningHostShortName(const QString &hostname) const
 {
-  QRegExp exp(conf_provisioning_host_short_name_regex);
+  QRegularExpression exp(conf_provisioning_host_short_name_regex);
 
-  exp.indexIn(hostname);
-  QStringList texts=exp.capturedTexts();
+  QStringList texts=exp.match(hostname).capturedTexts();
   if((unsigned)texts.size()<conf_provisioning_host_short_name_group) {
     return QString();
   }
@@ -280,10 +279,9 @@ QString RDConfig::provisioningServiceTemplate() const
 
 QString RDConfig::provisioningServiceName(const QString &hostname) const
 {
-  QRegExp exp(conf_provisioning_service_name_regex);
+  QRegularExpression exp(conf_provisioning_service_name_regex);
 
-  exp.indexIn(hostname);
-  QStringList texts=exp.capturedTexts();
+  QStringList texts=exp.match(hostname).capturedTexts();
   if((unsigned)texts.size()<conf_provisioning_service_name_group) {
     return QString();
   }
@@ -712,7 +710,7 @@ bool RDConfig::load()
     profile->boolValue("Debugging","KillPypadAfterJsonError");
 
   QStringList f0=profile->stringValue("Debugging","LogDropboxProcessing").
-    split(",",QString::KeepEmptyParts);
+    split(",",Qt::KeepEmptyParts);
   for(int i=0;i<f0.size();i++) {
     if(!f0.at(i).trimmed().isEmpty()) {
       bool ok=false;

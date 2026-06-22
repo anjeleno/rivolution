@@ -91,17 +91,54 @@ AC_ARG_ENABLE(i18n-updates,[  --enable-i18n-updates   enable I18N metadata updat
 
 
 #
-# Check for Qt5 (Mandatory)
+# Check for Qt6 (Mandatory). The QT5/QT5_CLI variable names stay as-is
+# rather than becoming QT6/QT6_CLI -- every Makefile.am in this tree
+# substitutes them as @QT5_CFLAGS@/@QT5_LIBS@, and renaming here would
+# mean touching every one of those files for no functional benefit.
 #
-PKG_CHECK_MODULES(QT5,Qt5Core Qt5Widgets Qt5Gui Qt5Network Qt5Sql Qt5Xml Qt5WebKitWidgets,,[AC_MSG_ERROR([*** Qt5 not found ***])])
-PKG_CHECK_MODULES(QT5_CLI,Qt5Core Qt5Network Qt5Sql Qt5Xml,,[AC_MSG_ERROR([*** Qt5 not found ***])])
-AC_CHECK_PROG(MOC_NAME,moc-qt5,[moc-qt5],[moc])
+PKG_CHECK_MODULES(QT5,Qt6Core Qt6Widgets Qt6Gui Qt6Network Qt6Sql Qt6Xml Qt6WebEngineWidgets,,[AC_MSG_ERROR([*** Qt6 not found ***])])
+PKG_CHECK_MODULES(QT5_CLI,Qt6Core Qt6Network Qt6Sql Qt6Xml,,[AC_MSG_ERROR([*** Qt6 not found ***])])
+
+#
+# Force the compiler to catch every Qt5-deprecated-in-Qt6 API usage, as a
+# build-time completeness check for this migration -- see
+# docs/specs/0006-qt6-migration.md.
+#
+QT5_CFLAGS="$QT5_CFLAGS -DQT_DISABLE_DEPRECATED_BEFORE=QT_VERSION_CHECK(6,0,0)"
+
+#
+# Qt6's packaging (confirmed directly against the real installed
+# Ubuntu/Debian packages, not assumed) drops Qt5's "-qt5" suffix
+# convention entirely: moc/uic/rcc live unsuffixed in
+# /usr/lib/qt6/libexec/, and lupdate/lrelease live unsuffixed in
+# /usr/lib/qt6/bin/ -- neither directory is on PATH by default. A
+# plain PATH search for "moc"/"lupdate"/"lrelease" is not safe to fall
+# back on: this same Debian/Ubuntu packaging also installs `qtchooser`
+# symlinks at those bare names in /usr/bin, which can resolve to a
+# *different* still-installed Qt version (confirmed directly: it
+# defaulted to Qt 5.15.13 here, silently, despite Qt6 being the one
+# actually wanted) -- so the known Qt6 location is checked first and
+# explicitly, before any PATH-based fallback.
+#
+if test -x /usr/lib/qt6/libexec/moc; then
+  MOC_NAME=/usr/lib/qt6/libexec/moc
+else
+  AC_PATH_PROG(MOC_NAME,moc,[moc])
+fi
 AC_SUBST(QT_MOC,$MOC_NAME)
 
-AC_CHECK_PROG(LUPDATE_NAME,lupdate-qt5,[lupdate-qt5],[lupdate])
+if test -x /usr/lib/qt6/bin/lupdate; then
+  LUPDATE_NAME=/usr/lib/qt6/bin/lupdate
+else
+  AC_PATH_PROG(LUPDATE_NAME,lupdate,[lupdate])
+fi
 AC_SUBST(QT_LUPDATE,$LUPDATE_NAME)
 
-AC_CHECK_PROG(LRELEASE_NAME,lrelease-qt5,[lrelease-qt5],[lrelease])
+if test -x /usr/lib/qt6/bin/lrelease; then
+  LRELEASE_NAME=/usr/lib/qt6/bin/lrelease
+else
+  AC_PATH_PROG(LRELEASE_NAME,lrelease,[lrelease])
+fi
 AC_SUBST(QT_LRELEASE,$LRELEASE_NAME)
 
 

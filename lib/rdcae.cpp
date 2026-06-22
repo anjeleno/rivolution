@@ -495,7 +495,7 @@ void RDCae::SendCommand(QString cmd)
 void RDCae::DispatchCommand(const QString &cmd)
 {
   __RDCae_PlayChannel *chan=NULL;
-  QStringList cmds=cmd.split(" ",QString::SkipEmptyParts);
+  QStringList cmds=cmd.split(" ",Qt::SkipEmptyParts);
   bool was_processed=false;
   bool ok=false;
 

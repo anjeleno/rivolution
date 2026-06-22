@@ -46,7 +46,7 @@ MainWidget::MainWidget(QWidget *parent)
   //
   for(unsigned i=0;i<rda->cmdSwitch()->keys();i++) {
     if(rda->cmdSwitch()->key(i)=="--input-meter") {
-      QStringList f0=rda->cmdSwitch()->value(i).split(":",QString::KeepEmptyParts);
+      QStringList f0=rda->cmdSwitch()->value(i).split(":",Qt::KeepEmptyParts);
       if(f0.size()<3) {
 	fprintf(stderr,"meterstrip_test: invalid --input-meter arguments\n");
 	exit(RDApplication::ExitInvalidOption);
@@ -68,7 +68,7 @@ MainWidget::MainWidget(QWidget *parent)
       rda->cmdSwitch()->setProcessed(i,true);
     }
     if(rda->cmdSwitch()->key(i)=="--output-meter") {
-      QStringList f0=rda->cmdSwitch()->value(i).split(":",QString::KeepEmptyParts);
+      QStringList f0=rda->cmdSwitch()->value(i).split(":",Qt::KeepEmptyParts);
       if(f0.size()<3) {
 	fprintf(stderr,"meterstrip_test: invalid --output-meter arguments\n");
 	exit(RDApplication::ExitInvalidOption);

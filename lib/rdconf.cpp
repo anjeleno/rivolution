@@ -970,8 +970,8 @@ bool RDProcessActive(const QStringList &cmds)
     if(ok) {
       if((f=fopen((QString("/proc/")+dirs[i]+"/cmdline").toUtf8(),"r"))!=NULL) {
 	if(fgets(line,1024,f)!=NULL) {
-	  QStringList f1=QString(line).split(" ",QString::SkipEmptyParts);
-	  QStringList f2=f1[0].split("/",QString::SkipEmptyParts);
+	  QStringList f1=QString(line).split(" ",Qt::SkipEmptyParts);
+	  QStringList f2=f1[0].split("/",Qt::SkipEmptyParts);
 	  cmdline=f2[f2.size()-1];
 	  for(int j=0;j<cmds.size();j++) {
 	    if(cmdline==cmds[j]) {
@@ -1143,7 +1143,7 @@ QString RDMimeType(const QString &filename,bool *ok)
   }
   *ok=true;
   ret=QString(proc->readAllStandardOutput()).
-    split(":",QString::SkipEmptyParts).last().trimmed();
+    split(":",Qt::SkipEmptyParts).last().trimmed();
 
   delete proc;
 
@@ -1173,7 +1173,7 @@ QString RDMimeType(const QByteArray &data,bool *ok)
   *ok=true;
 
   ret=QString(proc->readAllStandardOutput()).
-    split(":",QString::SkipEmptyParts).last().trimmed();
+    split(":",Qt::SkipEmptyParts).last().trimmed();
 
   delete proc;
 
@@ -1185,7 +1185,7 @@ QString RDWrapText(const QString &str,int width)
 {
   QString line;
   QString ret;
-  QStringList f0=str.split(" ",QString::KeepEmptyParts);
+  QStringList f0=str.split(" ",Qt::KeepEmptyParts);
   int fn=0;
 
   while(fn<f0.size()) {

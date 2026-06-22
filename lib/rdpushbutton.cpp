@@ -296,7 +296,7 @@ void RDPushButton::flashOff()
 void RDPushButton::ComposeText()
 {
   int lines;
-  QStringList f0=plain_text.split(" ",QString::SkipEmptyParts);
+  QStringList f0=plain_text.split(" ",Qt::SkipEmptyParts);
   QFont font(buttonFont().family(),(double)size().height()/2.0,QFont::Bold);
   QString accum;
   QString text;

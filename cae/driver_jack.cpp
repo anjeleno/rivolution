@@ -465,7 +465,7 @@ bool DriverJack::initialize(unsigned *next_cardnum)
   //
   if(rda->station()->startJack()) {
     QStringList args=
-      rda->station()->jackCommandLine().split(" ",QString::SkipEmptyParts);
+      rda->station()->jackCommandLine().split(" ",Qt::SkipEmptyParts);
     if(args.size()) {
       QString program=args.at(0);
       args.removeFirst();
@@ -1421,7 +1421,7 @@ void DriverJack::clientStartData()
     QString cmd=RDDateDecode(q->value(1).toString(),QDate::currentDate(),
 			     rda->station(),rda->config(),
 			     rda->config()->provisioningServiceName(rda->config()->stationName()));
-    QStringList args=cmd.split(" ",QString::SkipEmptyParts);
+    QStringList args=cmd.split(" ",Qt::SkipEmptyParts);
     QString program=args.at(0);
     args.removeFirst();
     jack_clients.push_back(new QProcess(this));

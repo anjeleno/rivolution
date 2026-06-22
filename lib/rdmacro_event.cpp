@@ -230,7 +230,7 @@ void RDMacroEvent::exec(int line)
     break;
 
   case RDMacro::CC:   // Send Command
-    args=event_cmds[line]->arg(0).split(":",QString::KeepEmptyParts);
+    args=event_cmds[line]->arg(0).split(":",Qt::KeepEmptyParts);
     stationname=args[0];
     if(args.size()==2) {
       port=args[1].toUInt();

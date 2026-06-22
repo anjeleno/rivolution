@@ -10426,7 +10426,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
       "from `STACK_LINES`";
     q=new RDSqlQuery(sql,false);
     while(q->next()) {
-      QStringList f0=q->value(1).toString().split(" ",QString::SkipEmptyParts);
+      QStringList f0=q->value(1).toString().split(" ",Qt::SkipEmptyParts);
       for(int i=0;i<f0.size();i++) {
 	if((!f0.at(i).trimmed().isEmpty())&&(f0.at(i).trimmed()!=".")) {
 	  sql=QString("insert into `STACK_SCHED_CODES` set ")+

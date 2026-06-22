@@ -151,7 +151,7 @@ RDDelete::ErrorCode RDDelete::runDelete(const QString &username,
   }
 
   if(conv_target_url.scheme().toLower()=="ftp"||conv_target_url.scheme().toLower()=="ftps") {
-    QStringList f0=conv_target_url.path().split("/",QString::SkipEmptyParts);
+    QStringList f0=conv_target_url.path().split("/",Qt::SkipEmptyParts);
     filename=f0.last();
     f0.removeLast();
     if(f0.size()>0) {

@@ -173,7 +173,7 @@ bool RDAlsaModel::loadConfig(const QString &filename)
 	  break;
 
 	case 1:
-	  list=str.split(" ",QString::SkipEmptyParts);
+	  list=str.split(" ",Qt::SkipEmptyParts);
 	  if(list[0]=="}") {
 	    if((port>=0)&&(port<RD_MAX_CARDS)) {
 	      for(int i=0;i<model_alsa_cards.size();i++) {

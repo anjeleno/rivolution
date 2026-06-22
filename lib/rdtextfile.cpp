@@ -43,7 +43,7 @@ bool RDTextFile(const QString &data,bool delete_on_exit)
     editor=rda->station()->reportEditorPath();
   }
   memset(args,0,sizeof(args));
-  QStringList f0=editor.split(" ",QString::SkipEmptyParts);
+  QStringList f0=editor.split(" ",Qt::SkipEmptyParts);
   if(f0.size()>64) {
     QMessageBox::warning(NULL,"File Error",
 			 "Too many arguments to report editor!");
@@ -96,7 +96,7 @@ bool RDTextViewer(const QString &filename)
     editor=rda->station()->reportEditorPath();
   }
   memset(args,0,sizeof(args));
-  QStringList f0=editor.split(" ",QString::SkipEmptyParts);
+  QStringList f0=editor.split(" ",Qt::SkipEmptyParts);
   if(f0.size()>64) {
     QMessageBox::warning(NULL,"File Error",
 			 "Too many arguments to report editor!");
@@ -137,7 +137,7 @@ bool RDWebBrowser(const QString &url)
     return false;
   }
   memset(args,0,sizeof(args));
-  QStringList f0=editor.split(" ",QString::SkipEmptyParts);
+  QStringList f0=editor.split(" ",Qt::SkipEmptyParts);
   if(f0.size()>64) {
     QMessageBox::warning(NULL,"Error",
 			 "Too many arguments to web browser!");

@@ -368,7 +368,7 @@ void RDStationListModel::updateRow(int row,RDSqlQuery *q)
   }
   else {
     texts.push_back(q->value(8).toString().
-		    split("/",QString::SkipEmptyParts).last());
+		    split("/",Qt::SkipEmptyParts).last());
   }
   icons.push_back(QVariant());
 
@@ -378,7 +378,7 @@ void RDStationListModel::updateRow(int row,RDSqlQuery *q)
   }
   else {
     texts.push_back(q->value(9).toString().
-		    split("/",QString::SkipEmptyParts).last());
+		    split("/",Qt::SkipEmptyParts).last());
   }
   icons.push_back(QVariant());
 

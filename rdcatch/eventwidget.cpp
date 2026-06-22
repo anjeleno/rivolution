@@ -253,7 +253,7 @@ void EventWidget::fromRecording(unsigned record_id)
 
 void EventWidget::locationActivatedData(const QString &str)
 {
-  QStringList f0=str.split(":",QString::KeepEmptyParts);
+  QStringList f0=str.split(":",Qt::KeepEmptyParts);
 
   switch(f0.size()) {
   case 1:
