@@ -138,33 +138,49 @@ API:
 - `achievedLevel()` — actual level reached (hundredths of dB), valid
   after `Ok`, for honest reporting
 
-`patch()` flow:
-1. Measure the source file's actual peak sample — first check whether
-   `mp3gain`'s own analysis output (`-s c`/`-o`) reports a usable
-   peak/max-amplitude value directly (one subprocess call doing both
-   analysis and giving us what we need, no new decode code in
-   Rivendell); otherwise fall back to reusing the existing
-   `LoadEnergyMpegLayer3()`-style decode pass (`lib/rdwavefile.cpp:4671`
-   on) purely for peak measurement. Either way: no new bit-level MP3
-   parsing code gets written, in either branch.
-2. Compute `gain_dB = normalizationLevel()/100.0 - 20*log10f(peak_sample)`
+`patch()` flow (verified against the real installed `mp3gain` 1.6.2,
+not assumed — see Implementation deviations below for what changed
+from the original plan during this verification):
+1. Measure the source file's actual peak: `mp3gain -s r -o -x <file>`
+   (force fresh analysis, tab-delimited, skip the loudness-suggestion
+   calc) reports a `Max Amplitude` column on a 16-bit-equivalent scale
+   where `32768` = full scale/0dBFS. Convert:
+   `peak_sample_equiv = max_amplitude / 32768.0`. One subprocess call,
+   no new decode code in Rivendell.
+2. Compute
+   `gain_dB = normalizationLevel()/100.0 - 20*log10f(peak_sample_equiv)`
    — the same formula as the PCM path, kept consistent (consider a
    small shared free function both call, decided at implementation
-   time).
-3. **Decrease (`gain_dB <= 0`):** always safe. Run
-   `mp3gain -d <gain_dB> -c -o <scratch copy>` via `QProcess`, mirroring
-   the `cdda2wav`/`podcasts.cpp` invocation pattern. Parse the achieved
-   gain from stdout.
-4. **Increase (`gain_dB > 0`):** real clipping risk — raising
+   time). Convert to whole `global_gain` steps:
+   `step_count = round(gain_dB / (20*log10(pow(2.0,0.25))))` — compute
+   the divisor as a real `double`, don't hardcode `1.505`.
+3. **Decrease (`step_count <= 0`):** always safe. Run
+   `mp3gain -g <step_count> -c -o <scratch copy>` via `QProcess`,
+   mirroring the `cdda2wav`/`podcasts.cpp` invocation pattern (`-g`
+   applies the exact step count with zero analysis — **not** `-d`, see
+   deviation below). Re-derive `achievedLevel()` from `step_count`
+   directly (exact, since `-g` is unconditional/literal — no need to
+   re-run analysis afterward to confirm).
+4. **Increase (`step_count > 0`):** real clipping risk — raising
    `global_gain` on already-quantized data can push the decoded signal
-   past full scale in a way Rivendell can't see without decoding. Use
-   `mp3gain`'s own `-k` (auto-lower to avoid clipping) rather than
-   reimplementing that logic — it already solved this. Report the
-   actually-applied (possibly capped) gain via `achievedLevel()`.
+   past full scale in a way Rivendell can't see without decoding.
+   **`mp3gain`'s `-k` does not help here** (see deviation below — it
+   only constrains `-r`/`-a`'s own automatic suggestions, not a manual
+   `-g` value). Cap `step_count` ourselves before calling `mp3gain` at
+   all: `max_safe_steps = floor(4*log2(32768.0/max_amplitude))` (derived
+   from the same `2^(steps/4)` relationship used in step 2, solved for
+   the step count that keeps the resulting peak at or under full
+   scale), then `step_count = min(step_count, max_safe_steps)`. Apply
+   the capped value via `-g`, and report the *actually applied* level
+   via `achievedLevel()` (derived from the capped `step_count`, not the
+   originally requested one) whenever capping occurred.
 5. `mp3gain` modifies files in place by default — always operate on a
    scratch copy, never the original Dropbox-dropped source, consistent
    with how the rest of the import pipeline treats the source as
-   read-only until safely copied.
+   read-only until safely copied. Always pass `-c`: without it,
+   `mp3gain` blocks waiting on an interactive stdin confirmation
+   whenever it detects clipping risk — fatal in a `QProcess` context
+   with no controlling tty.
 6. Not found / unexpected exit / free-format or otherwise unhandleable
    file → `NotApplicable`/`ToolError`. Caller falls back to the full
    `RDAudioConvert` path; this class never retries or guesses.
@@ -215,12 +231,11 @@ per-cut there too rather than only logging it.
 
 ## Verification plan
 
-1. Confirm `mp3gain`'s exact CLI syntax/output format for real
-   (`mp3gain --help`, `man mp3gain`, a real invocation) before writing
-   integration code, rather than relying on remembered flag names —
-   specifically `-d`'s exact semantics, whether `-o`/`-s c` reliably
-   reports a usable peak value, and `-k`'s exact reported behavior when
-   it caps an increase.
+1. ~~Confirm `mp3gain`'s exact CLI syntax/output format~~ — done, see
+   Implementation deviations below: `-g` (not `-d`) is the correct
+   direct-application flag, `-s r -o -x` is the correct peak-measurement
+   invocation, and `-k` does not apply to manual `-g` values (clipping
+   safety is computed in `RDMpegGainPatch` itself).
 2. Build-verify (`make`/`sudo make install` — the user runs this).
 3. Real Dropbox test at -13dBFS: a file louder than -13dBFS (common
    case — should gain-patch, fast, correct level) and a file quieter
@@ -233,6 +248,55 @@ per-cut there too rather than only logging it.
 
 ## Implementation deviations
 
-*(to be filled in as found, matching spec 0003's convention of
-documenting corrections discovered during implementation rather than
-silently absorbing them)*
+- **Verified against the real installed `mp3gain` 1.6.2 (2026-06-21),
+  three corrections to the plan above:**
+
+  1. **`-d` is not a standalone direct-dB-shift flag.** Per its actual
+     `--help` text, `-d <n>` "modify suggested dB gain by floating-point
+     n" — it only adjusts whatever `-r`/`-a`'s automatic loudness
+     analysis already suggested; it doesn't apply on its own. The
+     correct flag for "apply a Rivendell-computed step count with zero
+     analysis" is `-g <i>` ("apply gain i without doing any analysis").
+     Confirmed empirically: `mp3gain -g -9 -c -o <file>` shifted every
+     frame's `global_gain` by exactly -9 (`Max global_gain` 188→179,
+     `Min global_gain` 129→120, both shifted identically), and the
+     measured peak dropped by ~13.54dB — matching the
+     `9 × 1.50515dB ≈ 13.55dB` math from earlier discussion almost
+     exactly. `-r`/`-a` target a fixed ReplayGain-style 89dB loudness
+     reference, confirmed via a real recalculation
+     (`mp3gain -s r -o <file>` suggested `-5` steps/`-7.21dB` on a test
+     file with a peak already above full scale) — entirely the wrong
+     semantic for Rivendell's peak-based dBFS target, so `-r`/`-a` are
+     not used at all; `-g` with a step count computed from Rivendell's
+     own existing peak formula is the only mechanism actually used.
+
+  2. **`-k` does not constrain a manual `-g` value.** Tested directly:
+     `mp3gain -g 20 -k -c -o <file>` and `mp3gain -g 20 -c -o <file>`
+     (no `-k`) produced byte-for-byte identical results — `Max
+     global_gain` went 188→208 in both, and the measured peak ballooned
+     to ~1,081,968 (vastly over the 32768 full-scale reference) in both.
+     `-k`'s "automatically lower Track/Album gain to not clip" applies
+     only to `-r`/`-a`'s own automatic suggestions, not to a
+     caller-specified `-g`. Since `-g` is the only mechanism this
+     feature uses (per deviation 1), **clipping safety must be computed
+     entirely in `RDMpegGainPatch`'s own code** — capping `step_count`
+     using the peak measured in step 1 before ever invoking `-g` — not
+     delegated to `mp3gain` as the original plan assumed.
+
+  3. **Peak measurement can't be skipped for the decrease case.** The
+     original plan suggested skipping the peak-measurement pass
+     entirely for files needing a decrease, as an optimization. That's
+     backwards: the measurement is what determines *whether* a file
+     needs an increase or a decrease in the first place (Rivendell's
+     own `gain = target - 20*log10(peak)` formula needs the peak to
+     compute anything at all) — it's needed unconditionally, every
+     file, every time. The actual optimization opportunity (not yet
+     decided) is whether a *second*, separate decode/analysis pass can
+     be avoided after that, not the first one.
+
+  Confirmed `mp3gain -s r -o -x <file>` (force fresh analysis,
+  tab-delimited, skip the loudness-suggestion calc) reports `Max
+  Amplitude` on a 16-bit-equivalent scale where `32768.0` = full
+  scale/0dBFS — this is the value `RDMpegGainPatch` parses and divides
+  by `32768.0` before plugging into Rivendell's existing peak-dBFS
+  formula.
