@@ -1,26 +1,33 @@
-# 0004 — Replace QtWebKit with QtWebEngine
+# 0009 — Replace QtWebKit with QtWebEngine
 
-**Date:** 2026-06-20
+**Date:** 2026-06-20. Originally written and implemented on
+`anjeleno/rivendell`'s `feature/qtwebengine-migration` branch (as its
+own spec 0004, scoped against Qt5 only); carried into this repo
+2026-06-22 as part of `0006-qt6-migration.md`'s work, since
+`QWebView` has no Qt6 equivalent at all and was the one build blocker
+standing between this repo and a clean Qt6 build.
 
 ## Goal
 
 `Qt5WebKitWidgets`/`QWebView` is the one remaining hard blocker for
 building this fork on Debian 13 (trixie) — see
-`rivendell-installer`'s `docs/specs/0002-arm64-debian-support.md`.
-WebKit has been dead upstream for years; Debian dropped the package
-(binary and source) starting trixie, while Ubuntu still carries it for
-now but won't indefinitely. Replace it with `Qt5WebEngineWidgets`/
-`QWebEngineView` — Qt's own official, still-maintained successor —
-rather than working around its absence.
+`rivendell-installer`'s `docs/specs/0002-arm64-debian-support.md` — and
+has no Qt6 equivalent at all, making it also a hard blocker for
+`0006-qt6-migration.md` in this repo. WebKit has been dead upstream for
+years; Debian dropped the package (binary and source) starting trixie,
+Ubuntu dropped it for Qt6 entirely. Replace it with
+`Qt6WebEngineWidgets`/`QWebEngineView` — Qt's own official, still-
+maintained successor — rather than working around its absence.
 
-Explicitly scoped as a narrow, isolated swap: everything else in this
-codebase stays on Qt5 exactly as it is today. Not a Qt6 migration. But
-deliberately chosen because `QWebEngineView`'s API is essentially
-unchanged between Qt5WebEngine and Qt6WebEngine (Qt preserved it
-across the major-version bump — differences are in include
-paths/build system, not the API surface used here) — so this also
-happens to be the first real, forward-compatible piece of any future
-Qt6 migration, without requiring one now.
+Originally scoped as a narrow, isolated swap against Qt5 only (see the
+original implementation note below) — deliberately chosen because
+`QWebEngineView`'s API is essentially unchanged between Qt5WebEngine
+and Qt6WebEngine (Qt preserved it across the major-version bump —
+differences are in include paths/build system, not the API surface
+used here). That forward-compatibility bet is exactly why this ported
+into the Qt6 migration this cleanly: the same `QWebEngineView` code
+works unchanged under `Qt6WebEngineWidgets`, confirmed during this
+repo's own real `./configure` pass against Qt6 6.4.2.
 
 ## Background — verified against source, not assumed
 
@@ -68,11 +75,14 @@ Qt's own documentation.
 
 ## Implementation plan
 
-### 1. `configure.ac:96`
+### 1. `configure.ac`
 
-```
-PKG_CHECK_MODULES(QT5,Qt5Core Qt5Widgets Qt5Gui Qt5Network Qt5Sql Qt5Xml Qt5WebEngineWidgets,,[AC_MSG_ERROR([*** Qt5 not found ***])])
-```
+Original plan (against Qt5 only): swap `Qt5WebKitWidgets` for
+`Qt5WebEngineWidgets` in the one `PKG_CHECK_MODULES` line. Already
+superseded in this repo — `0006-qt6-migration.md`'s own `configure.ac`
+work already lists `Qt6WebEngineWidgets` directly (the Qt6 module was
+never `Qt5WebKitWidgets` to begin with), so no separate change was
+needed here beyond what that spec already did.
 
 ### 2. `rdairplay/messagewidget.h`
 
@@ -155,12 +165,15 @@ confirmed via a final repo-wide grep for
 `.ac`/`.am` file, returning no matches once this fix and the rest of
 the plan above were applied.
 
-## Confirmed out of scope
+## Confirmed out of scope (in the original Qt5-only implementation)
 
 - Any other Qt5 module in this codebase — `Qt5Core`/`Qt5Widgets`/
-  `Qt5Gui`/`Qt5Network`/`Qt5Sql`/`Qt5Xml` all stay exactly as they are.
-  Not a Qt6 migration; only the one already-dead module gets replaced
-  with its own direct, still-maintained Qt5 successor.
+  `Qt5Gui`/`Qt5Network`/`Qt5Sql`/`Qt5Xml` all stayed exactly as they
+  were at the time. In this repo specifically, those other modules are
+  separately migrated to their Qt6 equivalents by
+  `0006-qt6-migration.md` — this spec's own scope is still only the
+  WebKit→WebEngine swap, now landing on top of an already-Qt6 codebase
+  rather than a Qt5 one.
 - Any change to how `rivendell-installer`'s Ansible playbook installs
   build dependencies — once this lands, `roles/base`'s existing
   Ubuntu-specific `libqt5webkit5-dev` entry becomes

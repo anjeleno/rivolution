@@ -7,6 +7,24 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-22
 
+- Qt6 migration (in progress, `feature/qt6-migration`, not yet merged):
+  `configure.ac` now requires Qt6 (`Qt6Core`/`Qt6Widgets`/`Qt6Gui`/
+  `Qt6Network`/`Qt6Sql`/`Qt6Xml`/`Qt6WebEngineWidgets`) instead of Qt5,
+  with `QT_DISABLE_DEPRECATED_BEFORE=0x060000` added as a build-time
+  completeness check. `moc`/`uic`/`rcc`/`lupdate`/`lrelease` detection
+  rewritten for Qt6's real packaging (no `-qt5`-style suffix
+  convention, unsuffixed binaries outside `PATH`, and a `qtchooser`
+  trap that silently resolves to an old Qt5 install if not handled
+  explicitly). `QRegExp` replaced with `QRegularExpression` in the four
+  files using it; `QString::KeepEmptyParts`/`SkipEmptyParts` replaced
+  with `Qt::KeepEmptyParts`/`SkipEmptyParts` everywhere (94 occurrences,
+  49 files); every `Makefile.am`'s `-std=c++11` bumped to `-std=c++17`
+  (Qt6's own hard minimum). `QWebView` replaced with `QWebEngineView`
+  in `RDAirPlay`'s message-display widget, including a real behavioral
+  fix (`QWebEnginePage` has no `mainFrame()` — scrollbar hiding moves to
+  a `QWebEngineSettings::ShowScrollBars` page setting instead). See
+  `docs/specs/0006-qt6-migration.md` and
+  `docs/specs/0009-qtwebengine-migration.md`.
 - Fixed: MP3 gain-patch normalization (added 2026-06-21) silently never
   applied any gain shift. The requested level was read as hundredths of
   a dB, but every consumer of this setting elsewhere in the pipeline

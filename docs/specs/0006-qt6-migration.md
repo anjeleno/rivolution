@@ -92,10 +92,12 @@ completeness of this migration, not a supplementary nice-to-have.
 
 ## Verification
 
-1. `DEFINES += QT_DISABLE_DEPRECATED_BEFORE=QT_VERSION_CHECK(6,0,0)` is
-   added before any other migration work, so the build itself reports
-   the true, complete list of remaining deprecated-API usages rather
-   than relying on the grep-based list above being exhaustive.
+1. `QT_DISABLE_DEPRECATED_BEFORE=0x060000` (see Implementation
+   deviations below for why this is the literal hex value rather than
+   `QT_VERSION_CHECK(6,0,0)`) is added before any other migration work,
+   so the build itself reports the true, complete list of remaining
+   deprecated-API usages rather than relying on the grep-based list
+   above being exhaustive.
 2. Full `./configure && make` succeeds against Qt6 development
    packages on the target OS (Ubuntu 26.04).
 3. Each affected application launches and exercises the specific
@@ -105,4 +107,50 @@ completeness of this migration, not a supplementary nice-to-have.
 
 ## Implementation deviations
 
-None yet — implementation has not started.
+- **C++17 is a real, necessary migration item this spec's original
+  grep-based investigation missed entirely.** Qt6 itself requires a
+  C++17 compiler as a hard minimum (confirmed directly: a real build
+  attempt failed immediately on Qt6's own headers with `#error "Qt
+  requires a C++17 compiler"`, not just from reading Qt's
+  documentation). Every `Makefile.am` in this tree hardcoded
+  `-std=c++11` (49 files, all uniformly — no file had already moved to
+  a newer standard), predating any Qt6 awareness. This is exactly the
+  kind of gap `QT_DISABLE_DEPRECATED_BEFORE` itself can't catch (it's a
+  compiler-standard mismatch, not a deprecated Qt API), and exactly why
+  a real `./configure && make` attempt matters as the actual
+  verification mechanism, not just a grep sweep against the codebase.
+  Fixed by bumping `-std=c++11` to `-std=c++17` (the literal minimum
+  Qt6 requires, not a newer standard) across all 49 files uniformly.
+- **`QT_DISABLE_DEPRECATED_BEFORE`'s value uses the literal hex
+  constant (`0x060000`), not `QT_VERSION_CHECK(6,0,0)` as originally
+  written above.** This flag's value passes through several layers of
+  shell before reaching the compiler (the `Makefile` recipe, libtool's
+  wrapper script, the final `/bin/bash -c` invocation), and the macro
+  call's unescaped parentheses/commas get parsed as shell syntax
+  partway through — confirmed directly: a real build failed with
+  `syntax error near unexpected token '('`. `QT_VERSION_CHECK`'s own
+  definition is `((major<<16)|(minor<<8)|patch)`, so `(6,0,0)` is
+  simply `0x060000` — using that directly avoids the multi-layer
+  escaping problem entirely rather than trying to backslash-escape
+  parens through three separate shells.
+- **`QWebView` → `QWebEngineView`, already done elsewhere.** Rather
+  than redo this from scratch, pulled in the already-implemented,
+  already-spec'd fix from `anjeleno/rivendell`'s
+  `feature/qtwebengine-migration` branch (now `0009-qtwebengine-migration.md`
+  in this repo) via `git cherry-pick`, since that work already found a
+  real behavioral gap (`QWebEnginePage` has no `mainFrame()`) that a
+  naive mechanical rename would have missed.
+- **`moc`/`lupdate`/`lrelease` detection needed real logic, not a
+  suffix swap.** The original plan assumed Qt6 follows Qt5's `-qt5`-
+  suffixed binary-name convention (e.g. `moc-qt6`). Confirmed directly
+  against the real installed Ubuntu packages: Qt6 drops that
+  convention entirely, placing `moc`/`uic`/`rcc` unsuffixed in
+  `/usr/lib/qt6/libexec/` and `lupdate`/`lrelease` unsuffixed in
+  `/usr/lib/qt6/bin/`, neither on `PATH`. A plain `PATH`-based
+  `moc`/`lupdate`/`lrelease` lookup is actively unsafe here, not just
+  incomplete: this same packaging also installs `qtchooser` symlinks at
+  those bare names in `/usr/bin/`, which resolved to Qt 5.15.13
+  silently when tried — caught only by checking the resolved binary's
+  own `-v` output, not by `./configure` exiting cleanly. `configure.ac`
+  now checks the known Qt6 path explicitly first, falling back to a
+  `PATH` search only if that specific file doesn't exist.

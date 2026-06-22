@@ -102,9 +102,18 @@ PKG_CHECK_MODULES(QT5_CLI,Qt6Core Qt6Network Qt6Sql Qt6Xml,,[AC_MSG_ERROR([*** Q
 #
 # Force the compiler to catch every Qt5-deprecated-in-Qt6 API usage, as a
 # build-time completeness check for this migration -- see
-# docs/specs/0006-qt6-migration.md.
+# docs/specs/0006-qt6-migration.md. Using the literal hex value rather
+# than QT_VERSION_CHECK(6,0,0) itself -- this flag's value passes
+# through several layers of shell (the Makefile recipe, libtool's
+# wrapper script, /bin/bash -c) before reaching the compiler, and the
+# macro call's unescaped parens/commas get parsed as shell syntax
+# partway through (confirmed directly: a real build failed on exactly
+# this, "syntax error near unexpected token `('"). QT_VERSION_CHECK's
+# own definition is ((major<<16)|(minor<<8)|patch), so (6,0,0) is
+# simply 0x060000 -- avoids the escaping problem entirely instead of
+# trying to backslash-escape parens through three shell layers.
 #
-QT5_CFLAGS="$QT5_CFLAGS -DQT_DISABLE_DEPRECATED_BEFORE=QT_VERSION_CHECK(6,0,0)"
+QT5_CFLAGS="$QT5_CFLAGS -DQT_DISABLE_DEPRECATED_BEFORE=0x060000"
 
 #
 # Qt6's packaging (confirmed directly against the real installed
