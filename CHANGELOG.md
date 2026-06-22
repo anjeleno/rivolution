@@ -7,6 +7,14 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-21
 
+- Added MP3 gain-patch normalization: a same-format MP3-to-MP3 import
+  that requests normalization (the common case for most Dropboxes) can
+  now still take a fast path — the requested gain is patched directly
+  into each frame's `global_gain` field via `mp3gain`, instead of always
+  falling through to a full decode/re-encode. Falls back to the existing
+  conversion path whenever the patch isn't cleanly applicable. New
+  runtime dependency: `mp3gain` (packaged for Ubuntu and Debian, amd64
+  and arm64). See `docs/specs/0004-mp3-gain-patch.md`.
 - Fixed: MP3 passthrough (import) ignored a Dropbox's configured
   normalization/autotrim level whenever the source was already MP3 and
   the target format was also MP3 — the only acknowledgment was a syslog

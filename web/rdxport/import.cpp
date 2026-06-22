@@ -19,6 +19,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -33,6 +34,7 @@
 #include <rdgroup.h>
 #include <rdhash.h>
 #include <rdlibrary_conf.h>
+#include <rdmpeggainpatch.h>
 #include <rdsettings.h>
 #include <rdweb.h>
 
@@ -229,25 +231,65 @@ void Xport::Import()
   //
   // True passthrough: whenever the source is genuinely MP3 (MPEG audio
   // layer 3), the effective target format is also MP3, the source's
-  // real sample rate already matches the system rate, and no
-  // normalization/autotrim was requested -- there is never a reason to
-  // decode and re-encode an MP3 back to MP3 in that case. The
-  // sample-rate check matters because caed's MPEG playback path
-  // (cae/driver_alsa.cpp) does not resample mismatched-rate MPEG audio
-  // at playout time, unlike its PCM/Vorbis paths -- a passthrough copy
-  // of a file recorded at a different rate than the system's would
-  // play back pitch-shifted. The normalization/autotrim check matters
-  // because neither is possible without decoding to PCM, adjusting
-  // samples, and re-encoding -- a byte-for-byte passthrough copy is
-  // fundamentally incompatible with either. When any of these don't
-  // hold, fall through to the normal conversion path below, which
-  // resamples/normalizes/trims correctly.
+  // real sample rate already matches the system rate, and no autotrim
+  // was requested -- there is never a reason to decode and re-encode an
+  // MP3 back to MP3 in that case. The sample-rate check matters because
+  // caed's MPEG playback path (cae/driver_alsa.cpp) does not resample
+  // mismatched-rate MPEG audio at playout time, unlike its PCM/Vorbis
+  // paths -- a passthrough copy of a file recorded at a different rate
+  // than the system's would play back pitch-shifted. The autotrim check
+  // matters because it needs real sample-accurate start/end editing,
+  // unrelated to a gain shift and not expressible as a bitstream patch.
+  // When any of these don't hold, fall through to the normal conversion
+  // path below, which resamples/normalizes/trims correctly.
   //
-  bool do_passthrough=source_is_mp3&&(effective_format==3)&&
+  // A requested normalization doesn't rule passthrough out by itself --
+  // see the gain-patch attempt below (docs/specs/0004-mp3-gain-patch.md):
+  // normalization can be applied directly to the MP3 bitstream, without
+  // decoding/re-encoding, whenever that succeeds.
+  //
+  bool passthrough_eligible=source_is_mp3&&(effective_format==3)&&
     (source_sample_rate==rda->system()->sampleRate())&&
-    (normalization_level==0)&&(autotrim_level==0);
+    (autotrim_level==0);
+  bool do_passthrough=passthrough_eligible&&(normalization_level==0);
+  bool do_gain_patch=passthrough_eligible&&(normalization_level!=0);
+  QString passthrough_source_file=filename;
   RDAudioConvert::ErrorCode conv_err=RDAudioConvert::ErrorOk;
   RDAudioConvert *conv=NULL;
+
+  if(do_gain_patch) {
+    RDMpegGainPatch *gainpatch=new RDMpegGainPatch();
+    QString patched_file=filename+".gainpatch";
+    gainpatch->setSourceFile(filename);
+    gainpatch->setDestinationFile(patched_file);
+    gainpatch->setNormalizationLevel(normalization_level);
+    RDMpegGainPatch::ErrorCode gainpatch_err=gainpatch->patch();
+    if(gainpatch_err==RDMpegGainPatch::ErrorOk) {
+      passthrough_source_file=patched_file;
+      do_passthrough=true;  // Reuses the WAV-wrap-and-finish block below.
+      if(abs(gainpatch->achievedLevel()-normalization_level)>100) {
+	// More than a single ~1.5dB global_gain step off the requested
+	// level -- a real clipping-safety cap, not just the ordinary
+	// (at most half-a-step) discrete-step rounding every gain-patch
+	// import has. Worth a log line; routine rounding isn't.
+	rda->syslog(LOG_INFO,
+		   "rdxport: MP3 gain-patch normalization capped for cart "
+		   "%d, cut %d -- requested %d, achieved %d (hundredths "
+		   "of a dB)",cartnum,cutnum,normalization_level,
+		   gainpatch->achievedLevel());
+      }
+    }
+    else {
+      rda->syslog(LOG_INFO,
+		 "rdxport: MP3 gain-patch normalization not applied for "
+		 "cart %d, cut %d (%s) -- using full conversion instead",
+		 cartnum,cutnum,
+		 RDMpegGainPatch::errorText(gainpatch_err).toUtf8().
+		 constData());
+    }
+    delete gainpatch;
+  }
+
   if(do_passthrough) {
     //
     // Copy the source's MPEG frame data verbatim into a WAV-wrapped
@@ -256,8 +298,11 @@ void Xport::Import()
     // passthrough. Wrapping it lets LEVL energy data (computed below)
     // persist in the file's own header, the same mechanism PCM/Layer II
     // already use -- a bare elementary stream has no header to put it in.
+    // passthrough_source_file is either the original upload (true
+    // byte-copy passthrough) or a gain-patched scratch copy (normalized
+    // passthrough) -- identical handling either way from here on.
     //
-    RDWaveFile *src_wave=new RDWaveFile(filename);
+    RDWaveFile *src_wave=new RDWaveFile(passthrough_source_file);
     if(!src_wave->openWave()) {
       delete src_wave;
       XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER,
@@ -284,6 +329,11 @@ void Xport::Import()
       dst_wave->writeWave(passthrough_buffer,passthrough_n);
     }
     delete src_wave;
+    if(passthrough_source_file!=filename) {
+      QFile::remove(passthrough_source_file);  // The gain-patch scratch
+                                                // copy -- not the
+                                                // original upload.
+    }
     dst_wave->closeWave();
     delete dst_wave;
     wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));

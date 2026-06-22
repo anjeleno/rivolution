@@ -300,3 +300,27 @@ per-cut there too rather than only logging it.
   scale/0dBFS — this is the value `RDMpegGainPatch` parses and divides
   by `32768.0` before plugging into Rivendell's existing peak-dBFS
   formula.
+
+- **`import.cpp` integration details, decided during implementation:**
+  - `do_gain_patch`'s attempt runs before the `if(do_passthrough)` block
+    and, on success, sets `do_passthrough=true` to reuse that block's
+    WAV-wrap-and-finish logic unchanged (`passthrough_source_file`
+    points at the gain-patched scratch copy instead of the original
+    upload in that case) — avoids duplicating ~40 lines of
+    `createWave()`/copy-loop/`hasEnergy()` logic for what is, from that
+    point on, identical handling regardless of which path produced the
+    bytes.
+  - The scratch file (`<upload>.gainpatch`) is deleted right after the
+    copy loop consumes it, in the same place `src_wave` itself is
+    deleted — necessary because the per-request upload temp directory
+    gets `rmdir()`'d at the very end of `Import()`, which fails if
+    anything besides the original upload is left in it.
+  - Achieved-level logging only fires when the deviation from the
+    requested level exceeds 100 (hundredths of a dB, i.e. >1.00dB) —
+    deliberately above the ~0.75dB (half a `global_gain` step) maximum
+    possible from ordinary discrete-step rounding alone, so the log line
+    only fires on a genuine clipping-safety cap, not on the routine
+    quantization every single gain-patched import has. A
+    successfully-applied, non-capped gain-patch logs nothing at all —
+    consistent with this fork's general preference for quiet success
+    paths.
