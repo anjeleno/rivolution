@@ -1460,7 +1460,7 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
 #ifdef HAVE_LAME
   MPEG_mode mpeg_mode=STEREO;
   lame_global_flags *lameopts=NULL;
-  int dst_fd=-1;
+  RDWaveFile *wave=NULL;
   int16_t pcm[2304];
   unsigned char mpeg[2048];
   sf_count_t n;
@@ -1482,7 +1482,7 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
     break;
 
   case 2:
-    mpeg_mode=STEREO;    
+    mpeg_mode=STEREO;
     break;
 
   default:
@@ -1492,18 +1492,44 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
   //
   // Open Destination File
   //
+  // WAV-wrapped rather than a bare elementary stream -- this is what
+  // lets LEVL energy data (computed below, from the source PCM as it's
+  // encoded) persist in the file's own header, the same mechanism
+  // every other format already uses. Mirrors Stage3Layer2Wav()'s
+  // existing pattern for the sibling Layer II/WAV destination.
+  //
+  wave=new RDWaveFile(dstfile);
+  wave->setFormatTag(WAVE_FORMAT_MPEG);
+  wave->setChannels(src_sf_info->channels);
+  switch(src_sf_info->channels) {
+  case 1:
+    wave->setHeadMode(ACM_MPEG_SINGLECHANNEL);
+    break;
+
+  case 2:
+    wave->setHeadMode(ACM_MPEG_STEREO);
+    break;
+  }
+  wave->setSamplesPerSec(src_sf_info->samplerate);
+  wave->setHeadLayer(3);
+  wave->setHeadBitRate(conv_settings->bitRate());
+  wave->setBextChunk(true);
+  wave->setCartChunk(conv_dst_wavedata!=NULL);
+  wave->setLevlChunk(true);
+  wave->setRdxlContents(conv_dst_rdxl);
   unlink(dstfile.toUtf8());
-  if((dst_fd=open(dstfile.toUtf8(),O_WRONLY|O_CREAT|O_TRUNC,
-		  S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH))<0) {
+  if(!wave->createWave(conv_dst_wavedata,conv_start_point)) {
+    delete wave;
     return RDAudioConvert::ErrorNoDestination;
-  } 
+  }
 
   //
   // Initialize Encoder
   //
   if((lameopts=lame_init())==NULL) {
     lame_close(lameopts);
-    ::close(dst_fd);
+    wave->closeWave();
+    delete wave;
     rda->syslog(LOG_WARNING,"lame_init() failure");
     return RDAudioConvert::ErrorInternal;
   }
@@ -1515,19 +1541,34 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
   lame_set_bWriteVbrTag(lameopts,0);
   if(lame_init_params(lameopts)!=0) {
     lame_close(lameopts);
-    ::close(dst_fd);
+    wave->closeWave();
+    delete wave;
     return RDAudioConvert::ErrorInvalidSettings;
   }
 
   //
   // Encode
   //
+  // Energy is measured here, directly from the source PCM blocks as
+  // LAME consumes them -- not by decoding the encoded MP3 back
+  // afterward. More efficient (no redundant decode pass) and more
+  // accurate (true source-signal peaks, not the lossy-recompressed
+  // ones), and mirrors the exact peak-comparison convention
+  // RDWaveFile::LoadEnergy() already uses for PCM16. Only emits an
+  // energy_data entry for a full 1152-sample block, same as every
+  // other format -- a trailing partial block at EOF is simply not
+  // measured, matching existing convention elsewhere.
+  //
   if(src_sf_info->channels==2) {
     while((n=sf_readf_short(src_sf,pcm,1152))>0) {
+      if(n==1152) {
+	wave->updateEnergy(pcm);
+      }
       if((s=lame_encode_buffer_interleaved(lameopts,pcm,n,mpeg,2048))>=0) {
-	if(write(dst_fd,mpeg,s)!=s) {
+	if(wave->writeWave(mpeg,s)!=s) {
 	  lame_close(lameopts);
-	  ::close(dst_fd);
+	  wave->closeWave();
+	  delete wave;
 	  return RDAudioConvert::ErrorNoSpace;
 	}
       }
@@ -1536,10 +1577,14 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
   }
   else {
     while((n=sf_readf_short(src_sf,pcm,1152))>0) {
+      if(n==1152) {
+	wave->updateEnergy(pcm);
+      }
       if((s=lame_encode_buffer(lameopts,pcm,NULL,n,mpeg,2048))>=0) {
-	if(write(dst_fd,mpeg,s)!=s) {
+	if(wave->writeWave(mpeg,s)!=s) {
 	  lame_close(lameopts);
-	  ::close(dst_fd);
+	  wave->closeWave();
+	  delete wave;
 	  return RDAudioConvert::ErrorNoSpace;
 	}
 	usleep(conv_transcoding_delay);
@@ -1547,9 +1592,10 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
     }
   }
   if((s=lame_encode_flush(lameopts,mpeg,2048))>=0) {
-    if(write(dst_fd,mpeg,s)!=s) {
+    if(wave->writeWave(mpeg,s)!=s) {
       lame_close(lameopts);
-      ::close(dst_fd);
+      wave->closeWave();
+      delete wave;
       return RDAudioConvert::ErrorNoSpace;
     }
   }
@@ -1558,14 +1604,8 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
   // Clean Up
   //
   lame_close(lameopts);
-  ::close(dst_fd);
-
-  //
-  // Apply Metadata
-  //
-  if(conv_dst_wavedata!=NULL) {
-    ApplyId3Tag(dstfile,conv_dst_wavedata);
-  }
+  wave->closeWave();
+  delete wave;
 
   return RDAudioConvert::ErrorOk;
 #else

@@ -159,20 +159,28 @@ void Xport::Export()
     (start_point<0)&&(end_point<0)&&(speed_ratio==1.0)&&
     (wavedata==NULL)&&(normalization_level==0);
   if(do_passthrough) {
-    int pt_fd;
+    // Stored cuts are WAV-wrapped (the container carries the LEVL energy
+    // data computed at import/encode time) -- streamed raw, that wrapper
+    // and trailing LEVL chunk would go out to the client too, mislabeled
+    // as a bare MP3. readWave() already knows how to skip the wrapper
+    // and stop at the end of the real MPEG frame data, so the client
+    // still gets back a real, standalone, playable .mp3 -- this changes
+    // only what's read from storage, not what format=MpegL3 delivers.
     ssize_t pt_n;
     uint8_t pt_data[2048];
-    printf("Content-type: audio/x-mpeg\n\n");
-    fflush(NULL);
-    if((pt_fd=open(RDCut::pathName(cartnum,cutnum).toUtf8(),O_RDONLY))<0) {
+    RDWaveFile *pt_wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
+    if(!pt_wave->openWave()) {
+      delete pt_wave;
       delete settings;
       XmlExit("Unable to access source file",500,"export.cpp",LINE_NUMBER,
 	      RDAudioConvert::ErrorNoSource);
     }
-    while((pt_n=read(pt_fd,pt_data,2048))>0) {
+    printf("Content-type: audio/x-mpeg\n\n");
+    fflush(NULL);
+    while((pt_n=pt_wave->readWave(pt_data,2048))>0) {
       RDCheckReturnCode("Export() write",write(1,pt_data,pt_n),pt_n);
     }
-    close(pt_fd);
+    delete pt_wave;
     delete settings;
     Exit(0);
   }

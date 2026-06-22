@@ -5,6 +5,61 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-22
+
+- Fixed: MP3 gain-patch normalization (added 2026-06-21) silently never
+  applied any gain shift. The requested level was read as hundredths of
+  a dB, but every consumer of this setting elsewhere in the pipeline
+  (`RDAudioConvert`'s own normalization, and `rdimport`'s own conversion
+  before sending it over the wire) has always used plain whole dB —
+  e.g. a Dropbox configured for -13dBFS was read as -0.13dB, rounding
+  the computed gain-patch step to zero. `mp3gain` still ran and rewrote
+  some header bytes, so the import completed normally with no error,
+  just a still-unnormalized file. See
+  `docs/specs/0004-mp3-gain-patch.md`.
+- Added the configured Target Audio Format (PCM16/PCM24/MPEG Layer 2/
+  MPEG Layer 3) to the Dropbox-flags dump at the top of `rdimport.log`,
+  alongside the other already-logged per-Dropbox settings.
+
+## 2026-06-21
+
+- Added MP3 gain-patch normalization: a same-format MP3-to-MP3 import
+  that requests normalization (the common case for most Dropboxes) can
+  now still take a fast path — the requested gain is patched directly
+  into each frame's `global_gain` field via `mp3gain`, instead of always
+  falling through to a full decode/re-encode. Falls back to the existing
+  conversion path whenever the patch isn't cleanly applicable. New
+  runtime dependency: `mp3gain` (packaged for Ubuntu and Debian, amd64
+  and arm64). See `docs/specs/0004-mp3-gain-patch.md`.
+- Fixed: MP3 passthrough (import) ignored a Dropbox's configured
+  normalization/autotrim level whenever the source was already MP3 and
+  the target format was also MP3 — the only acknowledgment was a syslog
+  warning, never actually applied. Normalization/autotrim now requires
+  falling through to the full decode/process/re-encode path, since
+  neither is possible on a byte-for-byte passthrough copy. See
+  `docs/specs/0003-mp3-waveform-energy.md`.
+- Fixed two more bugs in the new MP3 waveform/peak energy feature, found
+  during pre-build review: peaks computed during MP3 import/encoding
+  could be undercounted (a signed-value comparison ignored negative-going
+  excursions), and a same-format passthrough import could persist a
+  permanently-empty peak chunk, leaving that cut's waveform blank
+  forever with no recovery. See `docs/specs/0003-mp3-waveform-energy.md`.
+- Fixed generated helper scripts (`helpers/install_python.sh`,
+  `helpers/rdi18n_helper.sh`, `xdg/install_usermode.sh`, `build_debs.sh`)
+  losing their executable bit whenever `make` triggers automake's
+  per-file regeneration via `config.status`, instead of only a full
+  `./configure` run. The `chmod` is now part of each file's own
+  `AC_CONFIG_FILES` recipe in `configure.ac`, so it reruns on every
+  regeneration path.
+
+## 2026-06-20
+
+- Added real MP3 (MPEG Layer III) waveform/peak energy display: actual
+  decoded peak data via `libmad`, persisted to the file's own `LEVL`
+  chunk so repeat views don't re-decode from scratch. Previously MP3
+  cuts had no real waveform in "Edit Markers" at all. See
+  `docs/specs/0003-mp3-waveform-energy.md`.
+
 ## 2026-06-18
 
 - Fixed: MP3 passthrough (import and export) could produce a file
