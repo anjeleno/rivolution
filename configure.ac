@@ -616,8 +616,6 @@ AC_CONFIG_FILES([rivendell.spec \
     conf/rd-bin.conf \
     icons/Makefile \
     helpers/Makefile \
-    helpers/install_python.sh \
-    helpers/rdi18n_helper.sh \
     LICENSES/Makefile \
     apis/setup.cfg \
     apis/Makefile \
@@ -713,17 +711,27 @@ AC_CONFIG_FILES([rivendell.spec \
     utils/rdsoftkeys/Makefile \
     utils/rmlsend/Makefile \
     xdg/Makefile \
-    xdg/install_usermode.sh \
     xdg/rdalsaconfig-root-consolehelper \
     xdg/rddbconfig-root-consolehelper \
-    build_debs.sh \
     ])
-AC_OUTPUT()
 
-chmod 755 helpers/rdi18n_helper.sh
-chmod 755 helpers/install_python.sh
-chmod 755 xdg/install_usermode.sh
-chmod 755 build_debs.sh
+# These four are generated from .in templates via shell-script
+# substitution and need the executable bit set on every regeneration --
+# not just a full ./configure run, but also config.status's own
+# per-file rebuild rule that 'make' triggers automatically whenever
+# configure.ac/Makefile.am are newer than the generated build files.
+# The COMMANDS argument here is baked into config.status's recipe for
+# each file, so it reruns on both paths.
+AC_CONFIG_FILES([helpers/install_python.sh],
+                 [chmod 755 helpers/install_python.sh])
+AC_CONFIG_FILES([helpers/rdi18n_helper.sh],
+                 [chmod 755 helpers/rdi18n_helper.sh])
+AC_CONFIG_FILES([xdg/install_usermode.sh],
+                 [chmod 755 xdg/install_usermode.sh])
+AC_CONFIG_FILES([build_debs.sh],
+                 [chmod 755 build_debs.sh])
+
+AC_OUTPUT()
 
 #
 # Create symlinks in 'utils/rdselect_helper/'

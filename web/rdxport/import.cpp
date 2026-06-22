@@ -227,39 +227,74 @@ void Xport::Import()
   }
 
   //
-  // True passthrough: unconditional whenever the source is genuinely MP3
-  // (MPEG audio layer 3), the effective target format is also MP3, and
-  // the source's real sample rate already matches the system rate --
-  // there is never a reason to decode and re-encode an MP3 back to MP3.
-  // The sample-rate check matters because caed's MPEG playback path
+  // True passthrough: whenever the source is genuinely MP3 (MPEG audio
+  // layer 3), the effective target format is also MP3, the source's
+  // real sample rate already matches the system rate, and no
+  // normalization/autotrim was requested -- there is never a reason to
+  // decode and re-encode an MP3 back to MP3 in that case. The
+  // sample-rate check matters because caed's MPEG playback path
   // (cae/driver_alsa.cpp) does not resample mismatched-rate MPEG audio
   // at playout time, unlike its PCM/Vorbis paths -- a passthrough copy
   // of a file recorded at a different rate than the system's would
-  // play back pitch-shifted. When rates don't match, fall through to
-  // the normal conversion path below, which resamples correctly.
+  // play back pitch-shifted. The normalization/autotrim check matters
+  // because neither is possible without decoding to PCM, adjusting
+  // samples, and re-encoding -- a byte-for-byte passthrough copy is
+  // fundamentally incompatible with either. When any of these don't
+  // hold, fall through to the normal conversion path below, which
+  // resamples/normalizes/trims correctly.
   //
   bool do_passthrough=source_is_mp3&&(effective_format==3)&&
-    (source_sample_rate==rda->system()->sampleRate());
+    (source_sample_rate==rda->system()->sampleRate())&&
+    (normalization_level==0)&&(autotrim_level==0);
   RDAudioConvert::ErrorCode conv_err=RDAudioConvert::ErrorOk;
   RDAudioConvert *conv=NULL;
   if(do_passthrough) {
-    if(autotrim_level!=0) {
-      rda->syslog(LOG_WARNING,
-		 "rdxport: ignoring autotrim level for passthrough import "
-		 "of cart %d, cut %d",cartnum,cutnum);
+    //
+    // Copy the source's MPEG frame data verbatim into a WAV-wrapped
+    // destination -- the audio bitstream itself is never decoded or
+    // re-encoded, only the container changes, so this stays a true
+    // passthrough. Wrapping it lets LEVL energy data (computed below)
+    // persist in the file's own header, the same mechanism PCM/Layer II
+    // already use -- a bare elementary stream has no header to put it in.
+    //
+    RDWaveFile *src_wave=new RDWaveFile(filename);
+    if(!src_wave->openWave()) {
+      delete src_wave;
+      XmlExit("Unable to access imported file",500,"import.cpp",LINE_NUMBER,
+	      RDAudioConvert::ErrorNoDestination);
     }
-    if(normalization_level!=0) {
-      rda->syslog(LOG_WARNING,
-		 "rdxport: ignoring normalization level for passthrough "
-		 "import of cart %d, cut %d",cartnum,cutnum);
-    }
-    if(!QFile::copy(filename,RDCut::pathName(cartnum,cutnum))) {
+    RDWaveFile *dst_wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
+    dst_wave->setFormatTag(WAVE_FORMAT_MPEG);
+    dst_wave->setChannels(src_wave->getChannels());
+    dst_wave->setSamplesPerSec(src_wave->getSamplesPerSec());
+    dst_wave->setHeadLayer(3);
+    dst_wave->setHeadBitRate(src_wave->getHeadBitRate());
+    dst_wave->setHeadMode(src_wave->getHeadMode());
+    if(!dst_wave->createWave(&wavedata)) {
+      delete src_wave;
+      delete dst_wave;
       XmlExit("Unable to write imported file",500,"import.cpp",LINE_NUMBER,
 	      RDAudioConvert::ErrorNoDestination);
     }
+    char passthrough_buffer[65536];
+    int passthrough_n;
+    while((passthrough_n=
+	   src_wave->readWave(passthrough_buffer,sizeof(passthrough_buffer)))>
+	  0) {
+      dst_wave->writeWave(passthrough_buffer,passthrough_n);
+    }
+    delete src_wave;
+    dst_wave->closeWave();
+    delete dst_wave;
     wave=new RDWaveFile(RDCut::pathName(cartnum,cutnum));
     if(wave->openWave()) {
       msecs=wave->getExtTimeLength();
+      // dst_wave above never had real sample/frame counts (those are
+      // only known once a file is closed and reopened), so the
+      // decode-and-measure pass has to happen here instead, against
+      // this freshly-reopened handle, for hasEnergy() (via PutLevl())
+      // to persist real peak data rather than an empty LEVL chunk.
+      wave->hasEnergy();
     }
     else {
       delete wave;

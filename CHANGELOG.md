@@ -5,6 +5,37 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-21
+
+- Fixed: MP3 passthrough (import) ignored a Dropbox's configured
+  normalization/autotrim level whenever the source was already MP3 and
+  the target format was also MP3 — the only acknowledgment was a syslog
+  warning, never actually applied. Normalization/autotrim now requires
+  falling through to the full decode/process/re-encode path, since
+  neither is possible on a byte-for-byte passthrough copy. See
+  `docs/specs/0003-mp3-waveform-energy.md`.
+- Fixed two more bugs in the new MP3 waveform/peak energy feature, found
+  during pre-build review: peaks computed during MP3 import/encoding
+  could be undercounted (a signed-value comparison ignored negative-going
+  excursions), and a same-format passthrough import could persist a
+  permanently-empty peak chunk, leaving that cut's waveform blank
+  forever with no recovery. See `docs/specs/0003-mp3-waveform-energy.md`.
+- Fixed generated helper scripts (`helpers/install_python.sh`,
+  `helpers/rdi18n_helper.sh`, `xdg/install_usermode.sh`, `build_debs.sh`)
+  losing their executable bit whenever `make` triggers automake's
+  per-file regeneration via `config.status`, instead of only a full
+  `./configure` run. The `chmod` is now part of each file's own
+  `AC_CONFIG_FILES` recipe in `configure.ac`, so it reruns on every
+  regeneration path.
+
+## 2026-06-20
+
+- Added real MP3 (MPEG Layer III) waveform/peak energy display: actual
+  decoded peak data via `libmad`, persisted to the file's own `LEVL`
+  chunk so repeat views don't re-decode from scratch. Previously MP3
+  cuts had no real waveform in "Edit Markers" at all. See
+  `docs/specs/0003-mp3-waveform-energy.md`.
+
 ## 2026-06-18
 
 - Fixed: MP3 passthrough (import and export) could produce a file
