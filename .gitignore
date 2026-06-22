@@ -29,6 +29,7 @@
 .AppleDouble
 .deps
 .libs
+ARCHITECTURE.md
 CLAUDE.md
 aclocal.m4
 apis/rivwebcapi/rivwebcapi.pc

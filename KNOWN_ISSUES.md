@@ -49,7 +49,10 @@ category.
 
 **Cause:** the log scheduler isn't excluding kill-dated carts from
 rotation before generating the log. Suspected regression (see
-`BACKLOG.md`) — flagged high priority, not yet fixed.
+`BACKLOG.md`) — flagged high priority, not yet fixed. Recurred again
+2026-06-21 with a second promo; that occurrence also raised a separate
+concern that sequential rotation itself isn't cycling members in order
+correctly — see `BACKLOG.md` for both.
 
 **Workaround:** before a cart's kill date arrives, manually remove or
 replace it in its rotation category rather than relying on the

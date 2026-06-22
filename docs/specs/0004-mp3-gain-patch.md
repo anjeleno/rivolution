@@ -70,8 +70,8 @@ simply never been exercised against a CRC-protected file), on top of the
 inherent complexity of variable-width per-granule fields and
 MPEG1-vs-MPEG2/2.5 layout differences. This is exactly the kind of
 "touching something that could break" risk this fork's own conventions
-already push against (`~/CLAUDE.md`: simplicity first, no
-speculative/risky code where a simpler path exists).
+already push against: simplicity first, no speculative/risky code where
+a simpler path exists.
 
 ### `mp3gain` — the established tool for exactly this technique, confirmed available everywhere this project targets
 

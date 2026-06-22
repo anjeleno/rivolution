@@ -69,7 +69,7 @@ future submitter/station will always encode at the system rate.
 
 ## Log generation doesn't exclude kill-dated carts from rotation — likely a regression
 
-**High priority** — flagged 2026-06-19 as needing a fix soon, not
+**High priority** — flagged 2026-06-19, recurred again 2026-06-21. Not
 deferred indefinitely like the other entries here.
 
 A promo cart (cart 064721, "Live at Swan Dive LV") had a kill date of
@@ -88,8 +88,21 @@ underlying bug isn't really about any one already-generated log: as
 long as an expired cart remains a member of a category's rotation, the
 scheduler will keep selecting it for any newly-generated log, kill date
 or not. Suspected regression — reported as not happening in earlier
-Rivendell versions, though not yet bisected to confirm or to a specific
-upstream change.
+Rivendell versions (possibly introduced in 4.4.1 specifically — not yet
+bisected to confirm or to a specific upstream change).
+
+**Recurred 2026-06-21** with a second, independent promo (kill date 8PM
+6/20), same symptom, same workaround. That second occurrence also
+surfaced something new, not present in the original report: **the
+rotation itself looks wrong too**, separately from the kill-date
+exclusion issue — not yet characterized with a concrete example of what
+it actually did instead of the expected sequential order. Worth keeping
+in mind during investigation: this category's rotation type is
+sequential (not percentage- or weight-based) — when those alternate
+rotation types aren't explicitly set, rotation should just cycle
+through members in order (A B C A B C A B C...), so any fix needs to
+confirm it's actually checking the configured rotation type, not
+assuming sequential.
 
 **Current mitigation:** manually remove/replace kill-dated carts from
 their rotation category before they expire, rather than relying on the
@@ -97,7 +110,34 @@ scheduler to skip them automatically. See `KNOWN_ISSUES.md` for the
 user-facing version.
 
 **Deferred for now** at the reporter's request — not investigated yet,
-but tracked here as the next thing to pick up given the priority.
+but tracked here as the next thing to pick up given the priority, and
+now reinforced by a second real-world occurrence.
+
+## RDAirplay plays silence for a cart with a missing audio file, instead of skipping it — likely a regression
+
+**High priority** — flagged 2026-06-21.
+
+Some carts in the library have a cut record in the database with no
+actual backing audio file (file never made it to `/var/snd`, got
+deleted out-of-band, etc.). Rivendell currently treats "a cut record
+exists" as "this cart has audio," with no check that the file is
+actually present. When such a cart is scheduled and reached during
+playout, `RDAirplay` plays silence for the cut's full listed duration
+instead of moving on. Reported as a regression: previous behavior was
+to skip a cart with missing audio automatically and start the next log
+element immediately, with no dead air.
+
+Not yet investigated — no file/line citations yet for where
+`RDAirplay`'s playout logic decides "does this cart have audio" (likely
+checking cut-record existence rather than file existence).
+
+**Current mitigation:** none. See `KNOWN_ISSUES.md` for the user-facing
+version.
+
+**Deferred for now** — not investigated yet, but tracked here given the
+priority (dead air on a live broadcast). See `ROADMAP.md` for the
+related feature request (a library-wide missing-audio audit tool) that
+came up alongside this report — distinct from this bug fix itself.
 
 ## xrdp/dbus session-bus bug after a host reboot or xrdp restart
 
