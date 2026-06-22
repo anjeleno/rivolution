@@ -227,32 +227,28 @@ void Xport::Import()
   }
 
   //
-  // True passthrough: unconditional whenever the source is genuinely MP3
-  // (MPEG audio layer 3), the effective target format is also MP3, and
-  // the source's real sample rate already matches the system rate --
-  // there is never a reason to decode and re-encode an MP3 back to MP3.
-  // The sample-rate check matters because caed's MPEG playback path
+  // True passthrough: whenever the source is genuinely MP3 (MPEG audio
+  // layer 3), the effective target format is also MP3, the source's
+  // real sample rate already matches the system rate, and no
+  // normalization/autotrim was requested -- there is never a reason to
+  // decode and re-encode an MP3 back to MP3 in that case. The
+  // sample-rate check matters because caed's MPEG playback path
   // (cae/driver_alsa.cpp) does not resample mismatched-rate MPEG audio
   // at playout time, unlike its PCM/Vorbis paths -- a passthrough copy
   // of a file recorded at a different rate than the system's would
-  // play back pitch-shifted. When rates don't match, fall through to
-  // the normal conversion path below, which resamples correctly.
+  // play back pitch-shifted. The normalization/autotrim check matters
+  // because neither is possible without decoding to PCM, adjusting
+  // samples, and re-encoding -- a byte-for-byte passthrough copy is
+  // fundamentally incompatible with either. When any of these don't
+  // hold, fall through to the normal conversion path below, which
+  // resamples/normalizes/trims correctly.
   //
   bool do_passthrough=source_is_mp3&&(effective_format==3)&&
-    (source_sample_rate==rda->system()->sampleRate());
+    (source_sample_rate==rda->system()->sampleRate())&&
+    (normalization_level==0)&&(autotrim_level==0);
   RDAudioConvert::ErrorCode conv_err=RDAudioConvert::ErrorOk;
   RDAudioConvert *conv=NULL;
   if(do_passthrough) {
-    if(autotrim_level!=0) {
-      rda->syslog(LOG_WARNING,
-		 "rdxport: ignoring autotrim level for passthrough import "
-		 "of cart %d, cut %d",cartnum,cutnum);
-    }
-    if(normalization_level!=0) {
-      rda->syslog(LOG_WARNING,
-		 "rdxport: ignoring normalization level for passthrough "
-		 "import of cart %d, cut %d",cartnum,cutnum);
-    }
     //
     // Copy the source's MPEG frame data verbatim into a WAV-wrapped
     // destination -- the audio bitstream itself is never decoded or

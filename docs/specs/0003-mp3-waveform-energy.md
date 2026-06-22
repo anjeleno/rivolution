@@ -406,3 +406,34 @@ revisiting later, rather than relying on chat history.
   by then the file is closed and reopened, so `sample_length` is
   correctly parsed and the decode-and-measure pass has real data to
   persist.
+
+- **Found via real testing (2026-06-21): same-format MP3 passthrough
+  import silently ignored Dropbox normalization (and autotrim).** Not a
+  bug in this spec's own code — a pre-existing gap in `import.cpp`'s
+  passthrough decision, introduced in spec 0001
+  (`docs/specs/0001-mp3-import-format.md`, commit `e97dc2e1`,
+  2026-06-17, already merged to `v4`) — but found and fixed here because
+  the user identified it as this branch's actual remaining goal.
+  `do_passthrough` checked source/target format and sample rate but
+  never `normalization_level`/`autotrim_level`, so a same-format MP3→MP3
+  import took the unconditional byte-copy passthrough path even when a
+  Dropbox had normalization configured, silently skipping it — the only
+  acknowledgment was a `syslog` warning ("ignoring normalization level
+  for passthrough import...") that nobody watching the Dropbox would
+  ever see. Root cause is fundamental, not incidental: normalization
+  requires decoding to PCM, scaling samples, and re-encoding — a
+  byte-for-byte passthrough copy is structurally incompatible with it,
+  full stop. Fixed by adding `&&(normalization_level==0)&&
+  (autotrim_level==0)` to the `do_passthrough` condition, so a Dropbox
+  that actually requests normalization/trim falls through to the
+  existing `RDAudioConvert` decode→process→re-encode path instead
+  (already confirmed correct for same-format MP3→MP3). Removed the two
+  now-unreachable warning blocks inside `if(do_passthrough)` rather than
+  leaving them as dead code. Confirmed this reaches Dropbox-driven
+  imports specifically, not just the HTTP API surface: `rdimport` (what
+  Dropboxes actually run) calls `RDAudioImport::runImport()`
+  (`lib/rdaudioimport.cpp:156-164`), which POSTs the same
+  `NORMALIZATION_LEVEL`/`AUTOTRIM_LEVEL` fields to the same
+  `rdxport.cgi` `Import` command this fix changes — same server-side
+  code path regardless of which client (rdimport CLI, RDLibrary's Add
+  Cut dialog, etc.) initiates the request.

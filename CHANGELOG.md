@@ -5,6 +5,16 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-21
+
+- Fixed: MP3 passthrough (import) ignored a Dropbox's configured
+  normalization/autotrim level whenever the source was already MP3 and
+  the target format was also MP3 — the only acknowledgment was a syslog
+  warning, never actually applied. Normalization/autotrim now requires
+  falling through to the full decode/process/re-encode path, since
+  neither is possible on a byte-for-byte passthrough copy. See
+  `docs/specs/0003-mp3-waveform-energy.md`.
+
 ## 2026-06-18
 
 - Fixed: MP3 passthrough (import and export) could produce a file
