@@ -139,6 +139,28 @@ priority (dead air on a live broadcast). See `ROADMAP.md` for the
 related feature request (a library-wide missing-audio audit tool) that
 came up alongside this report — distinct from this bug fix itself.
 
+## Edit Markers waveform goes blank at maximum zoom near end-of-file
+
+**Flagged 2026-06-22.** Long-standing, pre-existing Rivendell v4
+behavior — not introduced by this fork.
+
+In "Edit Markers" (used to view a cut's waveform and place segue
+markers), zooming all the way in while positioned near the end of the
+file doesn't peg the waveform at the highest zoom level the way it
+does everywhere else in the file — instead the display goes blank,
+showing empty space rather than the actual waveform at that zoom
+level. Working around it means staying two or three zoom steps back
+from maximum, which costs real precision when placing a segue marker
+right at a file's tail.
+
+Not yet investigated — no file/line citations yet for the zoom/
+rendering logic responsible (likely in the waveform widget's
+end-of-file boundary handling, where the visible window's pixel-to-
+sample mapping runs past the actual sample count at high zoom).
+
+**Current mitigation:** manually zoom out two or three steps from
+maximum when placing markers near the end of a file.
+
 ## xrdp/dbus session-bus bug after a host reboot or xrdp restart
 
 "Could not acquire name on session bus" black-screen error, hit

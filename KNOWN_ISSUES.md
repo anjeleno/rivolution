@@ -61,14 +61,14 @@ with the exceptions present, replacing the cart and regenerating the
 log clears that specific report — but the underlying rotation will keep
 selecting any other not-yet-removed expired cart the same way.
 
-## No waveform/peak display for MP3 cuts
+## Edit Markers waveform goes blank when zoomed in fully near end-of-file
 
-**Symptom:** carts containing MP3-format audio show no waveform in
-RDLibrary, making it hard to place segue/talk markers precisely.
+**Symptom:** in "Edit Markers," zooming all the way in while positioned
+near the end of a cut shows blank space instead of the waveform,
+making it hard to place a segue marker precisely at a file's tail.
 
-**Cause:** `RDWaveFile::LoadEnergy()` has no decode path for MPEG Layer
-III — pre-existing upstream limitation, not a regression in this fork.
-Real MP3 peak computation is planned but not yet built.
+**Cause:** long-standing Rivendell v4 behavior, not introduced by this
+fork — not yet investigated in detail (see `BACKLOG.md`).
 
-**Workaround:** none currently — place markers by ear/timestamp until
-this is built.
+**Workaround:** zoom out two or three steps from maximum when placing
+markers near the end of a file.
