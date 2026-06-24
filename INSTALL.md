@@ -1,13 +1,15 @@
-This is the installation file for the Rivendell package.
+# Installing Rivolution
 
-HARDWARE REQUIREMENTS
+This is the installation file for the Rivolution package.
+
+## HARDWARE REQUIREMENTS
 A graphical display capable of at least 1680x1050 pixels resolution.
 (1920x1080 or higher recommended).
 
 
-MANDATORY PREREQUISITES
+## MANDATORY PREREQUISITES
 You will need the following installed and configured properly on your 
-system before building Rivendell:
+system before building Rivolution:
 
 Apache Web Server
 Included with most distros, or available from: http://www.apache.org/.
@@ -104,8 +106,9 @@ formats. Available at https://taglib.org/.
 X11 Window System
 Virtually all Linux distros should include this.
 
+---
 
-OPTIONAL PREREQUISITES
+## OPTIONAL PREREQUISITES
 The following components are optional, but needed at build- and run- time in
 order for particular features to work:
 
@@ -140,10 +143,11 @@ Available at http://www.underbit.com/products/mad/.
 TwoLAME - MPEG Layer 2 Encoder Library. Needed for MPEG Layer 2 exporting and
 capture. Available at http://www.twolame.org/.
 
+---
 
-DOCUMENTATION
--------------
-The larger pieces of the Rivendell documentation are written in XML-DocBook5.
+## DOCUMENTATION
+
+The larger pieces of the Rivolution documentation are written in XML-DocBook5.
 The following tools are required to build them:
 
 XML-DocBook5 Stylesheets. Available at 
@@ -163,23 +167,27 @@ https://xmlgraphics.apache.org/fop/.
 For a list of the required set of development packages for various popular
 distros, see the 'DISTRO-SPECIFIC NOTES' section, below.
 
-INSTALLATION
-There are three major steps to getting a Rivendell system up and
+---
+
+## INSTALLATION
+
+There are three major steps to getting a Rivolution system up and
 running. They are:
 
-1)  Setting up pre-requisite software
+1.  Setting up pre-requisite software
 
-2)  Installing the Rivendell package
+2.  Installing the Rivolution package
 
-3)  Initial configuration
+3.  Initial configuration
 
+---
 
-1)  Setting Up Prerequisites
+### 1. Setting Up Prerequisites
 
 The major prerequisite piece of software needed for a functioning
-Rivendell system is the MySQL database engine. This needs to
+Rivolution system is the MySQL database engine. This needs to
 be accessible from the target system (either by running on the local
-host, or on a remote system) before Rivendell installation proper
+host, or on a remote system) before Rivolution installation proper
 is commenced. In practice, this means that the 'mysqld' daemon is
 running and can be connected to using the mysql(1) client. You will
 also need a login name/password for an account on the server with
@@ -190,11 +198,12 @@ is generally beyond the scope of this document. Details can be found
 in a number of books on the subject, as well as in the very extensive
 documentation that accompanies the server itself.
 
+---
 
-2)  Installing the Rivendell Package
+### 2. Installing the Rivolution Package
 
 Once the prerequisites are set up, installation is most often a matter of 
-cd'ing to the top of the Rivendell source tree and typing
+cd'ing to the top of the Rivolution source tree and typing
 './configure_build.sh', 'make', followed by 'sudo make install'. The
 'configure_build.sh' will attempt to determine which distribution is
 running and automatically invoke the './configure' script with the
@@ -208,7 +217,7 @@ argument to './configure'. Be sure to see the important additional
 information regarding configuration in the 'docs/JACK.txt' or 'docs/ALSA.txt'
 files if you plan on using those sound driver architectures.
 
-The installation of Rivendell's web services components are controlled
+The installation of Rivolution's web services components are controlled
 by two parameters passed to 'configure', as follows:
 
 --libexecdir     Location to install web scripts and static content
@@ -221,14 +230,15 @@ see the 'DISTRO-SPECIFIC NOTES' section below.
 
 After doing 'make install', be sure to restart the Apache web service.
 
+---
 
-3)  Initial Configuration
+### 3. Initial Configuration
 
 Next, you'll need to install a small configuration file at
 '/etc/rd.conf'. A sample can be found in 'conf/rd.conf-sample'. Much
 of this can be used unchanged, with the exception of the entries in the 
 [Identity] section. These should be changed to reflect the user and group 
-name of the system accounts that will be running Rivendell.
+name of the system accounts that will be running Rivolution.
 
 The directory for the audio sample data next needs to be created, as
 so:
@@ -256,22 +266,23 @@ DB user to access it. This user should have the following privileges:
 
 In the '[mySQL]' section of the '/etc/rd.conf' file, set the 'Database=',
 'Loginname=' and 'Password=' parameters to the DB name, user and password
-that you created. Then, create an initial Rivendell database and generate
+that you created. Then, create an initial Rivolution database and generate
 the audio for the test-tone cart in the audio store audio cart by doing:
 
        rddbmgr --create --generate-audio
 
 If all goes well, this command should return with no output.
 
-Finally, start up the Rivendell service by doing (as root):
+Finally, start up the Rivolution service by doing (as root):
 
        systemctl start rivendell
 
-You should now be able to run the various Rivendell components from the
+You should now be able to run the various Rivolution components from the
 Applications menu.
 
+---
 
-# DISTRO-SPECIFIC NOTES
+## DISTRO-SPECIFIC NOTES
 
 ### Ubuntu 26.04 LTS
 
@@ -281,7 +292,7 @@ package names changed across the Qt5-to-Qt6 migration, and a few packages
 present in the 24.04 distro (`libid3-dev`, `hpklinux-dev`) don't
 exist at all on 26.04 under those names.
 
-### Required dependencies: 
+#### Required dependencies
 
 ```bash
 sudo apt install git g++ automake autoconf autoconf-archive libtool \
@@ -300,19 +311,19 @@ sudo apt install git g++ automake autoconf autoconf-archive libtool \
   apache2 mariadb-server mariadb-client
 ```
 
-### Run the following command which detects the distro and applies the same script invocation below automatically:
+#### Run the following command, which detects the distro and applies the same script invocation below automatically
 
 ```bash
 ./configure_build.sh
 ```
 
-### Or to configure the script invocation manually, run: 
+#### Or to configure the script invocation manually, run
 
 ```bash
 ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled --enable-rdxport-debug MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
 ```
 
-### Environmental variables:
+#### Environmental variables
 
 ```bash
 DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
@@ -342,7 +353,7 @@ level — safe to use here specifically, since required flags like
 `-std=c++17` live in a separate `AM_CPPFLAGS` variable
 (`lib/Makefile.am`) that a `CXXFLAGS` override doesn't touch.
 
-### Apache Web Server Configuration: CGI processing must be enabled. Run the following commands:
+#### Apache Web Server configuration: CGI processing must be enabled — run the following commands
 
 ```bash
 sudo ln -sf ../mods-available/cgid.conf /etc/apache2/mods-enabled/cgid.conf
@@ -354,19 +365,19 @@ sudo ln -sf ../mods-available/cgid.load /etc/apache2/mods-enabled/cgid.load
 sudo systemctl restart apache2
 ```
 
-### Build with:
+#### Build with
 
 ```bash
 make -j$(nproc)
 ```
 
-### Then, to install, run:
+#### Then, to install, run
 
 ```bash
 sudo make install
 ``` 
 
-### Refresh the linker's cache after install finishes by running:
+#### Refresh the linker's cache after install finishes by running
 
 ```bash
 sudo ldconfig
