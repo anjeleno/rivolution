@@ -62,18 +62,15 @@ following it literally.
 ## `make install` doesn't refresh the linker cache
 
 Installing a new `librd-*.so` doesn't make it loadable until `sudo
-ldconfig` runs — see `KNOWN_ISSUES.md` for the symptom/workaround.
-**Switching the prefix to `/usr` does not fix this** (corrected after
-initially assuming it would): `/usr/lib` only "stays fresh
-automatically" when libraries arrive via `apt`/`dpkg`, which runs
-`ldconfig` as a post-install trigger — a property of installing
-through a package manager, not of the directory itself. This fork
-installs via raw `sudo make install` (a plain file copy via libtool),
-which never goes through `dpkg`, so nothing triggers `ldconfig`
-regardless of prefix. Still not fixed in the install target itself;
-unlike the earlier (wrong) assumption, there's no longer a reason to
-expect this to resolve on its own — worth an actual `install-exec-hook`
-fix if this comes up again.
+ldconfig` runs, independent of install prefix — see `KNOWN_ISSUES.md`
+for the symptom/workaround. `/usr/lib` only "stays fresh
+automatically" in the common case because `apt`/`dpkg` runs `ldconfig`
+as a post-install trigger; that's a property of installing through a
+package manager, not of the directory itself. This fork installs via
+raw `sudo make install` (a plain file copy via libtool), which never
+goes through `dpkg`, so the cache needs a manual refresh either way.
+Not fixed in the install target itself yet — worth an actual
+`install-exec-hook` fix.
 
 ## RD_CURL_TIMEOUT orphans server-side conversions on large/slow imports
 

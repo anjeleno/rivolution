@@ -16,16 +16,16 @@ on a build that otherwise compiled cleanly.
 
 **Cause:** `configure.ac` creates a `helpers/docbook` symlink to the
 system's DocBook stylesheet tree at `./configure` time, but only if
-`$DOCBOOK_STYLESHEETS` is set in the environment first — `INSTALL`
+`$DOCBOOK_STYLESHEETS` is set in the environment first — `INSTALL.md`
 documents this as required for every Ubuntu section, but
 `configure_build.sh` never exported it, so the symlink silently never
 got created. `docs/apis`, `docs/manpages`, `docs/dtds`, and
 `docs/rivwebcapi` all depend on the same variable and would hit
-equivalent failures if their targets are built. This had gone
-unnoticed because one specific dev machine's checkout had a
-9-year-old (2016), never-version-controlled local copy of the one file
-this error names sitting at the exact path the symlink would have
-resolved to — masking the gap there, but not on any other checkout.
+equivalent failures if their targets are built. Easy to miss on a
+build machine that already has a copy of this same stylesheet file
+sitting locally outside the symlink's expected path — the build works
+by coincidence there, which is exactly what made this gap hard to spot
+until a genuinely clean checkout hit it directly.
 
 **Workaround:** export the variable before configuring, or just create
 the symlink directly if you're resuming a build that already ran
