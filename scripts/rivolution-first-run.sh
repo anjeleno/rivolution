@@ -13,7 +13,7 @@
 # not arbitrary -- kept for permission consistency across any future
 # cloned/networked Rivendell hosts.
 #
-# Run with: sudo bash fix-rivendell-user.sh
+# Run with: sudo bash rivolution-first-run.sh
 
 set -e
 
