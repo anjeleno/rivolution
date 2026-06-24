@@ -4,6 +4,25 @@ Practical limitations you'll hit running this fork today, what causes
 them, and what to do about it. For the technical "why hasn't this been
 fixed yet" detail, see `BACKLOG.md`.
 
+## Binaries fail with "cannot open shared object file" after a fresh install
+
+**Symptom:** right after `sudo make install`, every Rivendell binary
+(`rdadmin`, `rdairplay`, etc.) fails immediately:
+```
+error while loading shared libraries: librd-6.0.0int0.so: cannot open shared object file: No such file or directory
+```
+even though the file genuinely exists at `/usr/local/lib/librd-*.so`.
+
+**Cause:** `/usr/local/lib` is in the linker's configured search path
+(`/etc/ld.so.conf.d/libc.conf`), but `make install` doesn't refresh the
+linker's *cache* (`ldconfig`) after installing a new shared library
+there — unlike `/usr/lib`, which most package-manager-driven installs
+keep refreshed automatically. See `BACKLOG.md` for the install-prefix
+question this is one concrete symptom of.
+
+**Workaround:** run `sudo ldconfig` once after every `make install`.
+Not yet automated as part of the install target itself.
+
 ## Submitted mixes must be encoded at the system's sample rate
 
 **Symptom:** an imported MP3 plays back pitch-shifted ("helium"

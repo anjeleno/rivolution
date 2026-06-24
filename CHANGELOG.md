@@ -45,6 +45,15 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   longer generates `./libtool` as a side effect of
   `AC_PROG_LIBTOOL`/`LT_INIT`, which the existing rpath workaround
   needs present at configure time.
+- Fixed: a fresh database connection (RDDB Config, `rdadmin`, the
+  `panel_copy`/`rdcatch_copy` importers) failed with `QSqlDatabase: can
+  not load requested driver`. The actual Qt6 MySQL/MariaDB driver
+  plugin names are `QMYSQL`/`QMARIADB`; `lib/rd.h`'s
+  `DEFAULT_MYSQL_DRIVER`, `conf/rd.conf-sample`'s `Driver=` line,
+  `docs/manpages/rd.conf.xml`, and both importers all still referenced
+  the legacy Qt3-era name `QMYSQL3`, which doesn't exist as a loadable
+  driver under Qt6 (or, in fact, modern Qt5 — this was already stale,
+  just never hit until now). All five corrected to `QMYSQL`.
 
 ## 2026-06-22
 

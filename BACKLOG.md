@@ -6,6 +6,57 @@ This is **not** a feature roadmap or pipeline of planned work; see
 `docs/specs/` for that. Entries here get promoted to a real spec and
 branch once they're picked up.
 
+## Install prefix: resolved — use `configure_build.sh`, not raw `./configure`
+
+Today's dev install went to `--prefix=/usr/local`, but that wasn't
+because anything actually defaults there: `configure_build.sh`
+(upstream's own distro-detection wrapper) already hardcodes
+`--prefix=/usr` for every distro case (debian/rhel/ubuntu), matching
+every example in `INSTALL`'s distro-specific notes. `/usr/local` only
+happened because today's build invoked raw `./configure` directly
+(for speed/control while debugging Qt6 issues), bypassing that wrapper
+entirely.
+
+`/usr/local` was originally adopted on the old shared 24.04 box
+specifically to let `v4` (`/usr`) and `v6` coexist without `make
+install` overwriting `v4`'s binaries. That reason no longer applies on
+the dedicated `v6` box, and `/usr/local` has a real cost: it needs an
+explicit `sudo ldconfig` after every install that `/usr/lib` typically
+doesn't (see `KNOWN_ISSUES.md`), and it's non-standard relative to
+every script/config elsewhere in this toolchain (Apache config,
+systemd units, `rivendell-golden-ansible`'s provisioning scripts) that
+assumes the conventional `/usr`-rooted FHS layout. If this fork ever
+ships a real `.deb`, `/usr` is mandatory — Debian packaging conventions
+reserve `/usr/local` for software installed outside the package
+manager.
+
+**No code change needed** — just use `./configure_build.sh` for future
+builds instead of raw `./configure`, and clean up the stale
+`/usr/local`-installed files once a `/usr`-prefixed build replaces
+them.
+
+## `INSTALL` is stale for the Qt6/v6 fork
+
+Still says "Qt5 Toolkit, v5.9 or better" in the prerequisites list, and
+every distro's required-build-packages line still lists Qt5 packages
+(`qtbase5-dev`, `libqt5sql5-mysql`, `libqt5webkit5-dev`,
+`qttools5-dev-tools`, etc.) instead of their Qt6 equivalents. Inherited
+unchanged from upstream's `v4`; nobody's gone through and updated it
+for this fork's actual Qt6 dependency yet. Low risk of silently
+breaking anything (it's documentation, not code), but actively
+misleading for anyone trying to build this fork from source by
+following it literally.
+
+## `make install` doesn't refresh the linker cache
+
+Installing a new `librd-*.so` to `/usr/local/lib` doesn't make it
+loadable until `sudo ldconfig` runs — see `KNOWN_ISSUES.md` for the
+symptom/workaround. Should resolve on its own once future builds go
+through `configure_build.sh` (per the entry above) and land in
+`/usr/lib` instead, which stays cache-fresh automatically. Not worth a
+separate code fix to force `ldconfig` into the install target itself
+if switching prefixes makes the whole problem moot.
+
 ## RD_CURL_TIMEOUT orphans server-side conversions on large/slow imports
 
 `RD_CURL_TIMEOUT` (`lib/rd.h:514`, 1200s) is shared by every HTTP-based

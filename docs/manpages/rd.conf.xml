@@ -270,7 +270,7 @@
 	       The name of the Qt SQL driver plug-in to use when connecting to
 	       the database server. Consult the Qt documentation for the list
 	       of available values. Default value is
-	       <userinput>QMYSQL3</userinput>. It should seldom be necessary
+	       <userinput>QMYSQL</userinput>. It should seldom be necessary
 	       to change this.
 	     </para>
 	   </listitem>

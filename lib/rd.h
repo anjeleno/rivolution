@@ -26,7 +26,7 @@
 /*
  * Copyright Notice
  */
-#define RD_COPYRIGHT_NOTICE "© 2002-2023 Fred Gleason"
+#define RD_COPYRIGHT_NOTICE "© 2002-2023 Fred Gleason\nRivolution modifications © 2026 Brandon"
 
 /*
  * License Notice
@@ -71,7 +71,7 @@
 #define DEFAULT_MYSQL_DATABASE "Rivendell"
 #define DEFAULT_MYSQL_USERNAME "rduser"
 #define DEFAULT_MYSQL_PASSWORD "letmein"
-#define DEFAULT_MYSQL_DRIVER "QMYSQL3"
+#define DEFAULT_MYSQL_DRIVER "QMYSQL"
 #define DEFAULT_MYSQL_HEARTBEAT_INTERVAL 360
 #define DEFAULT_MYSQL_ENGINE "MyISAM"
 #define DEFAULT_MYSQL_CHARSET "utf8mb4"
