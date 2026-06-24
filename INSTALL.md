@@ -354,11 +354,28 @@ be done by means of the following commands:
 
 This list is verified directly against a real working build on this
 distro (not carried forward from older, Qt5-era notes above) -- some
-package names changed across the Qt5-to-Qt6 move, and a few packages
+package names changed across the Qt5-to-Qt6 migration, and a few packages
 present in the 24.04 list above (`libid3-dev`, `hpklinux-dev`) don't
 exist at all on 26.04 under those names.
 
-Required build packages: git g++ automake autoconf autoconf-archive libtool libltdl-dev make debhelper qt6-base-dev qt6-base-dev-tools qt6-l10n-tools qt6-webengine-dev qt6-webengine-dev-tools libqt6sql6-mysql libexpat1-dev libexpat1 libid3-3.8.3-dev libcurl4-gnutls-dev libcoverart-dev libdiscid-dev libmusicbrainz5-dev libcdparanoia-dev libsndfile1-dev libpam0g-dev libvorbis-dev libsamplerate0-dev libsoundtouch-dev libsystemd-dev libjack-jackd2-dev libasound2-dev libflac-dev libflac++-dev libmp3lame-dev libmad0-dev libtwolame-dev libssl-dev libtag1-dev libmagick++-dev docbook5-xml libxml2-utils docbook-xsl-ns xsltproc fop python3 python3-pycurl python3-pymysql python3-serial python3-requests python3-venv python3-virtualenv python3-build twine apache2 mariadb-server mariadb-client openssh-server gnupg pbuilder ubuntu-dev-tools apt-file
+Required dependencies: 
+
+```bash
+sudo apt install git g++ automake autoconf autoconf-archive libtool \
+  libltdl-dev make debhelper \
+  qt6-base-dev qt6-base-dev-tools qt6-l10n-tools qt6-webengine-dev \
+  qt6-webengine-dev-tools libqt6sql6-mysql \
+  libexpat1-dev libid3-3.8.3-dev libcurl4-gnutls-dev libcoverart-dev \
+  libdiscid-dev libmusicbrainz5-dev libcdparanoia-dev libsndfile1-dev \
+  libpam0g-dev libvorbis-dev libsamplerate0-dev libsoundtouch-dev \
+  libsystemd-dev libjack-jackd2-dev libasound2-dev libflac-dev \
+  libflac++-dev libmp3lame-dev libmad0-dev libtwolame-dev libssl-dev \
+  libtag1-dev libmagick++-dev \
+  docbook5-xml docbook-xsl-ns xsltproc fop libxml2-utils \
+  python3 python3-pycurl python3-pymysql python3-serial python3-requests \
+  python3-venv python3-virtualenv python3-build twine \
+  apache2 mariadb-server mariadb-client
+```
 
 Configure script invocation: ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled --enable-rdxport-debug MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
 
@@ -366,21 +383,32 @@ Configure script invocation: ./configure --prefix=/usr --libdir=/usr/lib --libex
 applies this same invocation automatically.)
 
 Environmental variables:
-  DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
-  DEBUILD_MAKE_ARGS=<optional-gcc-flags>
+
+```bash
+DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
+```
+```bash
+DEBUILD_MAKE_ARGS=<optional-gcc-flags>
+```
 
 Apache Web Server Configuration: CGI processing must be enabled. This can
 be done by means of the following commands:
 
-   sudo ln -sf ../mods-available/cgid.conf /etc/apache2/mods-enabled/cgid.conf
-   sudo ln -sf ../mods-available/cgid.load /etc/apache2/mods-enabled/cgid.load
-   sudo systemctl restart apache2
+```bash
+sudo ln -sf ../mods-available/cgid.conf /etc/apache2/mods-enabled/cgid.conf
+```
+```bash
+sudo ln -sf ../mods-available/cgid.load /etc/apache2/mods-enabled/cgid.load
+```
+```bash
+sudo systemctl restart apache2
+```
 
 `sudo make install` must be followed by `sudo ldconfig` -- it does not
 refresh the linker's cache itself. See KNOWN_ISSUES.md.
 
 
-7) Debian 11 "Bullseye"
+8) Debian 11 "Bullseye"
 
 Required build packages: autoconf automake libtool g++ qtbase5-dev libqt5sql5-mysql libqt5webkit5-dev qttools5-dev-tools libexpat1 libexpat1-dev libssl-dev libsamplerate-dev libsndfile-dev libcdparanoia-dev libcoverart-dev libdiscid-dev libmusicbrainz5-dev libid3-dev libtag1-dev libcurl4-gnutls-dev libpam0g-dev libsoundtouch-dev docbook5-xml libxml2-utils docbook-xsl-ns xsltproc fop make libsystemd-dev libjack-jackd2-dev libasound2-dev libflac-dev libflac++-dev libmp3lame-dev libmad0-dev libtwolame-dev python3 python3-pycurl python3-pymysql python3-serial python3-requests python3-virtualenv libmagick++-dev debhelper
 
@@ -389,7 +417,7 @@ Configure script invocation: ./configure --prefix=/usr --libdir=/usr/lib --libex
 Environmental variables: DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
 
 
-8) Debian 12 "Bookworm"
+9) Debian 12 "Bookworm"
 
 Required build packages: autoconf automake libtool g++ qtbase5-dev libqt5sql5-mysql  libqt5webkit5-dev qttools5-dev-tools libexpat1 libexpat1-dev libssl-dev libsamplerate-dev libsndfile-dev libcdparanoia-dev libcoverart-dev libdiscid-dev libmusicbrainz5-dev libid3-dev libtag1-dev libcurl4-gnutls-dev libpam0g-dev libsoundtouch-dev docbook5-xml libxml2-utils docbook-xsl-ns xsltproc fop make libsystemd-dev libjack-jackd2-dev libasound2-dev libflac-dev libflac++-dev libmp3lame-dev libmad0-dev libtwolame-dev python3 python3-pycurl python3-pymysql python3-serial python3-requests python3-virtualenv libmagick++-dev debhelper
 

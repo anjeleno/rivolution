@@ -73,15 +73,20 @@ fi
 case $DISTRO_TYPE in
     debian)
     export MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
+    export DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
     CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled $@"
     ;;
 
     rhel)
+    # NOTE: DOCBOOK_STYLESHEETS intentionally not set here -- INSTALL
+    # doesn't document a confirmed path for RHEL, and this hasn't been
+    # verified on an actual RHEL box. See KNOWN_ISSUES.md.
     CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib64 --libexecdir=/var/www/rd-bin --sysconfdir=/etc/httpd/conf.d $@"
     ;;
 
     ubuntu)
     export MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
+    export DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
     CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled $@"
     ;;
 esac
