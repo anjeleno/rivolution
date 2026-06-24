@@ -326,7 +326,13 @@ be done by means of the following commands:
    sudo systemctl restart apache2
 
 
-6) Ubuntu 24.04 LTS
+6) Ubuntu 24.04 LTS [Qt5 -- see note below]
+
+NOTE: this fork now builds against Qt6 (see ROADMAP.md/CHANGELOG.md);
+the package list below is retained for historical reference for
+anyone still building an older, pre-Qt6 checkout on this distro. For
+any current checkout, use the Ubuntu 26.04 LTS section that follows
+instead.
 
 Required build packages: apache2 libexpat1-dev libexpat1 libid3-dev libcurl4-gnutls-dev libcoverart-dev libdiscid-dev libmusicbrainz5-dev libcdparanoia-dev libsndfile1-dev libpam0g-dev libvorbis-dev python3 python3-pycurl python3-pymysql python3-serial python3-requests python3-venv python3-virtualenv python3-build twine python3-virtualenv libsamplerate0-dev qtbase5-dev libqt5sql5-mysql libqt5webkit5-dev libsoundtouch-dev libsystemd-dev libjack-jackd2-dev libasound2-dev libflac-dev libflac++-dev libmp3lame-dev libmad0-dev libtwolame-dev docbook5-xml libxml2-utils docbook-xsl-ns xsltproc fop make g++ libltdl-dev autoconf automake libssl-dev libtag1-dev qttools5-dev-tools debhelper openssh-server autoconf-archive gnupg pbuilder ubuntu-dev-tools apt-file hpklinux-dev libmagick++-dev
 
@@ -342,6 +348,36 @@ be done by means of the following commands:
    sudo ln -sf ../mods-available/cgid.conf /etc/apache2/mods-enabled/cgid.conf
    sudo ln -sf ../mods-available/cgid.load /etc/apache2/mods-enabled/cgid.load
    sudo systemctl restart apache2
+
+
+7) Ubuntu 26.04 LTS
+
+This list is verified directly against a real working build on this
+distro (not carried forward from older, Qt5-era notes above) -- some
+package names changed across the Qt5-to-Qt6 move, and a few packages
+present in the 24.04 list above (`libid3-dev`, `hpklinux-dev`) don't
+exist at all on 26.04 under those names.
+
+Required build packages: git g++ automake autoconf autoconf-archive libtool libltdl-dev make debhelper qt6-base-dev qt6-base-dev-tools qt6-l10n-tools qt6-webengine-dev qt6-webengine-dev-tools libqt6sql6-mysql libexpat1-dev libexpat1 libid3-3.8.3-dev libcurl4-gnutls-dev libcoverart-dev libdiscid-dev libmusicbrainz5-dev libcdparanoia-dev libsndfile1-dev libpam0g-dev libvorbis-dev libsamplerate0-dev libsoundtouch-dev libsystemd-dev libjack-jackd2-dev libasound2-dev libflac-dev libflac++-dev libmp3lame-dev libmad0-dev libtwolame-dev libssl-dev libtag1-dev libmagick++-dev docbook5-xml libxml2-utils docbook-xsl-ns xsltproc fop python3 python3-pycurl python3-pymysql python3-serial python3-requests python3-venv python3-virtualenv python3-build twine apache2 mariadb-server mariadb-client openssh-server gnupg pbuilder ubuntu-dev-tools apt-file
+
+Configure script invocation: ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled --enable-rdxport-debug MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
+
+(Or just run `./configure_build.sh`, which detects the distro and
+applies this same invocation automatically.)
+
+Environmental variables:
+  DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
+  DEBUILD_MAKE_ARGS=<optional-gcc-flags>
+
+Apache Web Server Configuration: CGI processing must be enabled. This can
+be done by means of the following commands:
+
+   sudo ln -sf ../mods-available/cgid.conf /etc/apache2/mods-enabled/cgid.conf
+   sudo ln -sf ../mods-available/cgid.load /etc/apache2/mods-enabled/cgid.load
+   sudo systemctl restart apache2
+
+`sudo make install` must be followed by `sudo ldconfig` -- it does not
+refresh the linker's cache itself. See KNOWN_ISSUES.md.
 
 
 7) Debian 11 "Bullseye"
