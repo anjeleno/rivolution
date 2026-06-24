@@ -4,6 +4,30 @@ Practical limitations you'll hit running this fork today, what causes
 them, and what to do about it. For the technical "why hasn't this been
 fixed yet" detail, see `BACKLOG.md`.
 
+## AudioScience hardware (HPI/HPK) unsupported on Ubuntu 26.04
+
+**Symptom:** stations with AudioScience professional audio adapters
+can't build or run with HPI support on Ubuntu 26.04 — `hpklinux-dev`
+(and the underlying kernel driver) isn't installable at all on this
+release. This is a real blocker, not a minor gap, for anyone relying
+on that hardware specifically.
+
+**Cause:** the `hpklinux`/`hpklinux-dev` package comes from a repo
+that currently only publishes builds for 22.04 ("jammy") and 24.04
+("noble") — no 26.04 ("resolute") build exists there yet. AudioScience's
+own underlying driver/SDK is still actively maintained directly by
+AudioScience — this is specifically a packaging gap for this one
+Ubuntu release, not the hardware or driver being abandoned.
+
+**Workaround:** build AudioScience's driver directly from their own
+published source tarball (audioscience.com) against the 26.04 kernel
+headers until `hpklinux-dev` is available for this release. Stations
+without AudioScience hardware aren't affected at all — `./configure
+--disable-hpi` builds the rest of Rivendell normally. No verified,
+tested step-by-step procedure exists yet for the from-source driver
+build on 26.04 specifically; treat this as unverified until someone's
+actually done it and reported back.
+
 ## `docs/` build fails: "cannot parse ../../helpers/docbook/template/titlepage.xsl"
 
 **Symptom:** `make` fails partway through `docs/stylesheets` with:

@@ -350,7 +350,7 @@ be done by means of the following commands:
    sudo systemctl restart apache2
 
 
-7) Ubuntu 26.04 LTS
+### 7) Ubuntu 26.04 LTS
 
 This list is verified directly against a real working build on this
 distro (not carried forward from older, Qt5-era notes above) -- some
@@ -358,7 +358,7 @@ package names changed across the Qt5-to-Qt6 migration, and a few packages
 present in the 24.04 list above (`libid3-dev`, `hpklinux-dev`) don't
 exist at all on 26.04 under those names.
 
-Required dependencies: 
+### Required dependencies: 
 
 ```bash
 sudo apt install git g++ automake autoconf autoconf-archive libtool \
@@ -377,12 +377,19 @@ sudo apt install git g++ automake autoconf autoconf-archive libtool \
   apache2 mariadb-server mariadb-client
 ```
 
-Configure script invocation: ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled --enable-rdxport-debug MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
+### Run the following command which detects the distro and applies this same invocation automatically:
 
-(Or just run `./configure_build.sh`, which detects the distro and
-applies this same invocation automatically.)
+```bash
+./configure_build.sh
+```
 
-Environmental variables:
+### Or to configure the script invocation manually, run: 
+
+```bash
+./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled --enable-rdxport-debug MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
+```
+
+### Environmental variables:
 
 ```bash
 DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
@@ -391,8 +398,7 @@ DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
 DEBUILD_MAKE_ARGS=<optional-gcc-flags>
 ```
 
-Apache Web Server Configuration: CGI processing must be enabled. This can
-be done by means of the following commands:
+### Apache Web Server Configuration: CGI processing must be enabled. Run the following commands:
 
 ```bash
 sudo ln -sf ../mods-available/cgid.conf /etc/apache2/mods-enabled/cgid.conf
@@ -404,8 +410,23 @@ sudo ln -sf ../mods-available/cgid.load /etc/apache2/mods-enabled/cgid.load
 sudo systemctl restart apache2
 ```
 
-`sudo make install` must be followed by `sudo ldconfig` -- it does not
-refresh the linker's cache itself. See KNOWN_ISSUES.md.
+### Then build:
+
+```bash
+make -j$(nproc)
+```
+
+### Then install with:
+
+```bash
+sudo make install
+``` 
+
+### Refresh the linker's cache after install finishes by running:
+
+```bash
+sudo ldconfig
+```
 
 
 8) Debian 11 "Bullseye"
