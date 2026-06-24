@@ -80,6 +80,48 @@ question this is one concrete symptom of.
 **Workaround:** run `sudo ldconfig` once after every `make install`.
 Not yet automated as part of the install target itself.
 
+## A stale `/usr/local`-prefix install can silently shadow a working `/usr` one
+
+**Symptom:** after a clean `sudo make install` to the correct prefix
+(`/usr`, via `configure_build.sh`), things still behave like an older
+build — `which rdimport` (or any other Rivendell binary) resolves to
+`/usr/local/bin/rdimport` instead of `/usr/bin/rdimport`; freshly
+swapped launcher icons don't show up; a real code fix doesn't seem to
+take effect at all even though the build succeeded.
+
+**Cause:** if `./configure` was ever run directly at some earlier
+point — bypassing `configure_build.sh`'s `--prefix=/usr` — that build
+installed a complete, parallel copy of every Rivendell binary, library,
+and icon at the autotools default prefix, `/usr/local` (see
+`BACKLOG.md`). Every later `make install` done correctly via
+`configure_build.sh` only adds/updates files at `/usr`; it never
+touches or removes that old `/usr/local` tree, since `make install`/
+`uninstall-local` only manage whichever prefix the build is currently
+configured for. Both `$PATH` (`/usr/local/bin` before `/usr/bin` by
+default on Debian/Ubuntu) and the XDG icon theme search order
+(`/usr/local/share/icons` checked before `/usr/share/icons`) prefer the
+stale copies, so the old build silently keeps winning.
+
+**Workaround:** check directly — `which rdimport` should print
+`/usr/bin/rdimport`; if it prints `/usr/local/bin/rdimport` instead, a
+shadow install exists. Confirm with `stat -c "%y %n" /usr/bin/rdimport
+/usr/local/bin/rdimport` (the `/usr/local` copy will have a visibly
+older mtime). There's no `make uninstall` that can clean this up after
+the fact, since the build is now configured for a different prefix
+than the stale install used — remove it by hand. A full stale install
+spans: `/usr/local/{bin,sbin}/{rd*,rivendell_filter}`,
+`/usr/local/lib/{librd*,librdalsa*}`, `/usr/local/libexec/` (entirely
+Rivendell's, safe to remove as a whole directory),
+`/usr/local/share/{pixmaps/rivendell,rivendell}/` (also entirely
+Rivendell's), `/usr/local/share/icons/hicolor/*/apps/{rivendell,rdadmin,
+rdairplay,rdcartslots,rdcastmanager,rdcatch,rdlibrary,rdlogedit,
+rdlogmanager,rdpanel}.png` (only the specific Rivendell-named files —
+this directory is shared with other locally-installed software),
+`/usr/local/share/X11/fvwm2/pixmaps/{rivendell,mini.rivendell}.xpm`,
+and `/usr/local/etc/rd-bin.conf`. Run `sudo ldconfig` afterward to drop
+the removed `librd*.so` entries from the linker cache. Not yet
+automated — see `BACKLOG.md`.
+
 ## Submitted mixes must be encoded at the system's sample rate
 
 **Symptom:** an imported MP3 plays back pitch-shifted ("helium"

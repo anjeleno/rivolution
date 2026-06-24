@@ -47,6 +47,20 @@ builds instead of raw `./configure`, and clean up the stale
 `/usr/local`-installed files once a `/usr`-prefixed build replaces
 them.
 
+**Follow-up, 2026-06-24:** that cleanup didn't happen automatically and
+the stale `/usr/local` tree sat there silently shadowing the real
+`/usr` install for the better part of a day — `$PATH` and the XDG icon
+theme search order both prefer `/usr/local` over `/usr`, so binaries
+and icons kept resolving to the old build with zero indication
+anything was wrong, until two seemingly-unrelated symptoms (RDLibrary's
+group list, `rdimport`'s dropbox-watch) both got mis-diagnosed for a
+while before the stale install was found and manually removed. See
+`KNOWN_ISSUES.md` for the operator-facing symptom/check/cleanup detail.
+Still no automated detection — a `make install` (or a separate check)
+that flags a populated `/usr/local` Rivendell tree when installing to a
+different prefix would have caught this immediately instead of costing
+real debugging time.
+
 ## `INSTALL` is stale for the Qt6/v6 fork
 
 Still says "Qt5 Toolkit, v5.9 or better" in the prerequisites list, and
