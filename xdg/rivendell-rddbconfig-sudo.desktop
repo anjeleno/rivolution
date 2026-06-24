@@ -5,5 +5,5 @@ Categories=Qt;KDE;Rivendell;
 Name=RDDBConfig
 GenericName=Rivendell Database Management
 Exec=sudo rddbconfig
-Icon=rdadmin
+Icon=rddbconfig
 Type=Application

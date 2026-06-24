@@ -5,6 +5,16 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-24
+
+- Replaced launcher and in-app icons for `rdadmin`, `rdairplay`,
+  `rdcatch`, `rdlibrary`, `rdlogedit`, and `rdlogmanager` (PNG, `.ico`,
+  and `.xpm` sets, plus the `RDIconEngine`-embedded window icon for
+  each) — the previous set made several modules hard to tell apart at
+  a glance. Also added dedicated icons for `rdalsaconfig` and
+  `rddbconfig`, which previously had no icon of their own and silently
+  reused the generic Rivendell icon and `rdadmin`'s icon respectively.
+
 ## 2026-06-23
 
 - Qt6 migration complete: `./configure && make` now succeeds
