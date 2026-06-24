@@ -196,7 +196,7 @@ QVariant RDFeedListModel::data(const QModelIndex &index,int role) const
 
       case Qt::SizeHintRole:
 	return QSize(RD_LISTWIDGET_ITEM_WIDTH_PADDING+
-		     d_font_metrics->width(d_cast_texts.
+		     d_font_metrics->horizontalAdvance(d_cast_texts.
 		     at(index.internalId()-1).at(row).at(col).toString()),
 		     24);
       default:
@@ -222,7 +222,7 @@ QVariant RDFeedListModel::data(const QModelIndex &index,int role) const
 	}
 	return d_font;
 
-      case Qt::TextColorRole:
+      case Qt::ForegroundRole:
 	// Nothing to do here!
 	break;
 
@@ -233,7 +233,7 @@ QVariant RDFeedListModel::data(const QModelIndex &index,int role) const
       case Qt::SizeHintRole:
 	return QSize(RD_LISTWIDGET_ITEM_WIDTH_PADDING+
 		     (d_icons.at(row).at(col).value<QPixmap>().width())+
-		     d_font_metrics->width(d_texts.at(row).at(col).toString()),
+		     d_font_metrics->horizontalAdvance(d_texts.at(row).at(col).toString()),
 		     40);
 
       default:

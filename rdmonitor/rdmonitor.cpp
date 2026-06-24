@@ -22,9 +22,11 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QGuiApplication>
 #include <QMessageBox>
 #include <QPainter>
 #include <QProcess>
+#include <QScreen>
 #include <QTranslator>
 
 #include <dbversion.h>
@@ -89,10 +91,9 @@ MainWidget::MainWidget(RDConfig *c,QWidget *parent)
   mon_rdconfig->load();
   mon_rdconfig->setModuleName("RDMonitor");
 
-  mon_desktop_widget=new QDesktopWidget();
   mon_config=new RDMonitorConfig();
   mon_config->load();
-  mon_position_dialog=new PositionDialog(mon_desktop_widget,mon_config,
+  mon_position_dialog=new PositionDialog(mon_config,
 					 mon_rdconfig,this);
   mon_position_dialog->setGeometry(0,0,mon_position_dialog->sizeHint().width(),
 				   mon_position_dialog->sizeHint().height());
@@ -185,7 +186,7 @@ void MainWidget::quitMainWidget()
 }
 
 
-void MainWidget::enterEvent(QEvent *e)
+void MainWidget::enterEvent(QEnterEvent *e)
 {
   mon_status_label->show();
   QWidget::enterEvent(e);
@@ -289,9 +290,15 @@ void MainWidget::SetSummaryState(bool state)
 
 void MainWidget::SetPosition()
 {
-  int width=mon_metrics->width(mon_name_label->text())+40;
-  QRect geo=mon_desktop_widget->screenGeometry(mon_config->screenNumber());
-  QRect main_geo=mon_desktop_widget->geometry();
+  int width=mon_metrics->horizontalAdvance(mon_name_label->text())+40;
+  QList<QScreen *> screens=QGuiApplication::screens();
+  QScreen *screen=qApp->primaryScreen();
+  if((mon_config->screenNumber()>=0)&&
+     (mon_config->screenNumber()<screens.size())) {
+    screen=screens.at(mon_config->screenNumber());
+  }
+  QRect geo=screen->geometry();
+  QRect main_geo=qApp->primaryScreen()->virtualGeometry();
   int x=0;
   int dx=mon_config->xOffset();
   int y=0;
@@ -435,7 +442,7 @@ void MainWidget::SetStatusPosition()
 {
   QFontMetrics *fm=new QFontMetrics(mon_status_label->font());
   int h=10+fm->height();
-  int w=10+fm->width(mon_status_label->text());
+  int w=10+fm->horizontalAdvance(mon_status_label->text());
   QRect g=geometry();
 
   switch(mon_config->position()) {

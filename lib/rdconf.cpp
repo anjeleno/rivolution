@@ -857,7 +857,7 @@ QString RDTempFile()
 QString RDTimeZoneName(const QDateTime &datetime)
 {
   char name[20];
-  time_t time=datetime.toTime_t();
+  time_t time=datetime.toSecsSinceEpoch();
   strftime(name,20,"%Z",localtime(&time));
   return QString(name);
 }
@@ -1024,7 +1024,7 @@ QByteArray RDStringToData(const QString &str)
 	istate=1;
       }
       else {
-	ret+=str.at(i);
+	ret+=str.at(i).toLatin1();
       }
       break;
 
@@ -1081,7 +1081,6 @@ QList<pid_t> RDGetPids(const QString &program)
       QFile file(QString("/proc/")+files.at(i)+"/cmdline");
       if(file.open(QIODevice::ReadOnly)) {
 	QTextStream strm(&file);
-	strm.setCodec("UTF-8");
 	QStringList f0=strm.readLine().split(" ");
 	QStringList f1=f0.at(0).split("/");
 	if(f1.back().left(f1.back().length()-1)==program.trimmed()) {

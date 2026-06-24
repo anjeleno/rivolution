@@ -65,7 +65,6 @@ bool RDReport::ExportSoundEx(const QString &filename,const QDate &startdate,
     return false;
   }
   QTextStream *strm=new QTextStream(file);
-  strm->setCodec("UTF-8");
 
   //
   // Generate Header

@@ -42,6 +42,13 @@ missing cross-driver bridge.
 
 There is no existing AES67 implementation anywhere in this codebase.
 
+See `ARCHITECTURE.md`'s "`caed` audio driver layer" section for a
+deeper trace of the per-driver card/port model (ALSA auto-probes every
+system device; JACK registers exactly one card per process) and the
+exact existing routing mechanism (`setPassthroughLevel()`'s per-card
+gain matrix, plus JACK's startup-only `JackSessionSetup()` patch list)
+— useful background for the cross-driver routing decision below.
+
 ### Why PipeWire
 
 PipeWire's core architecture unifies ALSA, JACK-compatible clients,
@@ -62,6 +69,12 @@ PipeWire 1.0.5, below the AES67 support threshold. **Ubuntu 26.04
 same OS version this project is already targeting for the Qt6
 migration (`0006-qt6-migration.md`).
 
+PipeWire's AES67 path also depends on `linuxptp` 4.0 or later (the
+version that added the state-query API PipeWire reads clock state
+through). Confirmed against the same archive: Ubuntu 26.04 ships
+`linuxptp` 4.4-0ubuntu1, also past that floor — no separate PPA or
+backport needed for either dependency.
+
 `pipewire-jack`, PipeWire's JACK-API compatibility layer, would let an
 existing JACK client work against a PipeWire server with no source
 changes. This spec does not rely on that shim for the new AES67
@@ -69,6 +82,83 @@ driver — native support is wanted specifically — but it remains a
 relevant fact for any future evaluation of running existing JACK-based
 tooling (e.g. `qjackctl`-adjacent workflows) against a PipeWire server
 during a transition period.
+
+### Vendor interoperability
+
+AES67 is an interoperability layer, not a single vendor's protocol —
+compatibility with any given AoIP ecosystem holds only at the boundary
+where that vendor's gear is actually operating in genuine AES67 mode,
+not against that vendor's full proprietary feature set:
+
+- **RAVENNA** — clean at the audio/clock layer: RAVENNA was one of the
+  primary technical contributors to the AES67 standard itself, so
+  RAVENNA devices speak genuine AES67 natively, with no mode switch or
+  gateway required for the actual stream. **Discovery is a separate
+  caveat, not covered by that claim:** RAVENNA's native discovery
+  mechanism is zeroconf, while PipeWire's AES67 support discovers
+  streams via SAP — confirmed against a January 2025 PipeWire/AES67
+  technical talk, which also notes a Windows-only `RAV2SAP` bridge
+  tool exists specifically because these two don't interoperate
+  natively. A RAVENNA device won't necessarily appear in this spec's
+  auto-discovery UX (see "Routing UI" below) unless that specific
+  device is also configured to announce via SAP, or some bridge is
+  added. Needs more research as implementation develops — in
+  particular, how common dual zeroconf/SAP announcement actually is
+  across deployed RAVENNA hardware.
+- **Axia/Telos Alliance (Livewire+)** — also clean: modern xNode
+  hardware ships with AES67 as a first-class, built-in stream mode
+  alongside native Livewire+, coexisting on the same network fabric.
+- **Wheatstone (WheatNet-IP)** — AES67 is exposed at the Blade
+  hardware boundary (e.g. Blade 4), not as an inherent property of the
+  WheatNet-IP fabric as a whole. WheatNet-IP itself remains a separate
+  proprietary network; the Blade is what speaks AES67 in and out of
+  it. Practically fine, just not "the whole network is AES67."
+- **Dante** — real, binding limitations, not just a mode flag:
+  Dante-to-Dante traffic on the same network always uses Dante's
+  native proprietary transport, regardless of whether AES67 mode is
+  enabled on both ends — AES67 mode only governs Dante's interop
+  boundary with non-Dante gear. AES67 mode itself is capped at 48kHz
+  only, a maximum of 32 streams, and no redundancy; on some chipsets
+  (Brooklyn II, HC, Broadway) the third-party AES67 stream being
+  subscribed to must additionally be in the `239.x/16` multicast
+  address range. None of this is a PipeWire-side limitation — it's
+  intrinsic to how Dante itself implements AES67 mode, confirmed
+  against Audinate's own documentation.
+
+### Known risk: privilege/session model mismatch
+
+PipeWire normally runs per-user, started by that user's own systemd
+session, reachable only via that session's own socket — not as a
+system-wide service. `caed` and Rivendell's other daemons traditionally
+run as root. A real report of exactly this mismatch already exists for
+Rivendell against JACK (`ElvishArtisan/rivendell` issue #823: a root
+`caed` failing to reach a per-user PipeWire/JACK instance at all).
+PipeWire does support running system-wide instead, but that's a
+non-default configuration with its own tradeoffs, not something to
+assume works the same way as the per-user default. This needs to be
+resolved (either run PipeWire system-wide, or run `caed`/the new driver
+under whatever user owns the PipeWire session, or some other bridging
+mechanism) before the new `cae/driver_pipewire.cpp` can connect to
+anything — it is a precondition for this spec's implementation, not an
+optional side investigation.
+
+A real-world data point bearing on which way this resolves: the
+reference `pipewire-aes67` deployment (per the January 2025 talk cited
+above) runs AES67 as its own dedicated config/session
+(`~/.config/pipewire/pipewire-aes67.conf`, run as its own
+`pipewire-aes67` process) rather than a module flipped on inside
+whatever PipeWire instance happens to already be running. That's
+suggestive evidence for resolving the question above toward `caed`
+running its own dedicated, system-wide PipeWire instance — hosting the
+AES67 modules *and* the absorbed ALSA/HPI streams together — rather
+than reaching out to a desktop user's per-session instance. Not a
+closed decision yet; needs more research once implementation starts.
+
+Separately, the PTP hardware clock device node (`/dev/ptpN`) is
+root-owned by default and needs an explicit udev rule for `caed` (or
+whatever user PipeWire/`ptp4l` end up running as) to read it — a
+second, smaller permissions precondition alongside the PipeWire socket
+question above, easy to miss until it's hit in practice.
 
 ## Design
 
@@ -79,32 +169,191 @@ API (not the `pipewire-jack` compatibility shim), providing AES67/RTP
 support specifically — following the same `MakeDriver`/`GetDriver`
 registration pattern the three existing drivers already use.
 
+### PTP grandmaster clock
+
+AES67 requires a PTP grandmaster somewhere on the network; the new
+driver should not require the operator to provision one separately as
+a precondition just to get a working default. `ptp4l` can run as a
+grandmaster sourced purely from the host's own system clock — no GPS
+or PTP-hardware-timestamping NIC required — so `caed`'s PipeWire setup
+should default to launching and managing its own local-clock `ptp4l`
+grandmaster automatically, with the AES67 path otherwise unusable out
+of the box.
+
+That "no special NIC required" framing is the optimistic end of real
+guidance, not the whole picture — worth being honest about rather than
+letting it stand unqualified. A January 2025 PipeWire/AES67 technical
+talk treats a PTP-hardware-timestamping-capable NIC (verified via
+`ethtool -T`, showing `hardware-transmit`/`hardware-receive`/a real PTP
+hardware clock) as the baseline expectation for a real deployment, with
+specific recommended hardware for stations that don't already have one
+(Intel i210 over PCIe; ASIX AX88279 over USB, which needs an
+out-of-tree vendor module). Both things can be true — informal field
+reports of software-only timestamping holding sync reliably, *and*
+careful technical guidance defaulting to assuming hardware timestamping
+— but this spec should say so explicitly rather than implying no NIC
+consideration exists at all. Needs more research/field testing as
+implementation develops, ideally on the actual hardware this gets
+deployed on.
+
+The same source also names concrete AES67-profile `ptp4l` tuning this
+spec doesn't currently capture, beyond just "run a grandmaster": a
+faster Sync message interval than stock `ptp4l` defaults to
+(`logSyncInterval -3`), and DSCP QoS marking on both PTP and RTP
+traffic (`dscp_event 46` / `dscp_general 34` — Expedited Forwarding for
+PTP, Assured Forwarding 41 for audio RTP, the same marking scheme
+already confirmed against vendor docs in "Vendor interoperability"
+above). Without that marking, AES67 audio has no real protection from
+being delayed or dropped by other traffic on a busy network switch —
+this isn't cosmetic tuning, it's load-bearing for reliability at scale.
+Needs to be folded into whatever config `caed` generates/manages for
+its own `ptp4l` instance; exact mechanics still need working out.
+
+This must not assume Rivendell's clock stays master forever: PTP's
+Best Master Clock Algorithm means any better-quality clock already
+present on the network (a dedicated GPS-locked grandmaster appliance,
+or another device already configured as one) will automatically be
+elected over it. This is correct, expected behavior to design around,
+not a failure mode to suppress — Rivendell's own clock is a sane
+default/fallback, not a forced master. The accuracy tradeoff is real
+but acceptable at this project's scale: a software-only clock achieves
+microsecond-to-low-millisecond accuracy, sufficient for audio
+sample-clock alignment in a broadcast-station deployment, not the
+nanosecond-grade precision of dedicated PTP hardware — consistent with
+informal field reports of software-only PTP grandmasters (run on
+ordinary server hardware, no special NIC) holding AES67 sync reliably
+over a standard switched network.
+
 ### Cross-driver routing requirement
 
-The existing `driver_alsa.cpp`/`driver_jack.cpp`/`driver_hpi.cpp` files
-are not removed — there is no reason to delete working hardware-
-specific code. However, this spec's actual requirement is that ports
-on **all four** backends (ALSA, JACK, HPI, PipeWire/AES67) be patchable
-to ports on any of the others, in real time, with no exclusivity. This
-is the core deliverable, not an optional extension of "add a fourth
-driver."
+This spec's actual requirement is that ports on **all four** backends
+(ALSA, JACK, HPI, PipeWire/AES67) be patchable to ports on any of the
+others, in real time, with no exclusivity. This is the core
+deliverable, not an optional extension of "add a fourth driver."
 
-The exact mechanism for achieving this is itself open implementation
-design, to be resolved during implementation, not decided by this
-spec:
+A concrete operational case this requirement has to cover, not just an
+abstract any-to-any claim: live monitoring — a cue channel, driving
+studio monitors — has to keep working, including when the source being
+monitored is an AES67/PipeWire stream that needs to land on a plain
+analog output. An AES67 source feeding an analog cue channel is exactly
+the cross-driver routing this section already commits to, so it isn't
+new scope on its own, but it deserves to be named explicitly rather
+than left implicit, since "monitoring" tends to carry assumptions (low
+latency, multiple simultaneous independent mixes, talkback) that plain
+any-to-any patching doesn't automatically guarantee. Whether cue/studio
+monitoring needs anything beyond ordinary patching — a dedicated
+low-latency path, mix-minus behavior, more than one independent monitor
+mix active at once — needs more research as this gets designed in
+detail; not resolved here.
 
-- **Option A:** PipeWire absorbs the underlying hardware directly
-  (via its own ALSA backend), so the existing ALSA- and HPI-backed
-  cards become native PipeWire graph nodes, and `caed`'s existing
-  drivers are effectively superseded by PipeWire-side equivalents for
-  routing purposes.
-- **Option B:** the existing drivers remain the owners of their
-  hardware as today, and a bridging layer exposes each driver's ports
-  as PipeWire graph nodes, leaving the existing drivers' internal
-  implementation untouched.
+**Decision: PipeWire becomes the system's actual routing substrate for
+all four backends, not just the new one.** Each existing driver keeps
+its own native hardware-acquisition code exactly as today — HPI keeps
+calling `RDHPISoundCard`/`RDHPIPlayStream`/`RDHPIRecordStream`, ALSA
+keeps owning its hardware — but the *transport layer* changes: each
+driver becomes a PipeWire stream client (`pw_stream`) rather than
+doing its own private I/O. No bridge process, and no driver becomes
+dead code superseded by a parallel path.
 
-Whichever option is chosen must satisfy the same end requirement: one
-unified, real-time-patchable graph spanning all four backends.
+- **ALSA**: leans on PipeWire's own existing ALSA backend instead of
+  `driver_alsa.cpp`'s current direct `snd_pcm_open` calls.
+- **HPI**: the one case requiring genuinely new code — becomes a
+  `pw_stream` client wrapping its existing vendor API calls, the same
+  kind of work the new AES67 driver itself needs to do anyway, just
+  with HPI's hardware underneath instead of network RTP.
+- **JACK**: `driver_jack.cpp` is retired outright, not refactored.
+  Once `caed` is itself a native PipeWire client, any external
+  JACK-only application can already reach `caed`'s ports through the
+  system's own `pipewire-jack` compatibility layer with no Rivendell
+  code involved — PipeWire is what's actually serving the JACK
+  protocol system-wide at that point, so a Rivendell-maintained JACK
+  driver has no remaining purpose. The exact retirement mechanics
+  (whether any thin compatibility shim is needed for existing
+  `rd.conf` JACK settings) are implementation detail, not decided here.
+
+**This makes PipeWire a mandatory runtime dependency for `caed` to
+function at all** — not an optional fourth backend alongside
+ALSA/HPI/JACK, but the substrate every backend's transport runs
+through. That is a deliberate, accepted cost of this fork's
+modernization mandate, consistent with `v6` already being the
+no-compromise branch while the original fork continues to serve
+anyone who needs to stay on older infrastructure — not a new category
+of risk this decision introduces on its own. Two concrete consequences
+worth naming rather than leaving implicit:
+- It forecloses a real, currently-practiced deployment pattern:
+  minimal/stripped installs that deliberately omit PipeWire entirely
+  to reduce a playout box's footprint. That pattern stops being
+  possible under this decision, full stop.
+- It widens the blast radius of the privilege/session risk already
+  noted above. Today that mismatch only matters once AES67/PipeWire is
+  actually in use; under this decision it becomes a precondition for
+  `caed` to start at all, on every installation, regardless of whether
+  that station ever touches AES67.
+
+**Two alternatives were considered and rejected, not just unconsidered
+— worth keeping on record so this ground doesn't get re-litigated
+without the reasoning that closed it:**
+- A bridging layer that left every existing driver's internals fully
+  untouched (no transport-layer change at all) was the conservative
+  option, and was rejected specifically because it leaves PipeWire/AES67
+  as one driver among four with its own special-case bridge, rather
+  than the first-class substrate this decision commits to. It remains
+  the lower-risk fallback if the transport-layer refactor proves
+  harder than expected during implementation.
+- Having PipeWire absorb hardware directly via its own ALSA backend
+  (superseding the existing ALSA/HPI drivers rather than refactoring
+  their transport layer) was rejected because it doesn't have a clean
+  answer for HPI at all — AudioScience's hardware speaks a proprietary
+  vendor API, not ALSA, so that approach would have needed a separate
+  carve-out for HPI anyway, undermining its own main appeal of
+  architectural uniformity.
+
+**Both questions this raised are now resolved, not just identified:**
+
+- `setPassthroughLevel` survives as a real operation, not a
+  compatibility shim. It is a *gain* control between two ports on the
+  same card (an intra-node property), a different concept from
+  *connecting* two ports (an inter-node link — the new thing PipeWire's
+  graph actually adds). PipeWire nodes carry their own volume/gain
+  properties independent of link topology, so this method gets
+  reimplemented to set a PipeWire property rather than demoted to a
+  wrapper.
+- The one existing static patch mechanism in production use today,
+  JACK's `[JackSession]` `rd.conf` config consumed by the now-retired
+  `DriverJack::JackSessionSetup()`, gets **no automated migration —
+  because the whole point of this work is to make that mechanism
+  unnecessary, not to carry it forward in a new shape.** The entire
+  objective of this modernization is to replace the complexity of the
+  old persistent-patch model, not reimplement it under a new name.
+  Installing the system, opening the dashboard, and seeing every
+  source and destination across all four backends already there,
+  ready to drag-and-drop into place, is the feature — not a consolation
+  for losing something. A handful of static patches taking a few
+  minutes to re-draw on a system that auto-discovers its own I/O isn't
+  a cost worth building a migration tool to avoid; it's the
+  demonstration that the simpler model actually works. Operators moving
+  from a JACK-based install re-establish their routing by using the
+  thing this spec was built to deliver, not by porting forward the
+  thing it replaces.
+
+Persistence for the *new* system is a real, durable mechanism, not
+absent — it lives in WirePlumber, PipeWire's own session/policy manager.
+WirePlumber manages link policy via its own config (declarative rules,
+changeable at runtime via `wpctl`, stored so it survives reboots) — this
+is genuine persistence, not a desktop-session artifact. The dashboard's
+own ad hoc graph edits (a live drag-to-connect) are a *separate*,
+genuinely temporary layer unless explicitly promoted into WirePlumber's
+policy — most likely by the dashboard generating WirePlumber's policy
+config directly and triggering a reload, treating that config as a
+render target it owns rather than a file an operator edits by hand.
+This split (temporary live-graph state vs. persistent WirePlumber
+policy) is inherent to how PipeWire and WirePlumber are designed to
+interact, not a Rivendell limitation, and the dashboard's UI must make
+that explicit rather than let a patch silently revert on reboot with no
+visible explanation.
+
+This must satisfy the same end requirement regardless: one unified,
+real-time-patchable graph spanning all four backends.
 
 ### Routing UI
 
@@ -112,6 +361,70 @@ The routing-matrix interface — expected to be the Go web dashboard
 (`0005-go-api-foundation.md`) — is intended to fully replace `qjackctl`
 as the patchbay UI, not coexist alongside it. One interface for the
 entire any-to-any patchbay across all four backends.
+
+**This has no existing pattern to extend anywhere in this codebase.**
+Confirmed by auditing every module that talks to `caed`
+(`rdairplay`, `rdpanel`, `rdcatch`, `rdlibrary`): routing/passthrough
+operations (`setPassthroughVolume`, `setClockSource`, etc.) are called
+*only* from `rdadmin`, and even there only to write static config to
+the database — never to the live daemon. No GUI in this codebase has
+ever exposed a live routing control. The Go dashboard's patchbay is a
+wholly new UX, not a modernization of an existing one, and the wire
+protocol it would call into doesn't have the necessary commands yet
+either (see `ARCHITECTURE.md`'s `caed` network protocol notes) — both
+the UI and the protocol underneath it need to be designed from
+scratch.
+
+**Required, not optional, parts of that new UX:**
+- Continuous auto-discovery of all I/O across all four backends, not
+  a one-time scan at first launch. Every source and destination
+  should already be present and named the moment the dashboard is
+  opened, and that has to stay true across every reboot and every
+  topology change after that — a card added, a card removed, an AES67
+  stream appearing or disappearing on the network — detected and
+  reflected automatically. No terminal, no config file, no manual
+  rescan action, ever, for the dashboard to learn what's actually
+  there. PipeWire's own graph already emits exactly these add/remove
+  events; the dashboard subscribes to them rather than polling or
+  requiring a refresh.
+
+  One real precondition this doesn't eliminate: PipeWire's SAP-based
+  discovery (`module-rtp-sap`) needs an explicit network interface
+  configured before it listens for anything at all, plus stream-match
+  rules before it acts on what it hears — confirmed against PipeWire's
+  own module documentation. That's not "no config file, ever" in the
+  literal sense at the PipeWire layer, but it must still be true at the
+  operator-facing layer: this one-time network-scope setup (interface,
+  multicast scope) is required, not optional, to live as a setting
+  inside the Go dashboard itself, generated into whatever PipeWire
+  config it manages. Opening a terminal or hand-editing a PipeWire
+  config file is not an acceptable fallback for this, not even for
+  initial setup — the dashboard owns this end-to-end or it doesn't ship.
+  Needs more research once the dashboard's own settings surface is
+  designed, but the constraint itself isn't open for revision.
+- An explicit persistent/temporary state on every patch, not an
+  implicit one. Every ad hoc connection the operator makes starts
+  temporary by default; making it survive a reboot is a deliberate,
+  visible action (promoting it into WirePlumber's policy config), never
+  an assumption. The UI must say so plainly — this is how PipeWire and
+  WirePlumber are designed to interact, not a Rivendell limitation, and
+  an operator should never be surprised by a patch silently reverting.
+- One dashboard, not three places. Once `setPassthroughLevel`-style
+  gain control is reimplemented as a PipeWire node/port property (see
+  above), it belongs in the same view as the patchbay, not a separate
+  screen — gain and routing are two properties of the same graph
+  objects the dashboard already has to render to do patching at all.
+  The goal is one master control surface, not gain in one place and
+  routing in another.
+- A curated, named graph, not a raw one — stated here as an explicit
+  objective, not an aspiration. A raw PipeWire graph exposes internal
+  cruft (monitor ports, loopback nodes) no broadcast operator should
+  have to parse. Achieving "zero knowledge of the underlying plumbing"
+  requires deliberate work: good `node.description`/port metadata set
+  by `driver_pipewire.cpp` and every refactored driver, and filtered
+  dashboard views that hide non-Rivendell plumbing. This does not fall
+  out automatically from building on PipeWire — it has to be designed
+  and built.
 
 ### Core/CPU affinity tuning
 
@@ -137,11 +450,24 @@ spec's AES67/routing work.
 ## Files
 
 - New: `cae/driver_pipewire.{cpp,h}`.
-- Reference/possibly modified depending on which routing option (A/B
-  above) is chosen during implementation: `cae/cae.cpp`,
-  `cae/driver_alsa.cpp`, `cae/driver_jack.cpp`, `cae/driver_hpi.cpp`,
-  `lib/rdstation.{cpp,h}`, `lib/rdmatrix.cpp`.
-- `configure.ac`: add PipeWire client library detection.
+- Modified, transport layer refactored onto `pw_stream` per the
+  cross-driver routing decision above: `cae/cae.cpp`,
+  `cae/driver_alsa.cpp`, `cae/driver_hpi.cpp`, `lib/rdstation.{cpp,h}`.
+- Removed: `cae/driver_jack.{cpp,h}` — retired per the decision above,
+  not carried forward.
+- `configure.ac`: add PipeWire client library detection; remove JACK
+  client library detection once `driver_jack.{cpp,h}` is actually gone.
+- **`cae/cae_server.{h,cpp}` and `lib/rdcae.{h,cpp}`** — the existing
+  24-command wire protocol between `caed` and every client has no
+  commands for cross-driver routing or AES67/PTP status today; new
+  command codes and matching `RDCae` client methods are required, not
+  optional plumbing. See `ARCHITECTURE.md`'s `caed` network protocol
+  notes for the existing command set this needs to extend.
+- **`utils/rddbmgr/create.cpp` and `updateschema.cpp`** — `AUDIO_CARDS`
+  has no network-shaped columns at all (no multicast address, PTP
+  domain, SAP session name, or per-stream sample rate); a real schema
+  migration (new columns or a new child table) is required before any
+  AES67 config can persist.
 
 ## Verification
 

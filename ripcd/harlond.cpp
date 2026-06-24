@@ -224,7 +224,7 @@ void Harlond::socketReadyReadData()
 	bt_recv_buffer="";
       }
       else {
-	bt_recv_buffer+=data[i];
+	bt_recv_buffer+=QChar(data[i]);
       }
     }
   }

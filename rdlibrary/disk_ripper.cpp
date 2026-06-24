@@ -18,6 +18,8 @@
 //   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <utility>
+
 #include <QApplication>
 #include <QList>
 #include <QMessageBox>
@@ -502,7 +504,7 @@ void DiskRipper::ejectedData()
   rip_cddb_label->hide();
   rip_cdtext_label->hide();
   rip_cddb_label->hide();
-  rip_track=-1;
+  rip_track="";
   rip_artist_edit->clear();
   rip_album_edit->clear();
   rip_other_edit->clear();
@@ -729,7 +731,7 @@ void DiskRipper::mediaChangedData()
   }
   rip_wave_datas.clear();
   rip_track_model->clear();
-  rip_track=-1;
+  rip_track="";
   rip_setcut_button->setDisabled(true);
   rip_setall_button->setDisabled(true);
   rip_setsingle_button->setDisabled(true);
@@ -743,7 +745,7 @@ void DiskRipper::mediaChangedData()
     rip_cutnames.push_back(QString());
     rip_end_track.push_back(-1);
     rip_wave_datas.push_back(new RDWaveData());
-    rip_wave_datas.back()->setTitle(tr("Track")+QString().sprintf(" %d",i));
+    rip_wave_datas.back()->setTitle(tr("Track")+QString::asprintf(" %d",i));
   }
   rip_disc_record.clear();
   rip_cdrom->setCddbRecord(&rip_disc_record);
@@ -781,7 +783,7 @@ void DiskRipper::lookupDoneData(RDDiscLookup::Result result,
     else {
       rip_apply_box->hide();
       rip_apply_label->hide();
-      rip_track=-1;
+      rip_track="";
       rip_cdtext_label->hide();
       rip_cddb_label->hide();
       return;  // Apply no metadata
@@ -793,7 +795,7 @@ void DiskRipper::lookupDoneData(RDDiscLookup::Result result,
     if(rip_cdrom->status()!=RDCdPlayer::Ok) {
       rip_apply_box->hide();
       rip_apply_label->hide();
-      rip_track=-1;
+      rip_track="";
       rip_cdtext_label->hide();
       rip_cddb_label->hide();
       return;
@@ -844,7 +846,7 @@ void DiskRipper::lookupDoneData(RDDiscLookup::Result result,
   case RDDiscLookup::NoMatch:
     rip_apply_box->hide();
     rip_apply_label->hide();
-    rip_track=-1;
+    rip_track="";
     rip_cdtext_label->hide();
     rip_cddb_label->hide();
     break;
@@ -854,7 +856,7 @@ void DiskRipper::lookupDoneData(RDDiscLookup::Result result,
 			 " "+tr("Lookup Error"),err_msg);
     rip_apply_box->hide();
     rip_apply_label->hide();
-    rip_track=-1;
+    rip_track="";
     rip_cdtext_label->hide();
     rip_cddb_label->hide();
     break;
@@ -1206,7 +1208,7 @@ QModelIndexList DiskRipper::SortRows(const QModelIndexList &rows) const
     modified=false;
     for(int i=1;i<rows.size();i++) {
       if(rows.at(index.at(i-1)).row()>rows.at(index.at(i)).row()) {
-	index.swap(i-1,i);
+	std::swap(index[i-1],index[i]);
 	modified=true;
       }
     }

@@ -5,6 +5,47 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-23
+
+- Qt6 migration complete: `./configure && make` now succeeds
+  end-to-end against Qt6 on Ubuntu 26.04. Beyond the patterns already
+  logged below (2026-06-22), full-build verification surfaced 18 more
+  distinct Qt6 API removals/changes the original grep sweep missed —
+  `QString::sprintf()`→`asprintf()` (57 occurrences, 20 files);
+  `QPalette::Background`/`Foreground`→`Window`/`WindowText` (169
+  occurrences, 39 files); `QFontMetrics::width(QString)`→
+  `horizontalAdvance()` (77 occurrences, 23 files);
+  `Qt::TextColorRole`/`BackgroundColorRole`; `Qt::MidButton`;
+  `QDate::shortDayName()` and siblings; `QDesktopWidget` removed
+  entirely (→ `QScreen`); `QMouseEvent`/`QDropEvent` position
+  accessors; `QWheelEvent::orientation()`/`delta()`; `QVariant::Type`
+  on `QMimeData`'s virtual interface; `QTextStream::setCodec()`
+  removed (Core5Compat split); a second `QList::swap(int,int)` fix
+  idiom (`swapItemsAt`) alongside the first; a `QMap`/`QMultiMap`
+  iterator-type split; a missing `QFile` include; `QWidget::enterEvent`'s
+  widened `QEnterEvent*` signature; `QDateTime(const QDate&)`; and
+  `QLabel::pixmap()`'s value-vs-pointer return change. Full detail in
+  `docs/specs/0006-qt6-migration.md`.
+- Version bumped to `6.0.0int0` (from `4.4.1int3`) in
+  `versions/PACKAGE_VERSION`. `versions/README.txt` gained a short
+  explanation of the existing `intN` pre-release suffix convention
+  (inherited from upstream, not new) and a note that
+  `debian/changelog` is regenerated from `debian/changelog.src` by
+  `autogen.sh`, not hand-edited.
+- `debian/changelog.src`'s maintainer line updated to this fork's own
+  identity, separate from upstream's.
+- Ubuntu 26.04 build-compatibility fixes unrelated to Qt6 itself:
+  MusicBrainz pkg-config module names renamed (`libmusicbrainz5`→
+  `libmusicbrainz5cc`, `libcoverart`→`libcoverartcc`), with the
+  matching `librd_la_LIBADD` linkage added in `lib/Makefile.am`;
+  ImageMagick detection tries the unversioned `Magick++` pkg-config
+  name first, falling back to the old `Magick++-6.Q16` name (Ubuntu
+  26.04 ships ImageMagick 7 only, under which the old name doesn't
+  exist); `LT_OUTPUT` added to `configure.ac` since libtool ≥2.4.7 no
+  longer generates `./libtool` as a side effect of
+  `AC_PROG_LIBTOOL`/`LT_INIT`, which the existing rpath workaround
+  needs present at configure time.
+
 ## 2026-06-22
 
 - Qt6 migration (in progress, `feature/qt6-migration`, not yet merged):

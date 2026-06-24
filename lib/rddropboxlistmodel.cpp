@@ -155,7 +155,7 @@ QVariant RDDropboxListModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       if(col==1) {
 	return d_group_colors.at(row);
       }

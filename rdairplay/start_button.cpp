@@ -36,35 +36,35 @@ StartButton::StartButton(bool allow_pause,QWidget *parent)
   //
   start_stop_color=
     QPalette(QColor(BUTTON_STOPPED_BACKGROUND_COLOR),
-	     palette().color(QPalette::Background));
+	     palette().color(QPalette::Window));
   start_play_color=
     QPalette(QColor(BUTTON_PLAY_BACKGROUND_COLOR),
-	     palette().color(QPalette::Background));
+	     palette().color(QPalette::Window));
   start_play_color.
     setColor(QPalette::ButtonText,QColor(BUTTON_PLAY_TEXT_COLOR));
   start_pause_color=
     QPalette(QColor(BUTTON_PAUSE_BACKGROUND_COLOR),
-	     palette().color(QPalette::Background));
+	     palette().color(QPalette::Window));
   start_pause_color.
     setColor(QPalette::ButtonText,QColor(BUTTON_PAUSE_TEXT_COLOR));
 
   start_from_color=QPalette(QColor(BUTTON_FROM_BACKGROUND_COLOR),
-			    palette().color(QPalette::Background));
+			    palette().color(QPalette::Window));
   start_from_color.
     setColor(QPalette::ButtonText,QColor(BUTTON_FROM_TEXT_COLOR));
 
   start_to_color=QPalette(QColor(BUTTON_TO_BACKGROUND_COLOR),
-			       palette().color(QPalette::Background));
+			       palette().color(QPalette::Window));
   start_to_color.
     setColor(QPalette::ButtonText,QColor(BUTTON_TO_TEXT_COLOR));
 
   start_disabled_color=QPalette(QColor(BUTTON_DISABLED_BACKGROUND_COLOR),
-				palette().color(QPalette::Background));
+				palette().color(QPalette::Window));
   start_disabled_color.
     setColor(QPalette::ButtonText,QColor(BUTTON_DISABLED_TEXT_COLOR));
 
   start_error_color=QPalette(QColor(BUTTON_ERROR_BACKGROUND_COLOR),
-			     palette().color(QPalette::Background));
+			     palette().color(QPalette::Window));
   start_error_color.
     setColor(QPalette::ButtonText,QColor(BUTTON_ERROR_TEXT_COLOR));
 
@@ -178,19 +178,19 @@ void StartButton::paintEvent(QPaintEvent *e)
   if(start_mode!=StartButton::Disabled) {
     p->setPen(QColor(Qt::color1));
     p->setFont(labelFont());
-    p->drawText((w-p->fontMetrics().width(start_title))/2,
+    p->drawText((w-p->fontMetrics().horizontalAdvance(start_title))/2,
 		22,start_title);
     p->drawLine(10,24,70,24);
     if(!start_time.isNull()) {
-      p->drawText((w-p->fontMetrics().width(rda->timeString(start_time)))/2,40,
+      p->drawText((w-p->fontMetrics().horizontalAdvance(rda->timeString(start_time)))/2,40,
 		  rda->timeString(start_time));
     }
     else {
-      p->drawText((w-p->fontMetrics().width("--:--:--"))/2,
+      p->drawText((w-p->fontMetrics().horizontalAdvance("--:--:--"))/2,
 		  40,"--:--:--");
     }
     p->setFont(bigLabelFont());
-    p->drawText((w-p->fontMetrics().width(start_port))/2,70,start_port);
+    p->drawText((w-p->fontMetrics().horizontalAdvance(start_port))/2,70,start_port);
   }
   p->end();
   delete p;

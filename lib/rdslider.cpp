@@ -133,7 +133,7 @@ void RDSlider::setKnobColor(const QPalette &pal)
 
 void RDSlider::setKnobColor(const QColor &color)
 {
-  knob_color.setColor(QPalette::Background,color);
+  knob_color.setColor(QPalette::Window,color);
   calcKnob();
   update();
 }
@@ -338,7 +338,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
   if(rdslider_moving) {
     prev_knob=curr_knob;
     if((rdslider_orient==RDSlider::Up)||(rdslider_orient==RDSlider::Down)) {
-      if(mouse->y()<0) {
+      if(mouse->position().toPoint().y()<0) {
 	curr_knob=QRect(curr_knob.x(),0,curr_knob.width(),curr_knob.height());
 	if(prev_knob!=curr_knob) {
 	  switch(rdslider_orient) {
@@ -374,7 +374,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
 	}
 	return;
       }
-      if(mouse->y()>geometry().height()) {
+      if(mouse->position().toPoint().y()>geometry().height()) {
 	curr_knob=QRect(curr_knob.x(),height()-curr_knob.height(),
 			curr_knob.width(),curr_knob.height());
 	if(prev_knob!=curr_knob) {
@@ -411,7 +411,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
 	}
 	return;
       }
-      curr_y=curr_knob.y()-base_y+mouse->y();
+      curr_y=curr_knob.y()-base_y+mouse->position().toPoint().y();
       if(curr_y<0) {
 	curr_y=0;
       }
@@ -420,7 +420,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
       }
       curr_knob=QRect(curr_knob.x(),curr_y,
 		      curr_knob.width(),curr_knob.height());
-      base_y=mouse->y();
+      base_y=mouse->position().toPoint().y();
       switch(rdslider_orient) {
 	  case RDSlider::Up:
 	    knob_value=(maximum()-minimum())*
@@ -464,7 +464,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
     }
 
     if((rdslider_orient==RDSlider::Left)||(rdslider_orient==RDSlider::Right)) {
-      if(mouse->x()<0) {
+      if(mouse->position().toPoint().x()<0) {
 	curr_knob=QRect(0,curr_knob.y(),curr_knob.width(),curr_knob.height());
 	if(prev_knob!=curr_knob) {
 	  switch(rdslider_orient) {
@@ -500,7 +500,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
 	}
 	return;
       }
-      if(mouse->x()>geometry().width()) {
+      if(mouse->position().toPoint().x()>geometry().width()) {
 	curr_knob=QRect(width()-curr_knob.width(),curr_knob.y(),
 			curr_knob.width(),curr_knob.height());
 	if(prev_knob!=curr_knob) {
@@ -537,7 +537,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
 	}
 	return;
       }
-      curr_x=curr_knob.x()-base_x+mouse->x();
+      curr_x=curr_knob.x()-base_x+mouse->position().toPoint().x();
       if(curr_x<0) {
 	curr_x=0;
       }
@@ -546,7 +546,7 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
       }
       curr_knob=QRect(curr_x,curr_knob.y(),
 		      curr_knob.width(),curr_knob.height());
-      base_x=mouse->x();
+      base_x=mouse->position().toPoint().x();
       switch(rdslider_orient) {
 	  case RDSlider::Left:
 	    knob_value=(maximum()-minimum())*
@@ -594,18 +594,18 @@ void RDSlider::mouseMoveEvent(QMouseEvent *mouse)
 void RDSlider::mousePressEvent(QMouseEvent *mouse)
 {
   if(mouse->button()==Qt::LeftButton) {
-    if(curr_knob.contains(mouse->x(),mouse->y())) {
-      base_x=mouse->x();
-      base_y=mouse->y();
+    if(curr_knob.contains(mouse->position().toPoint().x(),mouse->position().toPoint().y())) {
+      base_x=mouse->position().toPoint().x();
+      base_y=mouse->position().toPoint().y();
       rdslider_moving=true;
       emit sliderPressed();
       return;
     }
-    if(page_up.contains(mouse->x(),mouse->y())) {
+    if(page_up.contains(mouse->position().toPoint().x(),mouse->position().toPoint().y())) {
       addStep();
       return;
     }
-    if(page_down.contains(mouse->x(),mouse->y())) {
+    if(page_down.contains(mouse->position().toPoint().x(),mouse->position().toPoint().y())) {
       subtractStep();
     }
   }
@@ -710,7 +710,7 @@ void RDSlider::calcKnob(int x,int y,int w,int h)
       delete knob_map;
     }
     knob_map=new QPixmap(curr_knob.size());
-    knob_map->fill(knob_color.color(QPalette::Background));
+    knob_map->fill(knob_color.color(QPalette::Window));
     p.begin(knob_map);
     
     //
@@ -789,7 +789,7 @@ void RDSlider::calcKnob(int x,int y,int w,int h)
       delete knob_map;
     }
     knob_map=new QPixmap(curr_knob.size());
-    knob_map->fill(knob_color.color(QPalette::Background));
+    knob_map->fill(knob_color.color(QPalette::Window));
     p.begin(knob_map);
     
     //

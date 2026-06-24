@@ -39,8 +39,8 @@ DeckMon::DeckMon(QString station,unsigned channel,QWidget *parent)
   // Generate Palettes
   //
   mon_red_palette=palette();
-  mon_red_palette.setColor(QPalette::Background,Qt::darkRed);
-  mon_red_palette.setColor(QPalette::Foreground,Qt::white);
+  mon_red_palette.setColor(QPalette::Window,Qt::darkRed);
+  mon_red_palette.setColor(QPalette::WindowText,Qt::white);
   mon_red_stylesheet="color: white;background-color: darkRed;";
   mon_dark_palette=palette();
 
@@ -65,7 +65,7 @@ DeckMon::DeckMon(QString station,unsigned channel,QWidget *parent)
   mon_monitor_button->setFont(subButtonFont());
   mon_monitor_button->setText(tr("MON"));
   mon_monitor_palette=new QPalette(QColor(BUTTON_MONITOR_FLASHING_COLOR),
-				   palette().color(QPalette::Background));
+				   palette().color(QPalette::Window));
   if((mon_channel>128)&&(mon_channel<(MAX_DECKS+129))) {
     mon_monitor_button->hide();
   }

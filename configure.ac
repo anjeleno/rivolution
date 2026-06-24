@@ -46,6 +46,11 @@ AC_SUBST(INTERFACE_RIVWEBCAPI_POINT,$RIVWEBCAPI_REVISION)
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LIBTOOL
+dnl libtool >= 2.4.7 stopped generating ./libtool as a side effect of
+dnl AC_PROG_LIBTOOL/LT_INIT -- it's now deferred to config.status unless
+dnl explicitly requested early. The rpath hack just below needs the
+dnl script to exist at configure time, not just at build time.
+LT_OUTPUT
 AC_LANG(C++)
 
 # to avoid rpath usage :
@@ -366,7 +371,7 @@ fi
 # Check for MusicBrainz support libraries
 # (libdiscid, libmusicbrainz and libcoverart)
 #
-PKG_CHECK_MODULES(MUSICBRAINZ,libdiscid libmusicbrainz5 libcoverart,,[AC_MSG_ERROR([*** One or more MusicBrainz libraries not found ***])])
+PKG_CHECK_MODULES(MUSICBRAINZ,libdiscid libmusicbrainz5cc libcoverartcc,,[AC_MSG_ERROR([*** One or more MusicBrainz libraries not found ***])])
 
 #
 # Check for Id3Lib
@@ -396,7 +401,13 @@ AC_CHECK_HEADER(soundtouch/SoundTouch.h,[],[AC_MSG_ERROR([*** SoundTouch not fou
 #
 # Check for ImageMagick
 #
-PKG_CHECK_MODULES(IMAGEMAGICK,Magick++-6.Q16,[],[AC_MSG_ERROR([*** ImageMagick 6 Magick++ binding not found ***])])
+dnl Ubuntu 26.04 ships ImageMagick 7 only -- the "Magick++-6.Q16" pkg-config
+dnl module name no longer exists at all on that distro (confirmed via
+dnl pkg-config --list-all). Try the modern unversioned name first, falling
+dnl back to the old IM6-versioned name for systems that still ship it.
+PKG_CHECK_MODULES(IMAGEMAGICK,Magick++,[],
+  [PKG_CHECK_MODULES(IMAGEMAGICK,Magick++-6.Q16,[],
+    [AC_MSG_ERROR([*** ImageMagick Magick++ binding not found ***])])])
 
 #
 # Check for Python

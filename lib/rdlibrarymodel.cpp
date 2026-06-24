@@ -279,7 +279,7 @@ QVariant RDLibraryModel::data(const QModelIndex &index,int role) const
 
       case Qt::SizeHintRole:
 	return QSize(RD_LISTWIDGET_ITEM_WIDTH_PADDING+
-		     d_font_metrics->width(d_cut_texts.
+		     d_font_metrics->horizontalAdvance(d_cut_texts.
 		     at(index.internalId()-1).at(row).at(col).toString()),
 		     RD_LISTWIDGET_ITEM_HEIGHT);
       default:
@@ -310,7 +310,7 @@ QVariant RDLibraryModel::data(const QModelIndex &index,int role) const
 	  return d_notes.at(row);
 	}
 
-      case Qt::TextColorRole:
+      case Qt::ForegroundRole:
 	if(col==1) {
 	  return d_group_colors.value(d_texts.at(row).at(1).toString());
 	}
@@ -322,7 +322,7 @@ QVariant RDLibraryModel::data(const QModelIndex &index,int role) const
       case Qt::SizeHintRole:
 	return QSize(RD_LISTWIDGET_ITEM_WIDTH_PADDING+
 		     (d_icons.at(row).at(col).value<QPixmap>().width())+
-		     d_font_metrics->width(d_texts.at(row).at(col).toString()),
+		     d_font_metrics->horizontalAdvance(d_texts.at(row).at(col).toString()),
 		     RD_LISTWIDGET_ITEM_HEIGHT);
 
       default:

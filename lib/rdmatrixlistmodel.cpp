@@ -135,7 +135,7 @@ QVariant RDMatrixListModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       // Nothing to do!
       break;
 

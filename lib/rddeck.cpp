@@ -41,8 +41,7 @@ RDDeck::RDDeck(QString station,unsigned channel,bool create)
     q=new RDSqlQuery(sql);
     if(q->size()!=1) {
       delete q;
-      sql=QString().
-        sprintf("insert into `DECKS` set ")+
+      sql=QString::asprintf("insert into `DECKS` set ")+
 	"`STATION_NAME`='"+RDEscapeString(deck_station)+"',"+
 	QString::asprintf("`CHANNEL`=%d",deck_channel);
       RDSqlQuery::apply(sql);

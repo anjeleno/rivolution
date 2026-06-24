@@ -146,20 +146,20 @@ QString RDDateDecode(QString str,const QDate &date,RDStation *station,
       //
       switch(str.at(i).toLatin1()) {
       case 'a':   // Abbreviated weekday name
-	field=QDate::shortDayName(dt.dayOfWeek()).toLower();
+	field=QLocale::system().dayName(dt.dayOfWeek(),QLocale::ShortFormat).toLower();
 	break;
 
       case 'A':   // Full weekday name
-	field=QDate::longDayName(dt.dayOfWeek()).toLower();
+	field=QLocale::system().dayName(dt.dayOfWeek(),QLocale::LongFormat).toLower();
 	break;
 
       case 'b':   // Abbreviated month name
       case 'h':
-	field=QDate::shortMonthName(dt.month()).toLower();
+	field=QLocale::system().monthName(dt.month(),QLocale::ShortFormat).toLower();
       break;
 
       case 'B':   // Full month name
-	field=QDate::longMonthName(dt.month()).toLower();
+	field=QLocale::system().monthName(dt.month(),QLocale::LongFormat).toLower();
 	break;
 
       case 'C':   // Century
@@ -357,20 +357,20 @@ QString RDDateTimeDecode(QString str,const QDateTime &datetime,
       //
       switch(str.at(i).toLatin1()) {
       case 'a':   // Abbreviated weekday name
-	field=QDate::shortDayName(dt.date().dayOfWeek()).toLower();
+	field=QLocale::system().dayName(dt.date().dayOfWeek(),QLocale::ShortFormat).toLower();
 	break;
 
       case 'A':   // Full weekday name
-	field=QDate::longDayName(dt.date().dayOfWeek()).toLower();
+	field=QLocale::system().dayName(dt.date().dayOfWeek(),QLocale::LongFormat).toLower();
 	break;
 
       case 'b':   // Abbreviated month name
       case 'h':
-	field=QDate::shortMonthName(dt.date().month()).toLower();
+	field=QLocale::system().monthName(dt.date().month(),QLocale::ShortFormat).toLower();
       break;
 
       case 'B':   // Full month name
-	field=QDate::longMonthName(dt.date().month()).toLower();
+	field=QLocale::system().monthName(dt.date().month(),QLocale::LongFormat).toLower();
 	break;
 
       case 'C':   // Century

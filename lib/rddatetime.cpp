@@ -160,8 +160,7 @@ QString RDWriteXmlTime(const QTime &time)
   if(utc_off<0) {
     tz_str="+";
   }
-  tz_str+=QString().
-    sprintf("%02d:%02d",utc_off/3600,(utc_off-3600*(utc_off/3600))/60);
+  tz_str+=QString::asprintf("%02d:%02d",utc_off/3600,(utc_off-3600*(utc_off/3600))/60);
 
   return time.toString("hh:mm:ss")+tz_str;
 }
@@ -347,8 +346,7 @@ QString RDWriteRfc822DateTime(const QDateTime &dt)
   if(utc_off<0) {
     tz_str="+";
   }
-  tz_str+=QString().
-    sprintf("%02d%02d",utc_off/3600,(utc_off-3600*(utc_off/3600))/60);
+  tz_str+=QString::asprintf("%02d%02d",utc_off/3600,(utc_off-3600*(utc_off/3600))/60);
 
   return __rddatetime_dow_names[dt.date().dayOfWeek()-1]+", "+
     QString::asprintf("%d ",dt.date().day())+

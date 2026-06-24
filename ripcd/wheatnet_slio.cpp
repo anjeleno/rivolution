@@ -198,7 +198,7 @@ void WheatnetSlio::readyReadData()
 	break;
 
       default:
-	slio_accum+=data[i];
+	slio_accum+=QChar(data[i]);
 	break;
       }
     }

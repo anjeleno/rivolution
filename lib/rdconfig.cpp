@@ -772,8 +772,7 @@ bool RDConfig::load()
   int c=1;
   QString dest;
   while(!(dest=profile->
-	  stringValue("RDBackup",QString().
-		      sprintf("Destination%d",c++),"")).isEmpty()) {
+	  stringValue("RDBackup",QString::asprintf("Destination%d",c++),"")).isEmpty()) {
     conf_destinations.push_back(dest);
   }
   delete profile;

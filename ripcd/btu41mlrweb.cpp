@@ -141,7 +141,7 @@ void BtU41MlrWeb::readyReadData()
 	break;
 
       default:
-	bt_accum+=data[i];
+	bt_accum+=QChar(data[i]);
 	break;
       }
     }

@@ -200,7 +200,7 @@ void WheatnetLio::readyReadData()
 	break;
 
       default:
-	lio_accum+=data[i];
+	lio_accum+=QChar(data[i]);
 	break;
       }
     }

@@ -23,7 +23,7 @@
 #include <rdescape_string.h>
 
 #include <qapplication.h>
-#include <qdesktopwidget.h>
+#include <QScreen>
 
 #include "edit_image.h"
 
@@ -212,8 +212,7 @@ QSize EditImage::FittedSize(const QSize &img_size) const
 
 QSize EditImage::MaxFriendlyImageSize() const
 {
-  QDesktopWidget *dt=QApplication::desktop();
-  QSize dsize(dt->screenGeometry(dt->screenNumber(this)).size());
+  QSize dsize(screen()->geometry().size());
 
   return QSize(dsize.width()-EDIT_IMAGE_WIDTH_OFFSET,
 	       dsize.height()-EDIT_IMAGE_HEIGHT_OFFSET-100);

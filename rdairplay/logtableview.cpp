@@ -51,7 +51,7 @@ void LogTableView::dropEvent(QDropEvent *e)
 {
   RDLogLine ll;
   int line=-1;
-  int y_pos=e->pos().y();
+  int y_pos=e->position().toPoint().y();
 
   if(RDCartDrag::decode(e->mimeData(),&ll)) {
     line=rowAt(y_pos);

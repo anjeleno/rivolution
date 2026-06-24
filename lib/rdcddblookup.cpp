@@ -23,7 +23,6 @@
 
 #include <qapplication.h>
 #include <qdatetime.h>
-#include <qregexp.h>
 #include <qtimer.h>
 
 #include "rdapplication.h"

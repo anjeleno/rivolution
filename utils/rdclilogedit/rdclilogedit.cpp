@@ -107,7 +107,7 @@ void MainObject::userData()
 	break;
 
       default:
-	edit_accum+=data[i];
+	edit_accum+=QChar(data[i]);
       }
     }
   }

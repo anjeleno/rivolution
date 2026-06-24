@@ -135,8 +135,7 @@ bool RDMacroEvent::load(const QString &str)
 
 bool RDMacroEvent::load(unsigned cartnum)
 {
-  QString sql=QString().
-    sprintf("select `MACROS` from `CART` where (`NUMBER`=%d)&&(`TYPE`=2)",
+  QString sql=QString::asprintf("select `MACROS` from `CART` where (`NUMBER`=%d)&&(`TYPE`=2)",
 	    cartnum);
   RDSqlQuery *q=new RDSqlQuery(sql);
   if(!q->first()) {

@@ -27,7 +27,7 @@ HourSelector::HourSelector(QWidget *parent)
   // Palettes
   //
   hour_active_palette=
-    QPalette(QColor(BUTTON_STOPPED_BACKGROUND_COLOR),palette().color(QPalette::Background));
+    QPalette(QColor(BUTTON_STOPPED_BACKGROUND_COLOR),palette().color(QPalette::Window));
 
   //
   // Buttons

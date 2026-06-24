@@ -2199,8 +2199,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
       "`END_TYPE`=1";
     q=new RDSqlQuery(sql,false);
     while(q->next()) {
-      sql=QString().
-	sprintf("update `RECORDINGS` set `MAX_GPI_REC_LENGTH`=%u where `ID`=%u",
+      sql=QString::asprintf("update `RECORDINGS` set `MAX_GPI_REC_LENGTH`=%u where `ID`=%u",
 		QTime(0,0,0).msecsTo(q->value(2).toTime())+q->value(3).toUInt()-
 		QTime(0,0,0).msecsTo(q->value(1).toTime()),q->value(0).toUInt());
       if(!RDSqlQuery::apply(sql,err_msg)) {
@@ -4854,8 +4853,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
     while(q->next()) {
       tablename=q->value(0).toString();
       tablename.replace(" ","_");
-      sql=QString().
-	sprintf("alter table `%s_LOG` modify column `ORIGIN_USER` char(255)",
+      sql=QString::asprintf("alter table `%s_LOG` modify column `ORIGIN_USER` char(255)",
 		tablename.toUtf8().constData());
       if(!RDSqlQuery::apply(sql,err_msg)) {
         return false;
@@ -4868,14 +4866,12 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
     while(q->next()) {
       tablename=q->value(0).toString();
       tablename.replace(" ","_");
-      sql=QString().
-	sprintf("alter table `%s_PRE` modify column `ORIGIN_USER` char(255)",
+      sql=QString::asprintf("alter table `%s_PRE` modify column `ORIGIN_USER` char(255)",
 		tablename.toUtf8().constData());
       if(!RDSqlQuery::apply(sql,err_msg)) {
         return false;
       }
-      sql=QString().
-	sprintf("alter table `%s_POST` modify column `ORIGIN_USER` char(255)",
+      sql=QString::asprintf("alter table `%s_POST` modify column `ORIGIN_USER` char(255)",
 		tablename.toUtf8().constData());
       if(!RDSqlQuery::apply(sql,err_msg)) {
         return false;
@@ -5812,8 +5808,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
     }
 
     for(unsigned i=0;i<10;i++) {
-      sql=QString().
-	sprintf("select `STATION`,`CARD%u`,`PORT%u`,`START_RML%u`,`STOP_RML%u` ",
+      sql=QString::asprintf("select `STATION`,`CARD%u`,`PORT%u`,`START_RML%u`,`STOP_RML%u` ",
 		i,i,i,i)+
 	"from `RDAIRPLAY`";
       q=new RDSqlQuery(sql,false);
@@ -5860,8 +5855,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
 
     for(unsigned i=0;i<10;i++) {
       if((i==2)||(i==3)||(i==6)||(i==7)||(i==8)||(i==9)) {
-	sql=QString().
-	  sprintf("select `STATION`,`CARD%u`,`PORT%u`,`START_RML%u`,`STOP_RML%u` ",
+	sql=QString::asprintf("select `STATION`,`CARD%u`,`PORT%u`,`START_RML%u`,`STOP_RML%u` ",
 		  i,i,i,i)+
 	  "from `RDPANEL`";
 	q=new RDSqlQuery(sql,false);

@@ -95,7 +95,7 @@ RDMarkerPlayer::RDMarkerPlayer(int card,int port,QWidget *parent)
   d_position_label->setFont(labelFont());
   d_position_label->setAlignment(Qt::AlignCenter);
   d_position_label->
-    setPalette(QPalette(palette().color(QPalette::Background),
+    setPalette(QPalette(palette().color(QPalette::Window),
   			palette().mid().color()));
   d_position_edit=new QLabel(this);
   d_position_edit->setAcceptDrops(false);

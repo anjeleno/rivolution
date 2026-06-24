@@ -93,7 +93,7 @@ void RDPushButton::setFlashColor(QColor color)
   int v=0;
 
   flash_color=color;  
-  flash_palette=QPalette(QColor(flash_color),palette().color(QPalette::Background));
+  flash_palette=QPalette(QColor(flash_color),palette().color(QPalette::Window));
 
   color.getHsv(&h,&s,&v);
   if((h>180)&&(h<300)) {
@@ -158,7 +158,7 @@ void RDPushButton::mousePressEvent(QMouseEvent *e)
     QPushButton::mousePressEvent(e);
     break;
 	
-  case Qt::MidButton:
+  case Qt::MiddleButton:
     emit centerPressed();
     break;
 	
@@ -179,23 +179,23 @@ void RDPushButton::mouseReleaseEvent(QMouseEvent *e)
     QPushButton::mouseReleaseEvent(e);
     break;
 	
-  case Qt::MidButton:
+  case Qt::MiddleButton:
     e->accept();
     emit centerReleased();
-    if((e->x()>=0)&&(e->x()<geometry().width())&&
-       (e->y()>=0)&&(e->y()<geometry().height())) {
+    if((e->position().toPoint().x()>=0)&&(e->position().toPoint().x()<geometry().width())&&
+       (e->position().toPoint().y()>=0)&&(e->position().toPoint().y()<geometry().height())) {
       emit centerClicked();
-      emit centerClicked(button_id,QPoint(e->x(),e->y()));
+      emit centerClicked(button_id,QPoint(e->position().toPoint().x(),e->position().toPoint().y()));
     }
     break;
 	
   case Qt::RightButton:
     e->accept();
     emit rightReleased();
-    if((e->x()>=0)&&(e->x()<geometry().width())&&
-       (e->y()>=0)&&(e->y()<geometry().height())) {
+    if((e->position().toPoint().x()>=0)&&(e->position().toPoint().x()<geometry().width())&&
+       (e->position().toPoint().y()>=0)&&(e->position().toPoint().y()<geometry().height())) {
       emit rightClicked();
-      emit rightClicked(button_id,QPoint(e->x(),e->y()));
+      emit rightClicked(button_id,QPoint(e->position().toPoint().x(),e->position().toPoint().y()));
     }
     break;
 
@@ -314,8 +314,8 @@ void RDPushButton::ComposeText()
       QFontMetrics fm(font);
       lines=1;
       for(int i=0;i<f0.size();i++) {
-	if((fm.width(accum+f0.at(i)+" "))>w) {
-	  if(fm.width(f0.at(i))>w) {
+	if((fm.horizontalAdvance(accum+f0.at(i)+" "))>w) {
+	  if(fm.horizontalAdvance(f0.at(i))>w) {
 	    singleton=true;
 	    break;
 	  }

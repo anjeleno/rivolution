@@ -3114,7 +3114,7 @@ bool RDWaveFile::GetAv10(int fd)
 	  istate=1;
 	}
 	else {
-	  label+=av10_chunk_data[i];
+	  label+=QChar(av10_chunk_data[i]);
 	}
 	break;
 
@@ -3202,9 +3202,9 @@ bool RDWaveFile::GetAv10(int fd)
 	  istate=0;
 	}
 	else {
-	  arg+=av10_chunk_data[i];
+	  arg+=QChar(av10_chunk_data[i]);
 	}
-	break;	
+	break;
     }
     if(!userdef.isEmpty()) {
       if(wave_data!=NULL) {

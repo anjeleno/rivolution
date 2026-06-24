@@ -18,6 +18,8 @@
 //   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <utility>
+
 #include <rdapplication.h>
 #include <rdconf.h>
 #include <rdescape_string.h>
@@ -154,7 +156,7 @@ QVariant ImportCartsModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       if((col==1)&&((d_event_types.at(row)==RDLogLine::Cart)||
 		    (d_event_types.at(row)==RDLogLine::Macro))) {
 	return d_group_colors.value(d_texts.at(row).at(1).toString());
@@ -371,8 +373,7 @@ void ImportCartsModel::save(RDLogLine::TransType first_trans)
     switch(d_event_types.at(i)) {
     case RDLogLine::Cart:
     case RDLogLine::Macro:
-      sql+=QString().
-	sprintf("`CART_NUMBER`=%u,",d_texts.at(i).at(0).toString().toUInt())+
+      sql+=QString::asprintf("`CART_NUMBER`=%u,",d_texts.at(i).at(0).toString().toUInt())+
 	"`MARKER_COMMENT`=null";
       break;
 
@@ -449,12 +450,12 @@ bool ImportCartsModel::moveUp(const QModelIndex &row)
   if((row.row()==0)||(row.row()>=lineCount())) {
     return false;
   }
-  d_marker_comments.swap(row.row(),row.row()-1);
-  d_texts.swap(row.row(),row.row()-1);
-  d_icons.swap(row.row(),row.row()-1);
-  d_event_types.swap(row.row(),row.row()-1);
-  d_trans_types.swap(row.row(),row.row()-1);
-  d_lengths.swap(row.row(),row.row()-1);
+  std::swap(d_marker_comments[row.row()],d_marker_comments[row.row()-1]);
+  std::swap(d_texts[row.row()],d_texts[row.row()-1]);
+  std::swap(d_icons[row.row()],d_icons[row.row()-1]);
+  std::swap(d_event_types[row.row()],d_event_types[row.row()-1]);
+  std::swap(d_trans_types[row.row()],d_trans_types[row.row()-1]);
+  std::swap(d_lengths[row.row()],d_lengths[row.row()-1]);
   //  normalizeTransitions();
   emit dataChanged(createIndex(row.row()-1,0),
 		   createIndex(row.row(),columnCount()-1));
@@ -468,12 +469,12 @@ bool ImportCartsModel::moveDown(const QModelIndex &row)
   if(row.row()>=(lineCount()-1)) {
     return false;
   }
-  d_marker_comments.swap(row.row(),row.row()+1);
-  d_texts.swap(row.row(),row.row()+1);
-  d_event_types.swap(row.row(),row.row()+1);
-  d_trans_types.swap(row.row(),row.row()+1);
-  d_lengths.swap(row.row(),row.row()+1);
-  d_icons.swap(row.row(),row.row()+1);
+  std::swap(d_marker_comments[row.row()],d_marker_comments[row.row()+1]);
+  std::swap(d_texts[row.row()],d_texts[row.row()+1]);
+  std::swap(d_event_types[row.row()],d_event_types[row.row()+1]);
+  std::swap(d_trans_types[row.row()],d_trans_types[row.row()+1]);
+  std::swap(d_lengths[row.row()],d_lengths[row.row()+1]);
+  std::swap(d_icons[row.row()],d_icons[row.row()+1]);
   //  normalizeTransitions();
   emit dataChanged(createIndex(row.row(),0),
 		   createIndex(row.row()+1,columnCount()-1));

@@ -776,8 +776,7 @@ void MainObject::CheckOrphanedCuts() const
 	//
 	// FIXME: Regen Cart Data
 	//
-	sql=QString().
-	  sprintf("update `CUTS` set `CART_NUMBER`=%u where `CUT_NAME`='%s'",
+	sql=QString::asprintf("update `CUTS` set `CART_NUMBER`=%u where `CUT_NAME`='%s'",
 		  q1->value(0).toUInt(),
 		  q->value(0).toString().toUtf8().constData());
 	q2=new QSqlQuery(sql);

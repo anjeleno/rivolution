@@ -29,6 +29,8 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include <QRegularExpression>
+
 #include <rdapplication.h>
 #include <rd.h>
 #include <rdcart.h>

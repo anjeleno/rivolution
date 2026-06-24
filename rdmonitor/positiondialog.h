@@ -22,7 +22,6 @@
 #define POSITIONDIALOG_H
 
 #include <qcombobox.h>
-#include <qdesktopwidget.h>
 #include <qlabel.h>
 #include <qpushbutton.h>
 #include <qspinbox.h>
@@ -34,7 +33,7 @@ class PositionDialog : public RDDialog
 {
  Q_OBJECT
  public:
-  PositionDialog(QDesktopWidget *dw,RDMonitorConfig *mconfig,RDConfig *config,
+  PositionDialog(RDMonitorConfig *mconfig,RDConfig *config,
 		 QWidget *parent=0);
   QSize sizeHint() const;
   QSizePolicy sizePolicy() const;
@@ -59,7 +58,6 @@ class PositionDialog : public RDDialog
   QSpinBox *pos_y_offset_spin;
   QPushButton *pos_ok_button;
   QPushButton *pos_cancel_button;
-  QDesktopWidget *pos_desktop_widget;
   RDMonitorConfig *pos_config;
 };
 

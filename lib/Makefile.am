@@ -452,6 +452,7 @@ nodist_librd_la_SOURCES = moc_rdadd_cart.cpp\
                           moc_rdxsltengine.cpp
 
 librd_la_LDFLAGS = -release $(VERSION)
+librd_la_LIBADD = @MUSICBRAINZ_LIBS@
 
 EXTRA_DIST = librd.pro\
              librd_cs.ts\

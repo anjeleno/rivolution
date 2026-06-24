@@ -61,6 +61,48 @@ metadata publishing) is included in scope, and is a natural integration
 point given Python is already a first-class citizen in this codebase
 (PyPad itself, plus the existing `apis/rivwebpyapi` client library).
 
+### Install model: bundled, not on-demand
+
+**Decision: Icecast, Liquidsoap, and VLC (plus `vlc-plugin-jack`) are
+v6 dependencies, installed unconditionally with every v6 install — not
+installed on demand by the Go dashboard when an operator enables a
+feature.** This is a deliberate continuation of the same tradeoff
+`0007-pipewire-audio-engine.md` already made for PipeWire (mandatory
+runtime dependency, not an optional backend, accepting that this
+forecloses minimal/stripped installs): Rivendell already depends
+unconditionally on ALSA/JACK client libraries regardless of whether a
+given station uses them, and this is the same category of dependency,
+not a new precedent.
+
+Rejected alternative: the Go dashboard invoking the package manager
+at runtime to install a tool only when an operator turns on a feature
+that needs it. Rejected because it works against this spec's own
+"Critical note" below — ROCK SOLID, 100%-predictable-after-reboot
+behavior is a much harder target when a feature's first use can also
+trigger a network-dependent install with its own failure/partial-state
+modes, on top of everything already needed to make persistent patches
+and service ordering reliable. It also means the Go API needs a
+privileged package-manager execution capability as a first-class
+feature — a real, avoidable increase in attack surface for a
+network-facing service, not justified when bundling is available.
+
+This is distinct from *running*: bundling the packages does not mean
+every tool's service runs by default. The dashboard governs whether
+each tool's systemd unit is enabled/active, independent of whether the
+package is installed — a station that never streams can have Icecast
+and Liquidsoap present but disabled, at near-zero runtime cost, rather
+than absent. Installed-vs-running is the dashboard's actual on/off
+switch for these tools, not package presence.
+
+**Stereo Tool remains the explicit, narrow exception**, not a
+precedent for on-demand installation generally: it's a proprietary,
+licensed binary with no apt package and no path to being bundled at
+all, which is exactly why this spec already calls for the dashboard to
+offer a host-OS/CPU-specific download for it. Where bundling is
+possible (every other tool in this spec's scope), this decision
+applies; Stereo Tool needs its own mechanism because bundling isn't an
+option for it in the first place.
+
 Once cross-driver audio routing exists (`0007-pipewire-audio-engine.md`),
 the same dashboard becomes the natural place to manage persistent
 patch connections between Rivendell, Stereo Tool, Liquidsoap, and any

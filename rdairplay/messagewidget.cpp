@@ -86,8 +86,8 @@ void MessageWidget::setText(const QString &str,const QColor &col)
 {
   QPalette pal=d_label->palette();
 
-  pal.setColor(QPalette::Active,QPalette::Foreground,col);
-  pal.setColor(QPalette::Inactive,QPalette::Foreground,col);
+  pal.setColor(QPalette::Active,QPalette::WindowText,col);
+  pal.setColor(QPalette::Inactive,QPalette::WindowText,col);
   d_label->setPalette(pal);
   d_label->setFont(MessageFont(str));
   d_label->setText(str);
@@ -166,7 +166,7 @@ void MessageWidget::resizeEvent(QResizeEvent *e)
 QFont MessageWidget::MessageFont(QString str) const
 {
   for(int i=(MESSAGE_FONT_QUANTITY-1);i>=0;i--) {
-    if(d_message_metrics[i]->width(str)<MESSAGE_WIDGET_WIDTH) {
+    if(d_message_metrics[i]->horizontalAdvance(str)<MESSAGE_WIDGET_WIDTH) {
       return d_message_fonts[i];
     }
   }

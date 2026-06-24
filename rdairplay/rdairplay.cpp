@@ -337,22 +337,22 @@ MainWidget::MainWidget(RDConfig *config,QWidget *parent)
   // Create Palettes
   //
   auto_color=QPalette(QColor(BUTTON_MODE_AUTO_COLOR),
-		      palette().color(QPalette::Background));
+		      palette().color(QPalette::Window));
   manual_color=QPalette(QColor(BUTTON_MODE_MANUAL_COLOR),
-			palette().color(QPalette::Background));
+			palette().color(QPalette::Window));
   active_color=palette();
   active_color.setColor(QPalette::Active,QPalette::ButtonText,
 			BUTTON_LOG_ACTIVE_TEXT_COLOR);
   active_color.setColor(QPalette::Active,QPalette::Button,
 			BUTTON_LOG_ACTIVE_BACKGROUND_COLOR);
-  active_color.setColor(QPalette::Active,QPalette::Background,
-			palette().color(QPalette::Background));
+  active_color.setColor(QPalette::Active,QPalette::Window,
+			palette().color(QPalette::Window));
   active_color.setColor(QPalette::Inactive,QPalette::ButtonText,
 			BUTTON_LOG_ACTIVE_TEXT_COLOR);
   active_color.setColor(QPalette::Inactive,QPalette::Button,
 			BUTTON_LOG_ACTIVE_BACKGROUND_COLOR);
-  active_color.setColor(QPalette::Inactive,QPalette::Background,
-			palette().color(QPalette::Background));
+  active_color.setColor(QPalette::Inactive,QPalette::Window,
+			palette().color(QPalette::Window));
 
   //
   // Add Button
@@ -1854,11 +1854,11 @@ void MainWidget::resizeEvent(QResizeEvent *e)
 
 void MainWidget::wheelEvent(QWheelEvent *e)
 {
-  if((air_panel!=NULL)&&(e->orientation()==Qt::Vertical)) {
-    if(e->delta()>0) {
+  if(air_panel!=NULL) {
+    if(e->angleDelta().y()>0) {
       air_panel->soundPanelWidget()->panelDown();
     }
-    if(e->delta()<0) {
+    if(e->angleDelta().y()<0) {
       air_panel->soundPanelWidget()->panelUp();
     }
   }

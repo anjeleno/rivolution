@@ -154,3 +154,146 @@ completeness of this migration, not a supplementary nice-to-have.
   own `-v` output, not by `./configure` exiting cleanly. `configure.ac`
   now checks the known Qt6 path explicitly first, falling back to a
   `PATH` search only if that specific file doesn't exist.
+- **`RDNotification::dump()` had a pre-existing, unrelated logic bug
+  fixed alongside its `QVariant::type()` → `typeId()` rename.**
+  `lib/rdnotification.cpp`'s `default:` case built its "Unknown
+  QMetaType type value" message with a comma expression
+  (`ret+="...%u\n",id().typeId();`) instead of `QString::asprintf(...)`
+  as every sibling `case` in the same `switch` does. The `%u`
+  placeholder was never actually filled in, and the `id().typeId()`
+  value was silently discarded as the comma operator's first operand.
+  Not a Qt6 compatibility issue (it predates this migration and would
+  have compiled and misbehaved identically under Qt5) — found only
+  because the line needed touching anyway for the `typeId()` rename.
+  Fixed to match the surrounding pattern:
+  `ret+=QString::asprintf("...%u\n",id().typeId());`. If this needs
+  reverting independently of the `typeId()` rename, the original line
+  was: `ret+="Unknown QMetaType type value: %u\n",id().type();`.
+
+### Additional API removals found during full-build verification
+
+None of these were caught by the original grep-based investigation —
+each surfaced only once `QT_DISABLE_DEPRECATED_BEFORE` plus a real
+`./configure && make` reached the file in question. Listed here as the
+actual evidence that the build-time verification mechanism (not the
+initial grep sweep) is what made this migration exhaustive.
+
+- **`QString::sprintf()` (deprecated instance method) removed; replaced
+  by `QString::asprintf()` (static, unchanged).** The most widespread
+  single pattern found post-grep: 57 occurrences across 20 files
+  (`lib/rdcae.cpp` alone accounts for 26), including collapsing the
+  multi-line `QString().\n  sprintf(...)` idiom used throughout this
+  codebase into the single-line static-call form. Mechanical, no
+  behavioral change.
+- **`QString::operator+=(char)` raw byte-append removed/ambiguous.**
+  Code appending raw bytes from `char[]` buffers into a `QString`
+  (serial-protocol parsing, mostly) now needs an explicit `QChar(...)`
+  wrap. 8 files, 16 occurrences: `ripcd/btss41mlr.cpp`,
+  `ripcd/btu41mlrweb.cpp`, `ripcd/harlond.cpp`,
+  `ripcd/wheatnet_lio.cpp`, `ripcd/wheatnet_slio.cpp`,
+  `utils/rdclilogedit/rdclilogedit.cpp`, `lib/rdwavefile.cpp`,
+  `lib/rdtextvalidator.cpp` (also covers `str.replace(int,...)` →
+  `str.replace(QChar(int),...)`).
+- **`QPalette::Background`/`Foreground` removed** (deprecated
+  `QPalette::ColorRole` aliases) → `QPalette::Window`/`WindowText`. The
+  single largest pattern by file count: 39 files, 169 occurrences (123
+  `Background`→`Window`, 46 `Foreground`→`WindowText`) — touches nearly
+  every custom widget in `lib/` plus most of `rdairplay/`, `rdcatch/`,
+  `rdlogmanager/`, `rdgpimon/`.
+- **`Qt::TextColorRole`/`BackgroundColorRole` removed** (a distinct
+  `Qt::ItemDataRole` enum, not the `QPalette` one above, but the same
+  kind of Qt6 cleanup) → `Qt::ForegroundRole`/`BackgroundRole`.
+  `TextColorRole`: 37 files, 38 occurrences (essentially every
+  `lib/rd*listmodel.cpp`/`*model.cpp`). `BackgroundColorRole`: only
+  `utils/rdalsaconfig/rdalsamodel.cpp`, 1 occurrence.
+- **`Qt::MidButton` removed** → `Qt::MiddleButton`. 4 files, 5
+  occurrences: `lib/rdcueedit.cpp`, `lib/rdmarkerview.cpp`,
+  `lib/rdtrackerwidget.cpp`, `lib/rdpushbutton.cpp` (2).
+- **`QFontMetrics::width(const QString&)` removed** (the
+  int-returning string-width overload; the surviving `width()`
+  overload takes a single `QChar`) → `horizontalAdvance(const
+  QString&)`. 23 files, 77 occurrences — one of the widest-reaching
+  patterns, spanning most custom-drawn widgets in `lib/` and several
+  `rdairplay/` panel widgets. `lib/rdcardselector.cpp` also fixes a
+  pre-existing bug bundled into the same line: `width(tr("Port:")
+  >label_width)` was comparing a string to an int *inside* the call;
+  now correctly `horizontalAdvance(tr("Port:"))>label_width`.
+- **`QDate::shortDayName()`/`longDayName()`/`shortMonthName()`/
+  `longMonthName()` static methods removed** →
+  `QLocale::system().dayName(n, QLocale::ShortFormat/LongFormat)` /
+  `.monthName(...)`. 5 files, 14 occurrences: `lib/rddatedecode.cpp`
+  (8), `lib/rddatepicker.cpp`, `lib/rdwavedata.cpp` (2),
+  `rdlogmanager/edit_grid.cpp`, `rdlogmanager/svc_rec.cpp` (2).
+- **`QDesktopWidget` (and `QApplication::desktop()`/`qApp->desktop()`)
+  removed entirely** → `QScreen` API
+  (`screen()->geometry()`, `QGuiApplication::screens()`,
+  `qApp->primaryScreen()`). 6 files: `rdadmin/edit_image.cpp`,
+  `rdselect/rdselect.cpp`, `rdmonitor/positiondialog.{cpp,h}` (drops
+  the `QDesktopWidget*` constructor parameter entirely, uses
+  `QGuiApplication::screens().size()` instead),
+  `rdmonitor/rdmonitor.{cpp,h}` (drops the `mon_desktop_widget` member,
+  rewrites `SetPosition()` to iterate `QGuiApplication::screens()`).
+- **`QMouseEvent`/`QDropEvent` int/`QPoint` position accessors
+  removed** — `pos()`, `globalPos()`, bare `x()`/`y()` → `position()`/
+  `globalPosition()` (now `QPointF`-returning, need `.toPoint()`). 8
+  files, 19 occurrences: the `*tableview.cpp`/`*listview.cpp` family
+  (`lib/rdtrackertableview.cpp`, `rdadmin/feedlistview.cpp`,
+  `rdairplay/logtableview.cpp`, `rdcatch/catchtableview.cpp`,
+  `rdlogedit/logtableview.cpp`, `rdlogmanager/clocklistview.cpp`,
+  `rdlogmanager/importcartsview.cpp`), plus `lib/rdslider.cpp` (9 more,
+  the bare `mouse->x()`/`mouse->y()` variant).
+- **`QWheelEvent::orientation()`/`delta()` removed** →
+  `angleDelta().y()` (the `if(orientation()==Qt::Vertical)` guard is
+  simply dropped, since `angleDelta()` needs no such check). 5 files,
+  17 occurrences: `lib/rdcueedit.cpp`, `lib/rdsound_panel.cpp`,
+  `lib/rdtrackerwidget.cpp`, `rdairplay/rdairplay.cpp`,
+  `rdpanel/rdpanel.cpp`.
+- **`QVariant::Type` parameter removed from `QMimeData`'s virtual
+  interface** — `RDCartDrag::retrieveData()` overrides a `QMimeData`
+  virtual whose Qt6 signature changed from `QVariant::Type` to
+  `QMetaType`. `lib/rdcartdrag.{cpp,h}`, declaration and definition.
+- **`QTextStream::setCodec("UTF-8")` removed** (`QTextCodec` moved out
+  of Core into the separate Core5Compat module in Qt6) — `QTextStream`
+  defaults to UTF-8 unconditionally now, so the call is simply deleted,
+  no replacement needed; the now-unused `#include <QTextCodec>` is
+  dropped alongside it. 16 files: all 13 `lib/export_*.cpp` files,
+  `lib/rdconf.cpp`, `utils/rmlsend/rmlsend.cpp` (1 call site each), and
+  `lib/rddb.cpp` (include-only cleanup, no call site there).
+- **`QList<T>::swap(int,int)`** (the two-index, swap-elements-by-
+  position convenience overload; only `swap(QList&)`, swapping two
+  lists' entire contents, survives in Qt6) **— two different fix idioms
+  in use, not one.** Most call sites use `std::swap(list[i],list[j])`
+  (`rdlibrary/disk_ripper.cpp`, `rdlogmanager/importcartsmodel.cpp`,
+  12 occurrences across `moveUp`/`moveDown`), but
+  `lib/rdcutlistmodel.cpp` (2 occurrences) and `rdlogedit/rdlogedit.cpp`
+  (1) instead call Qt's own `QList::swapItemsAt(i,j)`. Both are valid;
+  noted here so a future pass doesn't assume one idiom is the
+  established convention when the codebase actually has both.
+- **`QMap<K,V>::const_iterator` and `QMultiMap<K,V>::const_iterator`
+  decoupled into incompatible types** — Qt5 allowed `QMultiMap`'s
+  iterator to satisfy a `QMap::const_iterator`-typed loop variable
+  (`QMultiMap` inherited `QMap`'s iterator machinery); Qt6 separates
+  them entirely. `utils/rdimport/journal.cpp`, 2 occurrences
+  (`Journal::sendAll()`'s two loops over a `QMultiMap<QString,QString>`
+  declared with a `QMap<QString,QString>::const_iterator`) — fixed by
+  matching the iterator type to the actual container type.
+- **Missing `#include <QFile>`** in `rdlogmanager/generate_log.cpp` —
+  Qt5 provided `QFile`'s full definition transitively through another
+  Qt header's include chain; Qt6 trimmed that transitive inclusion
+  (a deliberate compile-time improvement), exposing the latent missing
+  include. Not an API change, just a previously-hidden gap.
+- **`QWidget::enterEvent(QEvent*)` widened to
+  `QWidget::enterEvent(QEnterEvent*)`.** A `QEvent*`-typed override no
+  longer overrides the real virtual at all under Qt6 — it silently
+  hides it instead (caught via the compiler's `-Woverloaded-virtual`
+  warning, then a hard error at the call site forwarding to the real
+  base method). `rdmonitor/rdmonitor.{h,cpp}`, `MainWidget::enterEvent`.
+- **`QDateTime(const QDate&)` single-argument constructor removed/
+  deprecated** → now requires the explicit two-argument form,
+  `QDateTime(date, QTime())`. `lib/rdcut.cpp`, 2 occurrences
+  (`startDateTime`, `endDateTime`).
+- **`QLabel::pixmap()` returns `QPixmap` by value, not `const
+  QPixmap*`** — the pointer-returning overload is gone, so a
+  dereference of the old pointer return (`*label->pixmap()`) no longer
+  compiles. `lib/rdslotbox.cpp`, `rdairplay/loglinebox.cpp`, 1
+  occurrence each.

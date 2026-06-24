@@ -568,7 +568,7 @@ void RDCartFilter::resizeEvent(QResizeEvent *e)
   d_codes_label->setGeometry(225,33,115,20);
   d_codes_box->setGeometry(345,31,120,24);
   d_and_codes_label->
-    setGeometry(465,33,labelFontMetrics()->width(d_and_codes_label->text()),20);
+    setGeometry(465,33,labelFontMetrics()->horizontalAdvance(d_and_codes_label->text()),20);
   d_and_codes_label->setVisible(w>RDCARTFILTER_SECOND_SCHED_CODE_WIDTH);
   d_and_codes_box->
     setGeometry(d_and_codes_label->x()+d_and_codes_label->width(),31,120,24);

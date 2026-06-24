@@ -370,7 +370,7 @@ void MainWidget::deleteData()
       modified=false;
       for(int i=0;i<(rows.size()-1);i++) {
 	if(rows.at(rowtable.at(i))<rows.at(rowtable.at(i+1))) {
-	  rowtable.swap(i,i+1);
+	  rowtable.swapItemsAt(i,i+1);
 	  modified=true;
 	}
       }

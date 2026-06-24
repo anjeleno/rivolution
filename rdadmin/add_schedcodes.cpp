@@ -21,6 +21,7 @@
 
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QRegularExpressionValidator>
 
 #include <rddb.h>

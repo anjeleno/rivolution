@@ -155,7 +155,7 @@ QVariant RDLogListModel::data(const QModelIndex &index,int role) const
       // Nothing to do!
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       // Nothing to do!
       break;
 

@@ -816,7 +816,7 @@ void MainObject::SaveSourceFile(const QString &filepath) const
       return;
     }
     filename=rda->config()->saveWebgetFilesDirectory()+"/"+
-      now.toString("yyyyMMdd-hhmmss")+QString().sprintf("[%d]-",num)+f0.last();
+      now.toString("yyyyMMdd-hhmmss")+QString::asprintf("[%d]-",num)+f0.last();
     num++;
   }
 

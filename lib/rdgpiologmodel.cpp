@@ -121,7 +121,7 @@ QVariant RDGpioLogModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       return d_text_colors.at(row);
 
     case Qt::BackgroundRole:

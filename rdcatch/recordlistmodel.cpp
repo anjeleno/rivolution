@@ -203,7 +203,7 @@ QVariant RecordListModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       return d_text_colors.at(row);
 
     case Qt::BackgroundRole:
@@ -632,7 +632,7 @@ void RecordListModel::updateRow(int row,RDSqlQuery *q)
   d_exit_codes[row]=(RDRecording::ExitCode)q->value(25).toUInt();
 
   //
-  // Qt::TextColorRole
+  // Qt::ForegroundRole
   //
   if(q->value(2).toString()=="Y") {
     d_text_colors[row]=QColor(EVENT_ACTIVE_TEXT_COLOR);

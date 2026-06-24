@@ -194,7 +194,7 @@ QVariant RDPodcastListModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       // Nothing to do!
       break;
 
@@ -206,11 +206,11 @@ QVariant RDPodcastListModel::data(const QModelIndex &index,int role) const
       if(col==0) {
 	return QSize(RD_LISTWIDGET_ITEM_WIDTH_PADDING+32+
 		     d_bold_font_metrics->
-		     width(d_texts.at(row).at(col).toString()),40);
+		     horizontalAdvance(d_texts.at(row).at(col).toString()),40);
       }
       return QSize(RD_LISTWIDGET_ITEM_WIDTH_PADDING+
 		   d_font_metrics->
-		   width(d_texts.at(row).at(col).toString()),40);
+		   horizontalAdvance(d_texts.at(row).at(col).toString()),40);
 
     default:
       break;

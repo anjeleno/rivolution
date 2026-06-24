@@ -153,7 +153,7 @@ QVariant RDServiceListModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       if(col==3) {  // Track Group
 	return d_group_color_map.value(d_texts.at(row).at(col).toString(),
 				       QVariant());

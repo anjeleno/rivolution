@@ -46,7 +46,7 @@ class MainWidget : public RDWidget
   void quitMainWidget();
 
  protected:
-  void enterEvent(QEvent *e);
+  void enterEvent(QEnterEvent *e);
   void leaveEvent(QEvent *e);
   void mousePressEvent(QMouseEvent *e);
   void mouseDoubleClickEvent(QMouseEvent *e);
@@ -70,7 +70,6 @@ class MainWidget : public RDWidget
   int mon_rdselect_y;
   QLabel *mon_status_label;
   //  StatusTip *mon_tooltip;
-  QDesktopWidget *mon_desktop_widget;
   RDMonitorConfig *mon_config;
   RDConfig *mon_rdconfig;
 };
