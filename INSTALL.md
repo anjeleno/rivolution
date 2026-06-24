@@ -273,14 +273,12 @@ Applications menu.
 
 # DISTRO-SPECIFIC NOTES
 
----
-
 ### Ubuntu 26.04 LTS
 
 This list is verified directly against a real working build on this
 distro (not carried forward from older, Qt5-era notes above) -- some
 package names changed across the Qt5-to-Qt6 migration, and a few packages
-present in the 24.04 list above (`libid3-dev`, `hpklinux-dev`) don't
+present in the 24.04 distro (`libid3-dev`, `hpklinux-dev`) don't
 exist at all on 26.04 under those names.
 
 ### Required dependencies: 
