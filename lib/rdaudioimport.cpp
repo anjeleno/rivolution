@@ -254,16 +254,19 @@ RDAudioImport::ErrorCode RDAudioImport::runImport(const QString &username,
     *conv_err=web_result.converterErrorCode();
   }
   else {
-    *conv_err=RDAudioConvert::ErrorOk;
+    // The response wasn't a recognizable RDWebResult document at all (e.g.
+    // a dead/misconfigured CGI endpoint returning something else entirely)
+    // -- a real failure, not grounds to assume the import succeeded.
+    *conv_err=RDAudioConvert::ErrorInternal;
   }
   //printf("resp code: %d\n",response_code);
   switch(response_code) {
   case 200:
     break;
-    
+
   case 400:
     return RDAudioImport::ErrorService;
-    
+
   case 401:
     return RDAudioImport::ErrorInvalidUser;
 
@@ -271,6 +274,9 @@ RDAudioImport::ErrorCode RDAudioImport::runImport(const QString &username,
     return RDAudioImport::ErrorNoDestination;
 
   default:
+    return RDAudioImport::ErrorConverter;
+  }
+  if(*conv_err!=RDAudioConvert::ErrorOk) {
     return RDAudioImport::ErrorConverter;
   }
   return RDAudioImport::ErrorOk;

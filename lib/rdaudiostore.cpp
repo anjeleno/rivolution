@@ -148,6 +148,12 @@ RDAudioStore::ErrorCode RDAudioStore::runStore(const QString &username,
   }
   conv_free_bytes=ParseInt("freeBytes",conv_xml);
   conv_total_bytes=ParseInt("totalBytes",conv_xml);
+  if((conv_free_bytes==(uint64_t)-1)||(conv_total_bytes==(uint64_t)-1)) {
+    // ParseInt()'s failure sentinel -- the response wasn't a recognizable
+    // audioStore document at all (e.g. a dead/misconfigured CGI endpoint),
+    // not a real zero reading.
+    return RDAudioStore::ErrorService;
+  }
 
   return RDAudioStore::ErrorOk;
 }

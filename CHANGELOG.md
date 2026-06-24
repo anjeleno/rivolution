@@ -26,6 +26,20 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   a glance. Also added dedicated icons for `rdalsaconfig` and
   `rddbconfig`, which previously had no icon of their own and silently
   reused the generic Rivendell icon and `rdadmin`'s icon respectively.
+- Fixed `RDAudioImport::runImport()` and `RDAudioStore::runStore()`
+  treating any HTTP 200 from `rdxport.cgi` as success regardless of
+  what the response body actually contained. Both relied on
+  `RDWebResult::readXml()`/`ParseInt()`, two ad-hoc line-scanning
+  parsers that quietly returned success/zero on unrecognizable input
+  instead of signaling a parse failure — so a dead or misconfigured CGI
+  endpoint (Apache serving the binary itself instead of executing it,
+  for instance) looked exactly like a successful import or a genuinely
+  empty audio store. `readXml()` now requires a real `<RDWebResult>`
+  root tag before extracting fields, and both callers now treat a
+  parse failure as a real error instead of defaulting to success. This
+  bug predates this fork; found while diagnosing a dropbox import that
+  reported success and deleted its source file despite never actually
+  storing any audio.
 
 ## 2026-06-23
 
