@@ -297,3 +297,62 @@ initial grep sweep) is what made this migration exhaustive.
   dereference of the old pointer return (`*label->pixmap()`) no longer
   compiles. `lib/rdslotbox.cpp`, `rdairplay/loglinebox.cpp`, 1
   occurrence each.
+
+### A second category: silent runtime failures the build never caught
+
+Everything above was caught by the compiler during the original
+migration push and is reflected in the "build now succeeds end-to-end"
+milestone recorded in `CHANGELOG.md` (2026-06-23). The item below is
+categorically different: it compiles cleanly under Qt6 with zero
+warnings, so it survived that entire milestone undetected. The only
+symptom is a runtime-only `QObject::connect` warning printed at
+startup — easy to miss among other harmless startup noise — and then
+total silence from whatever the connection was supposed to drive,
+since Qt's old string-based `connect()` doesn't error or crash on a
+signal name that no longer exists, it just never connects.
+
+- **`QSignalMapper::mapped(int)` removed.** Qt5's `QSignalMapper` had
+  four overloaded `mapped` signals (`int`, `QString`, `QWidget*`,
+  `QObject*`); Qt6 disambiguates them into distinctly-named signals —
+  `mappedInt(int)`, `mappedString(const QString&)`,
+  `mappedObject(QObject*)` — and the bare `mapped` name doesn't exist
+  on the class at all anymore. Every `connect(...,SIGNAL(mapped(int)),
+  ...)` call site silently fails to connect under Qt6; the mapper's
+  `map()` slot still fires normally, but nothing downstream ever hears
+  about it. Confirmed against this system's actual Qt6
+  `qsignalmapper.h`, not assumed from memory.
+
+  This was discovered indirectly: `ripcd`'s own client-connection
+  `readyRead` handling routes through exactly this pattern
+  (`ripcd.cpp:98`), meaning `ripcd` never processed the login handshake
+  from *any* connecting client — not as a network/auth problem, but
+  because the signal telling it data had arrived never reached its
+  dispatcher. That, in turn, is why `RDLibrary`'s group/category list
+  came up empty (the `userChanged()` signal chain that populates it
+  depends on a completed login handshake) and why `rdimport`'s
+  persistent dropbox-watch mode never started scanning after launch
+  (`MainObject::userData()` — which kicks off `RunDropBox()` — is
+  itself gated on that same signal). Both looked like unrelated,
+  separate bugs; both traced back to this one line.
+
+  Fixed by replacing `SIGNAL(mapped(int))` with
+  `SIGNAL(mappedInt(int))` at all 52 occurrences across 32 files —
+  `ripcd` (`ripcd.cpp`, `vguest.cpp`, `quartz1.cpp`, `modbus.cpp`,
+  `modemlines.cpp`, `kernelgpio.cpp`, `harlond.cpp`,
+  `wheatnet_lio.cpp`, `wheatnet_slio.cpp`, `livewire_mcastgpio.cpp`),
+  `cae` (`cae_server.cpp`, `driver_jack.cpp`, `driver_alsa.cpp`),
+  `rdcatchd.cpp`, `rdairplay` (`rdairplay.cpp`, `hourselector.cpp`,
+  `button_log.cpp`), `rdvairplayd.cpp`, `rdadmin` (`edit_audios.cpp`,
+  `edit_rdairplay.cpp`, `edit_decks.cpp`), `rdlogmanager/edit_grid.cpp`,
+  `rdpadd/repeater.cpp`, `utils/rdsoftkeys/rdsoftkeys.cpp`, and shared
+  `lib/` code (`rdmarkerplayer.cpp`, `rdgpio.cpp`, `rdplay_deck.cpp`,
+  `rdevent_player.cpp`, `rdoneshot.cpp`, `rdtimeengine.cpp`,
+  `rdlivewire.cpp`, `rdbutton_panel.cpp`). The slot signatures already
+  took `int` in every case, so no further changes were needed beyond
+  the signal name itself.
+
+  Given the breadth of this pattern and that it produces no compiler
+  diagnostic, any future Qt5→Qt6-style migration work in this codebase
+  should grep for `SIGNAL(mapped(` (and the equivalent for any other
+  signal with Qt6-disambiguated overloads) rather than relying on a
+  clean build as proof the migration is complete.

@@ -344,7 +344,7 @@ void RDGpio::RemapTimers()
   //
   ioctl(gpio_fd,GPIO_GETINFO,&info);
   gpio_revert_mapper=new QSignalMapper(this);
-  connect(gpio_revert_mapper,SIGNAL(mapped(int)),this,SLOT(revertData(int)));
+  connect(gpio_revert_mapper,SIGNAL(mappedInt(int)),this,SLOT(revertData(int)));
   for(int i=0;i<info.outputs;i++) {
     gpio_revert_timer[i]=new QTimer(this);
     gpio_revert_timer[i]->setSingleShot(true);

@@ -30,7 +30,7 @@ RDEventPlayer::RDEventPlayer(RDRipc *ripc,QObject *parent)
     player_state[i]=false;
   }
   player_mapper=new QSignalMapper(this);
-  connect(player_mapper,SIGNAL(mapped(int)),
+  connect(player_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(macroFinishedData(int)));
   player_timer=new QTimer(this);
   player_timer->setSingleShot(true);

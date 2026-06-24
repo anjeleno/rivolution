@@ -62,7 +62,7 @@ RDPlayDeck::RDPlayDeck(RDCae *cae,int id,QObject *parent)
   // Timers
   //
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(pointTimerData(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(pointTimerData(int)));
   for(int i=0;i<3;i++) {
     play_point_timer[i]=new QTimer(this);
     play_point_timer[i]->setSingleShot(true);

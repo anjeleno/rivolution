@@ -44,7 +44,7 @@ Harlond::Harlond(RDMatrix *matrix,QObject *parent)
   // Reset Timers
   //
   bt_reset_mapper=new QSignalMapper(this);
-  connect(bt_reset_mapper,SIGNAL(mapped(int)),this,SLOT(resetTimeoutData(int)));
+  connect(bt_reset_mapper,SIGNAL(mappedInt(int)),this,SLOT(resetTimeoutData(int)));
   for(int i=0;i<bt_inputs;i++) {
     bt_reset_states.push_back(false);
     bt_reset_timers.push_back(new QTimer(this));

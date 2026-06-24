@@ -38,7 +38,7 @@ Repeater::Repeater(const QString &src_unix_addr,uint16_t serv_port,
   // Client Server
   //
   pad_client_disconnect_mapper=new QSignalMapper(this);
-  connect(pad_client_disconnect_mapper,SIGNAL(mapped(int)),
+  connect(pad_client_disconnect_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(clientDisconnected(int)));
 
   pad_client_server=new QTcpServer(this);
@@ -53,7 +53,7 @@ Repeater::Repeater(const QString &src_unix_addr,uint16_t serv_port,
   // Source Server
   //
   pad_source_disconnect_mapper=new QSignalMapper(this);
-  connect(pad_source_disconnect_mapper,SIGNAL(mapped(int)),
+  connect(pad_source_disconnect_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(sourceDisconnected(int)));
 
   pad_source_server=new RDUnixServer(this);

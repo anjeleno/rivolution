@@ -118,7 +118,7 @@ MainObject::MainObject(QObject *parent)
   // Log Machines
   //
   QSignalMapper *reload_mapper=new QSignalMapper(this);
-  connect(reload_mapper,SIGNAL(mapped(int)),this,SLOT(logReloadedData(int)));
+  connect(reload_mapper,SIGNAL(mappedInt(int)),this,SLOT(logReloadedData(int)));
   QSignalMapper *rename_mapper=new QSignalMapper(this);
   QString default_svcname=rda->airplayConf()->defaultSvc();
   for(int i=0;i<RD_RDVAIRPLAY_LOG_QUAN;i++) {

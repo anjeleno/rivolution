@@ -592,11 +592,11 @@ DriverAlsa::DriverAlsa(QObject *parent)
   // Stop & Fade Timers
   //
   QSignalMapper *stop_mapper=new QSignalMapper(this);
-  connect(stop_mapper,SIGNAL(mapped(int)),this,SLOT(stopTimerData(int)));
+  connect(stop_mapper,SIGNAL(mappedInt(int)),this,SLOT(stopTimerData(int)));
   QSignalMapper *fade_mapper=new QSignalMapper(this);
-  connect(fade_mapper,SIGNAL(mapped(int)),this,SLOT(fadeTimerData(int)));
+  connect(fade_mapper,SIGNAL(mappedInt(int)),this,SLOT(fadeTimerData(int)));
   QSignalMapper *record_mapper=new QSignalMapper(this);
-  connect(record_mapper,SIGNAL(mapped(int)),this,SLOT(recordTimerData(int)));
+  connect(record_mapper,SIGNAL(mappedInt(int)),this,SLOT(recordTimerData(int)));
   for(int i=0;i<RD_MAX_CARDS;i++) {
     for(int j=0;j<RD_MAX_STREAMS;j++) {
       alsa_stop_timer[i][j]=new QTimer(this);

@@ -260,7 +260,7 @@ EditDecks::EditDecks(RDStation *station,RDStation *cae_station,QWidget *parent)
   edit_event_section_label->setFont(sectionLabelFont());
 
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(eventCartSelectedData(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(eventCartSelectedData(int)));
   for(unsigned i=0;i<RD_CUT_EVENT_ID_QUAN;i+=2) {
     for(unsigned j=0;j<2;j++) {
       edit_event_labels[i+j]=new QLabel(QString::asprintf("%u:",i+j+1),this);

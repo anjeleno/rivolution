@@ -80,7 +80,7 @@ ModemLines::ModemLines(RDMatrix *matrix,QObject *parent)
   // GPO Timers
   //
   gpio_gpo_mapper=new QSignalMapper(this);
-  connect(gpio_gpo_mapper,SIGNAL(mapped(int)),this,SLOT(gpoResetData(int)));
+  connect(gpio_gpo_mapper,SIGNAL(mappedInt(int)),this,SLOT(gpoResetData(int)));
   for(int i=0;i<gpio_gpos;i++) {
     gpio_gpo_timers[i]=new QTimer(this);
     gpio_gpo_timers[i]->setSingleShot(true);

@@ -53,7 +53,7 @@ Modbus::Modbus(RDMatrix *matrix,QObject *parent)
   connect(modbus_poll_timer,SIGNAL(timeout()),this,SLOT(pollInputs()));
 
   modbus_reset_mapper=new QSignalMapper(this);
-  connect(modbus_reset_mapper,SIGNAL(mapped(int)),
+  connect(modbus_reset_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(resetStateData(int)));
   for(int i=0;i<modbus_gpos;i++) {
     modbus_reset_timers.push_back(new QTimer(this));

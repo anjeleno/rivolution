@@ -45,7 +45,7 @@ WheatnetSlio::WheatnetSlio(RDMatrix *matrix,QObject *parent)
   connect(slio_poll_timer,SIGNAL(timeout()),this,SLOT(pollData()));
 
   slio_reset_mapper=new QSignalMapper(this);
-  connect(slio_reset_mapper,SIGNAL(mapped(int)),
+  connect(slio_reset_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(resetStateData(int)));
   for(int i=0;i<slio_gpios;i++) {
     slio_reset_timers.push_back(new QTimer(this));

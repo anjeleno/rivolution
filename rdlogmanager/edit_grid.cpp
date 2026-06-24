@@ -46,7 +46,7 @@ EditGrid::EditGrid(QString servicename,QWidget *parent)
   // Hour Buttons
   //
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(hourButtonData(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(hourButtonData(int)));
   for(int i=0;i<5;i++) {
     edit_day_boxes[i]=new QGroupBox(QLocale::system().dayName(i+1,QLocale::LongFormat),this);
     edit_day_boxes[i]->setFont(labelFont());

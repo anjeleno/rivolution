@@ -7,6 +7,18 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-24
 
+- Fixed `ripcd` never processing any client's login handshake:
+  `connect(...,SIGNAL(mapped(int)),...)` against a `QSignalMapper`
+  silently fails to connect under Qt6, since the bare `mapped(int)`
+  signal was disambiguated into `mappedInt`/`mappedString`/
+  `mappedObject` and no longer exists on the class. This broke
+  `ripcd`'s per-connection read routing specifically, which in turn
+  caused `RDLibrary`'s group/category list to come up empty and
+  `rdimport`'s dropbox-watch mode to never start scanning after
+  launch — both depend on the same post-login signal chain. Fixed at
+  all 52 occurrences across 32 files; see `docs/specs/
+  0006-qt6-migration.md` for the full file list and why this evaded
+  the original migration's build-clean verification.
 - Replaced launcher and in-app icons for `rdadmin`, `rdairplay`,
   `rdcatch`, `rdlibrary`, `rdlogedit`, and `rdlogmanager` (PNG, `.ico`,
   and `.xpm` sets, plus the `RDIconEngine`-embedded window icon for

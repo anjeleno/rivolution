@@ -73,7 +73,7 @@ EditRDAirPlay::EditRDAirPlay(RDStation *station,RDStation *cae_station,
   label->setGeometry(10,10,200,16);
 
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(editGpiosData(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(editGpiosData(int)));
 
   //
   // Main Log Output 1

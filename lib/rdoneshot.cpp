@@ -28,7 +28,7 @@ RDOneShot::RDOneShot(QObject *parent)
   //
   shot_count=0;
   shot_mapper=new QSignalMapper(this);
-  connect(shot_mapper,SIGNAL(mapped(int)),this,SLOT(timeoutData(int)));
+  connect(shot_mapper,SIGNAL(mappedInt(int)),this,SLOT(timeoutData(int)));
 
   //
   // Zombie Timer
