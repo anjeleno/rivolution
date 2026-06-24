@@ -377,7 +377,7 @@ sudo apt install git g++ automake autoconf autoconf-archive libtool \
   apache2 mariadb-server mariadb-client
 ```
 
-### Run the following command which detects the distro and applies this same invocation automatically:
+### Run the following command which detects the distro and applies the same script invocation below automatically:
 
 ```bash
 ./configure_build.sh
@@ -394,9 +394,30 @@ sudo apt install git g++ automake autoconf autoconf-archive libtool \
 ```bash
 DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
 ```
+
+`DEBUILD_MAKE_ARGS` only matters if you're building a real `.deb`
+package via `debuild`/`dpkg-buildpackage` (it's passed straight
+through as `make $(DEBUILD_MAKE_ARGS)` in `debian/rules.src`) — it has
+no effect on a normal `./configure_build.sh && make` build, and you
+can skip it entirely for that. If you are building a `.deb`, real
+values that work:
+
 ```bash
-DEBUILD_MAKE_ARGS=<optional-gcc-flags>
+DEBUILD_MAKE_ARGS=-j8
 ```
+```bash
+DEBUILD_MAKE_ARGS=V=1
+```
+```bash
+DEBUILD_MAKE_ARGS=CXXFLAGS="-O0 -g"
+```
+
+`-jN` controls parallel build jobs. `V=1` shows full compiler command
+lines instead of automake's default terse `CXX file.o` output.
+`CXXFLAGS=`/`CFLAGS=` override the default `-g -O2` optimization/debug
+level — safe to use here specifically, since required flags like
+`-std=c++17` live in a separate `AM_CPPFLAGS` variable
+(`lib/Makefile.am`) that a `CXXFLAGS` override doesn't touch.
 
 ### Apache Web Server Configuration: CGI processing must be enabled. Run the following commands:
 
@@ -410,13 +431,13 @@ sudo ln -sf ../mods-available/cgid.load /etc/apache2/mods-enabled/cgid.load
 sudo systemctl restart apache2
 ```
 
-### Then build:
+### Build with:
 
 ```bash
 make -j$(nproc)
 ```
 
-### Then install with:
+### Then, to install, run:
 
 ```bash
 sudo make install
