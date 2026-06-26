@@ -20,6 +20,26 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   next free cart number for the newly-selected group never re-ran.
   Fixed at all 46 occurrences across 32 files; see `docs/specs/
   0006-qt6-migration.md` for the full file list.
+- Fixed `RDWaveFile::createWave()` clobbering `errno` via an unconditional
+  `unlink()` of a nonexistent `.energy` sidecar file between the actual
+  file open and the caller's check of whether it succeeded, masking the
+  real reason a destination file failed to open.
+- Documented `mp3gain` as a required runtime dependency in `INSTALL.md`
+  and the golden-image package list — its absence silently forces a full
+  decode/re-encode instead of bitstream-level loudness normalization,
+  with no error, just a much slower import.
+- Fixed `RDImportAudio::Import()` (RDLibrary's manual Import dialog)
+  never actually transmitting the user's selected output format to the
+  server, and the Format control being unconditionally disabled in
+  Import mode by original design. Added an explicit, opt-in "Override
+  library default format" checkbox so manual imports can request MP3
+  passthrough deliberately, consistent with the Dropbox/`rdimport`
+  format-override controls.
+- Fixed RDLibrary's "Add" cart flow deleting a newly-imported cart's
+  audio (both the database row and the file in `/var/snd`) whenever the
+  Edit Cart dialog was closed any way other than the explicit OK button
+  — now checks for already-persisted audio before allowing any rollback,
+  regardless of how the dialog was closed.
 
 ## 2026-06-24
 

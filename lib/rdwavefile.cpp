@@ -504,6 +504,7 @@ bool RDWaveFile::createWave(RDWaveData *data,unsigned ptr_offset)
 {
   mode_t prev_mask;
   bool rc;
+  int open_errno=0;
   wave_data=data;
   ptr_offset_msecs=ptr_offset;
   if(wave_data!=NULL) {
@@ -541,10 +542,14 @@ bool RDWaveFile::createWave(RDWaveData *data,unsigned ptr_offset)
 	  return false;
 	}
         prev_mask = umask(0113);      // Set umask so files are user and group writable.
+	syslog(LOG_WARNING,"RDWaveFile::createWave() opening \"%s\"",
+	       (const char *)wave_file_name.toUtf8());
         rc=wave_file.open(QIODevice::ReadWrite|QIODevice::Truncate);
+	open_errno=errno;          // unlink() below clobbers errno even on success
 	unlink((wave_file_name+".energy").toUtf8());
         umask(prev_mask);
 	if(rc==false) {
+	  errno=open_errno;
 	  return false;
 	}
 	recordable=true;

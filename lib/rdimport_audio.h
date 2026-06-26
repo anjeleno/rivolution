@@ -74,6 +74,7 @@ class RDImportAudio : public RDDialog
   void filenameChangedData(const QString &str);
   void normalizeCheckData(bool state);
   void autotrimCheckData(bool state);
+  void formatOverrideCheckData(bool state);
   void selectInputFileData();
   void selectOutputFileData();
   void selectOutputFormatData();
@@ -89,6 +90,7 @@ class RDImportAudio : public RDDialog
   void Export();
   void StartBar();
   void StopBar();
+  void UpdateFormatControls();
   RDSettings *import_default_settings;
   RDCut *import_clipboard;
   bool *import_running;
@@ -104,6 +106,7 @@ class RDImportAudio : public RDDialog
   QLineEdit *import_out_filename_edit;
   QCheckBox *import_out_metadata_box;
   QPushButton *import_out_selector_button;
+  QCheckBox *import_format_override_box;
   QLabel *import_format_label;
   QLineEdit *import_format_edit;
   QPushButton *import_out_format_button;

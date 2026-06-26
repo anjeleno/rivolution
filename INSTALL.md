@@ -308,8 +308,17 @@ sudo apt install git g++ automake autoconf autoconf-archive libtool \
   docbook5-xml docbook-xsl-ns xsltproc fop libxml2-utils \
   python3 python3-pycurl python3-pymysql python3-serial python3-requests \
   python3-venv python3-virtualenv python3-build twine \
-  apache2 mariadb-server mariadb-client
+  apache2 mariadb-server mariadb-client mp3gain
 ```
+
+`mp3gain` is a runtime dependency, not a build-time one: it's never
+linked against, only invoked via `QProcess` at import time
+(`lib/rdmpeggainpatch.cpp`) to apply MP3 loudness normalization
+directly to the compressed bitstream, without decoding/re-encoding.
+Without it, a normalized MP3 import still works, but silently falls
+back to a full decode/re-encode instead of the fast bitstream-level
+passthrough — correct output, much slower, and easy to mistake for an
+unrelated bug (see `docs/specs/0004-mp3-gain-patch.md`).
 
 #### Run the following command, which detects the distro and applies the same script invocation below automatically
 
