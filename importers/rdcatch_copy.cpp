@@ -118,7 +118,7 @@ MainObject::MainObject(QObject *parent)
   //
   // Open Databases
   //
-  src_db=QSqlDatabase::addDatabase("QMYSQL3");
+  src_db=QSqlDatabase::addDatabase("QMYSQL");
   src_db.setDatabaseName(rd_config->mysqlDbname());
   src_db.setUserName(rd_config->mysqlUsername());
   src_db.setPassword(rd_config->mysqlPassword());
@@ -139,7 +139,7 @@ MainObject::MainObject(QObject *parent)
     }
   }
   else {
-    dest_db=QSqlDatabase::addDatabase("QMYSQL3");
+    dest_db=QSqlDatabase::addDatabase("QMYSQL");
     dest_db.setDatabaseName(rd_config->mysqlDbname());
     dest_db.setUserName(rd_config->mysqlUsername());
     dest_db.setPassword(rd_config->mysqlPassword());

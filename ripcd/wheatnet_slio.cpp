@@ -36,7 +36,7 @@ WheatnetSlio::WheatnetSlio(RDMatrix *matrix,QObject *parent)
   slio_socket=new QTcpSocket(this);
   connect(slio_socket,SIGNAL(connected()),this,SLOT(connectedData()));
   connect(slio_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(slio_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(slio_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
   slio_socket->connectToHost(slio_ip_address.toString(),slio_ip_port);
 
@@ -45,7 +45,7 @@ WheatnetSlio::WheatnetSlio(RDMatrix *matrix,QObject *parent)
   connect(slio_poll_timer,SIGNAL(timeout()),this,SLOT(pollData()));
 
   slio_reset_mapper=new QSignalMapper(this);
-  connect(slio_reset_mapper,SIGNAL(mapped(int)),
+  connect(slio_reset_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(resetStateData(int)));
   for(int i=0;i<slio_gpios;i++) {
     slio_reset_timers.push_back(new QTimer(this));
@@ -198,7 +198,7 @@ void WheatnetSlio::readyReadData()
 	break;
 
       default:
-	slio_accum+=data[i];
+	slio_accum+=QChar(data[i]);
 	break;
       }
     }

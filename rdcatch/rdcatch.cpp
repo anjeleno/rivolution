@@ -102,15 +102,15 @@ MainWidget::MainWidget(RDConfig *c,QWidget *parent)
 			BUTTON_ACTIVE_TEXT_COLOR);
   catch_scroll_color[0].setColor(QPalette::Active,QPalette::Button,
 			BUTTON_ACTIVE_BACKGROUND_COLOR);
-  catch_scroll_color[0].setColor(QPalette::Active,QPalette::Background,
-			palette().color(QPalette::Background));
+  catch_scroll_color[0].setColor(QPalette::Active,QPalette::Window,
+			palette().color(QPalette::Window));
   catch_scroll_color[0].setColor(QPalette::Inactive,QPalette::ButtonText,
 			BUTTON_ACTIVE_TEXT_COLOR);
   catch_scroll_color[0].setColor(QPalette::Inactive,QPalette::Button,
 			BUTTON_ACTIVE_BACKGROUND_COLOR);
-  catch_scroll_color[0].setColor(QPalette::Inactive,QPalette::Background,
-			palette().color(QPalette::Background));
-  catch_scroll_color[1]=QPalette(palette().color(QPalette::Background),palette().color(QPalette::Background));
+  catch_scroll_color[0].setColor(QPalette::Inactive,QPalette::Window,
+			palette().color(QPalette::Window));
+  catch_scroll_color[1]=QPalette(palette().color(QPalette::Window),palette().color(QPalette::Window));
 
   str=QString("RDCatch")+" v"+VERSION+" - "+tr("Host")+":";
   setWindowTitle(str+" "+rda->config()->stationName());

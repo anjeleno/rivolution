@@ -122,7 +122,7 @@ RDLiveWire::RDLiveWire(unsigned id,QObject *parent)
   connect(live_socket,SIGNAL(disconnected()),
 	  this,SLOT(connectionClosedData()));
   connect(live_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(live_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(live_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
 
   //
@@ -605,7 +605,7 @@ void RDLiveWire::ReadVersion(const QString &cmd)
   if(!live_connected) {
     f0=AString(cmd).split(" ","\"");
     for(int i=0;i<f0.size();i++) {
-      f1=f0.at(i).split(":",QString::KeepEmptyParts);
+      f1=f0.at(i).split(":",Qt::KeepEmptyParts);
       if(f1.size()==2) {
 	if(f1[0]=="LWRP") {
 	  live_protocol_version=f1[1];
@@ -645,7 +645,7 @@ void RDLiveWire::ReadVersion(const QString &cmd)
 	if(f1[0]=="NGPI") {
 	  live_gpis=f1[1].toInt();
 	  QSignalMapper *mapper=new QSignalMapper(this);
-	  connect(mapper,SIGNAL(mapped(int)),this,SLOT(gpiTimeoutData(int)));
+	  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(gpiTimeoutData(int)));
 	  for(int i=0;i<live_gpis;i++) {
 	    live_gpi_states.push_back(new bool[RD_LIVEWIRE_GPIO_BUNDLE_SIZE]);
 	    live_gpi_channels.
@@ -670,7 +670,7 @@ void RDLiveWire::ReadVersion(const QString &cmd)
 	if(f1[0]=="NGPO") {
 	  live_gpos=f1[1].toInt();
 	  QSignalMapper *mapper=new QSignalMapper(this);
-	  connect(mapper,SIGNAL(mapped(int)),this,SLOT(gpoTimeoutData(int)));
+	  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(gpoTimeoutData(int)));
 	  for(int i=0;i<live_gpos;i++) {
 	    live_gpo_states.push_back(new bool[RD_LIVEWIRE_GPIO_BUNDLE_SIZE]);
 	    live_gpo_channels.
@@ -721,7 +721,7 @@ void RDLiveWire::ReadSources(const QString &cmd)
   QStringList f0=AString(cmd).split(" ","\"");
   src->setSlotNumber(f0[0].toInt());
   for(int i=1;i<f0.size();i++) {
-    f1=f0.at(i).split(":",QString::KeepEmptyParts);
+    f1=f0.at(i).split(":",Qt::KeepEmptyParts);
     if(f1.size()==2) {
       if(f1[0]=="PSNM") {
 	src->setPrimaryName(f1[1]);
@@ -766,7 +766,7 @@ void RDLiveWire::ReadDestinations(const QString &cmd)
   QStringList f0=AString(cmd).split(" ","\"");
   dst->setSlotNumber(f0[0].toInt());
   for(int i=1;i<f0.size();i++) {
-    f1=f0.at(i).split(":",QString::KeepEmptyParts);
+    f1=f0.at(i).split(":",Qt::KeepEmptyParts);
     if(f1.size()==2) {
       if(f1[0]=="NAME") {
 	dst->setPrimaryName(f1[1]);
@@ -849,7 +849,7 @@ void RDLiveWire::ReadGpioConfig(const QString &cmd)
   f0=AString(cmd).split(" ","\"");
   int slot=f0[0].toInt()-1;
   for(int i=1;i<f0.size();i++) {
-    f1=f0.at(i).split(":",QString::KeepEmptyParts);
+    f1=f0.at(i).split(":",Qt::KeepEmptyParts);
     if(f1.size()==2) {
       if(f1[0]=="SRCA") {
 	int chan=PruneUrl(f1[1]).toInt();

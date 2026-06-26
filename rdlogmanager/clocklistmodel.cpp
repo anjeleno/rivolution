@@ -119,7 +119,7 @@ QVariant ClockListModel::data(const QModelIndex &index,int role) const
       }
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       // Nothing to do!
       break;
 
@@ -314,7 +314,7 @@ QPixmap ClockListModel::MakeIcon(const QString &color) const
     p->fillRect(0,0,15,15,QColor(color));
   }
   else {
-    p->fillRect(0,0,15,15,d_palette.color(QPalette::Background));
+    p->fillRect(0,0,15,15,d_palette.color(QPalette::Window));
   }
   p->end();
   delete p;

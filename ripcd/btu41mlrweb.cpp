@@ -37,7 +37,7 @@ BtU41MlrWeb::BtU41MlrWeb(RDMatrix *matrix,QObject *parent)
   bt_socket=new QTcpSocket(this);
   connect(bt_socket,SIGNAL(connected()),this,SLOT(connectedData()));
   connect(bt_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(bt_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(bt_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
   bt_socket->connectToHost(bt_ip_address.toString(),bt_ip_port);
 
@@ -141,7 +141,7 @@ void BtU41MlrWeb::readyReadData()
 	break;
 
       default:
-	bt_accum+=data[i];
+	bt_accum+=QChar(data[i]);
 	break;
       }
     }

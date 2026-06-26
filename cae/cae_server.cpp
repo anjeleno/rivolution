@@ -63,11 +63,11 @@ CaeServer::CaeServer(RDConfig *config,QObject *parent)
   connect(cae_server,SIGNAL(newConnection()),this,SLOT(newConnectionData()));
 
   cae_ready_read_mapper=new QSignalMapper(this);
-  connect(cae_ready_read_mapper,SIGNAL(mapped(int)),
+  connect(cae_ready_read_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(readyReadData(int)));
 
   cae_connection_closed_mapper=new QSignalMapper(this);
-  connect(cae_connection_closed_mapper,SIGNAL(mapped(int)),
+  connect(cae_connection_closed_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(connectionClosedData(int)));
 }
 
@@ -231,7 +231,7 @@ bool CaeServer::ProcessCommand(int id,const QString &cmd)
   CaeServerConnection *conn=cae_connections.value(id);
   bool ok=false;
   QString cmdstr=cmd;
-  QStringList f0=cmd.split(" ",QString::SkipEmptyParts);
+  QStringList f0=cmd.split(" ",Qt::SkipEmptyParts);
 
 #ifdef __CAE_SERVER_LOG_PROTOCOL_MESSAGES
   rda->syslog(LOG_DEBUG,"from connection %d [%s:%u]: \"%s!\"",

@@ -651,7 +651,7 @@ void ListReports::GenerateCartDumpCsv(QString *report,bool prepend_names)
       *report+=RDCsvField(q->value(30).toInt());
     }
     sql=QString("select `SCHED_CODE` from `CART_SCHED_CODES` where ")+
-      QString().sprintf("`CART_NUMBER`=%u",q->value(0).toUInt());
+      QString::asprintf("`CART_NUMBER`=%u",q->value(0).toUInt());
     QString schedcodes="";
     q1=new RDSqlQuery(sql);
     while(q1->next()) {

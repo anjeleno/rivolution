@@ -224,10 +224,14 @@ per-cut there too rather than only logging it.
 - New: `lib/rdmpeggainpatch.h`, `lib/rdmpeggainpatch.cpp`
 - Modified: `web/rdxport/import.cpp` (passthrough-eligibility split above)
 - Modified: `lib/Makefile.am` (register the new source files)
-- Separate repo, separate follow-up (not this branch's scope):
-  `rivendell-installer`'s `roles/base/tasks/main.yml` package list needs
-  `mp3gain` added once this lands, so a fresh golden-image build actually
-  has the dependency this shells out to.
+- `mp3gain` added to `INSTALL.md`'s required-dependencies list and to
+  `rivendell-golden-ansible`'s base package list (2026-06-26) — this had
+  been deferred as a separate-repo follow-up when this spec first landed
+  and was missed on both fronts, which meant a fresh build never actually
+  had the dependency this shells out to. The runtime effect of a missing
+  `mp3gain` isn't a crash (the fallback below does work as designed) but
+  a full decode/re-encode in place of the fast bitstream passthrough —
+  easy to mistake for an unrelated bug, which is exactly what happened.
 
 ## Verification plan
 
@@ -243,8 +247,14 @@ per-cut there too rather than only logging it.
    a capped level with an honest log line, or cleanly fall back).
 4. Confirm Edit Markers still works correctly on a gain-patched file
    (this session's LEVL persistence work must still apply cleanly).
-5. Confirm the fallback path works correctly when `mp3gain` is not
-   installed — must cleanly fall through to `RDAudioConvert`, not error.
+5. ~~Confirm the fallback path works correctly when `mp3gain` is not
+   installed — must cleanly fall through to `RDAudioConvert`, not
+   error.~~ — confirmed 2026-06-26, the hard way: a box that never got
+   `mp3gain` installed (see "Files" above) hit exactly this fallback on
+   every normalized MP3 import. It does fall through cleanly, exactly as
+   designed — no crash, no error — it just does so via a full decode/
+   re-encode instead of the fast bitstream patch, which is correct but
+   slow enough to look like a different bug entirely.
 
 ## Implementation deviations
 

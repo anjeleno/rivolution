@@ -746,7 +746,7 @@ bool RDUser::ticketIsValid(const QString &ticket,
 
 bool RDUser::emailIsValid(const QString &addr)
 {
-  QStringList f0=addr.split("@",QString::KeepEmptyParts);
+  QStringList f0=addr.split("@",Qt::KeepEmptyParts);
 
   if(f0.size()!=2) {
     return false;

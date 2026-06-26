@@ -18,13 +18,14 @@
 //   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <QGuiApplication>
+
 #include "positiondialog.h"
 
-PositionDialog::PositionDialog(QDesktopWidget *dw,RDMonitorConfig *mconfig,
+PositionDialog::PositionDialog(RDMonitorConfig *mconfig,
 			       RDConfig *config,QWidget *parent)
   : RDDialog(config,parent)
 {
-  pos_desktop_widget=dw;
   pos_config=mconfig;
 
   setWindowTitle("RDMonitor");
@@ -101,7 +102,7 @@ QSizePolicy PositionDialog::sizePolicy() const
 int PositionDialog::exec()
 {
   pos_screen_number_box->clear();
-  for(int i=0;i<pos_desktop_widget->numScreens();i++) {
+  for(int i=0;i<QGuiApplication::screens().size();i++) {
     pos_screen_number_box->insertItem(i,QString::asprintf("%d",i));
     if(i==pos_config->screenNumber()) {
       pos_screen_number_box->setCurrentIndex(i);

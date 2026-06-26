@@ -109,13 +109,13 @@ void WallClock::tickClock()
   }
   else {
     p.fillRect(0,0,width()-2,height()-2,QGuiApplication::palette().color(QPalette::Inactive,
-							QPalette::Background));
+							QPalette::Window));
     p.setPen(QColor(text_color));
   }
   p.setFont(subLabelFont());
-  p.drawText((size().width()-2-p.fontMetrics().width(date))/2,22,date);
+  p.drawText((size().width()-2-p.fontMetrics().horizontalAdvance(date))/2,22,date);
   p.setFont(bannerFont());
-  p.drawText((size().width()-2-p.fontMetrics().width(accum))/2,48,accum);
+  p.drawText((size().width()-2-p.fontMetrics().horizontalAdvance(accum))/2,48,accum);
   p.end();
   setIcon(*pix);
 }

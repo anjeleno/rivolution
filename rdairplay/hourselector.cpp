@@ -27,13 +27,13 @@ HourSelector::HourSelector(QWidget *parent)
   // Palettes
   //
   hour_active_palette=
-    QPalette(QColor(BUTTON_STOPPED_BACKGROUND_COLOR),palette().color(QPalette::Background));
+    QPalette(QColor(BUTTON_STOPPED_BACKGROUND_COLOR),palette().color(QPalette::Window));
 
   //
   // Buttons
   //
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(hourClicked(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(hourClicked(int)));
   for(unsigned i=0;i<24;i++) {
     hour_button[i]=new QPushButton(this);
     hour_button[i]->setFont(bigButtonFont());

@@ -20,7 +20,7 @@
 ##
 ## Use automake to process this into a Makefile.in
 
-AM_CPPFLAGS = -Wall -DPREFIX=\"$(prefix)\" @QT5_CFLAGS@ @MUSICBRAINZ_CFLAGS@ -Wno-strict-aliasing -std=c++11 -fPIC -I/usr/include/taglib @IMAGEMAGICK_CFLAGS@
+AM_CPPFLAGS = -Wall -DPREFIX=\"$(prefix)\" @QT5_CFLAGS@ @MUSICBRAINZ_CFLAGS@ -Wno-strict-aliasing -std=c++17 -fPIC -I/usr/include/taglib @IMAGEMAGICK_CFLAGS@
 MOC = @QT_MOC@
 CWRAP = ../helpers/cwrap
 
@@ -452,6 +452,7 @@ nodist_librd_la_SOURCES = moc_rdadd_cart.cpp\
                           moc_rdxsltengine.cpp
 
 librd_la_LDFLAGS = -release $(VERSION)
+librd_la_LIBADD = @MUSICBRAINZ_LIBS@
 
 EXTRA_DIST = librd.pro\
              librd_cs.ts\

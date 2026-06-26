@@ -154,7 +154,7 @@ bool MainObject::ImportCut(RDGroup *group,struct WingsRecord *rec,
     delete group;
     return false;
   }
-  destfile=new RDWaveFile(RDCut::pathName(QString().sprintf
+  destfile=new RDWaveFile(RDCut::pathName(QString::asprintf
 					   ("%06u_001",cartnum)));
   switch(wavefile->getFormatTag()) {
       case WAVE_FORMAT_PCM:

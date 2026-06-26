@@ -35,7 +35,7 @@ KernelGpio::KernelGpio(RDMatrix *matrix,QObject *parent)
   // Initialize the interface
   //
   gpio_reset_mapper=new QSignalMapper(this);
-  connect(gpio_reset_mapper,SIGNAL(mapped(int)),this,SLOT(gpoResetData(int)));
+  connect(gpio_reset_mapper,SIGNAL(mappedInt(int)),this,SLOT(gpoResetData(int)));
   gpio_gpio=new RDKernelGpio(this);
   connect(gpio_gpio,SIGNAL(valueChanged(int,bool)),
 	  this,SLOT(gpiChangedData(int,bool)));

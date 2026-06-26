@@ -59,7 +59,7 @@ RDMarkerPlayer::RDMarkerPlayer(int card,int port,QWidget *parent)
   d_readout_labels[6]->setText(tr("Length")+":");
 
   d_readout_mapper=new QSignalMapper(this);
-  connect(d_readout_mapper,SIGNAL(mapped(int)),
+  connect(d_readout_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(readoutClickedData(int)));
 
   d_cut_readout=new RDMarkerReadout(RDMarkerHandle::CutStart,this);
@@ -95,7 +95,7 @@ RDMarkerPlayer::RDMarkerPlayer(int card,int port,QWidget *parent)
   d_position_label->setFont(labelFont());
   d_position_label->setAlignment(Qt::AlignCenter);
   d_position_label->
-    setPalette(QPalette(palette().color(QPalette::Background),
+    setPalette(QPalette(palette().color(QPalette::Window),
   			palette().mid().color()));
   d_position_edit=new QLabel(this);
   d_position_edit->setAcceptDrops(false);

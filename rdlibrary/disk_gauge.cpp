@@ -92,9 +92,9 @@ void DiskGauge::update()
 void DiskGauge::resizeEvent(QResizeEvent *e)
 {
   QFontMetrics *fm=new QFontMetrics(disk_label->font());
-  disk_label->setGeometry(0,0,fm->width(disk_label->text()),size().height()/2);
-  disk_bar->setGeometry(fm->width(disk_label->text())+5,0,
-			size().width()-fm->width(disk_label->text())-10,size().height()/2);
+  disk_label->setGeometry(0,0,fm->horizontalAdvance(disk_label->text()),size().height()/2);
+  disk_bar->setGeometry(fm->horizontalAdvance(disk_label->text())+5,0,
+			size().width()-fm->horizontalAdvance(disk_label->text())-10,size().height()/2);
   disk_space_label->
     setGeometry(0,size().height()/2,size().width(),size().height()/2);
   delete fm;

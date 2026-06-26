@@ -120,7 +120,7 @@ void ListImages::addData()
     //
     // Upload the image
     //
-    f0=filename.split(".",QString::SkipEmptyParts);
+    f0=filename.split(".",Qt::SkipEmptyParts);
     if(!list_feed->postImage(img_id)) {
       QMessageBox::warning(this,"RDAdmin - "+tr("Upload Error"),
 			   tr("Image upload failed!")+"\n"+
@@ -142,7 +142,7 @@ void ListImages::addData()
     //
     // Save import path
     //
-    f0=filename.split("/",QString::SkipEmptyParts);
+    f0=filename.split("/",Qt::SkipEmptyParts);
     f0.removeLast();
     list_file_dir=f0.join("/");
   }

@@ -155,18 +155,18 @@ MainWidget::MainWidget(RDConfig *c,QWidget *parent)
   label->setFont(labelFont());
   label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
   QPalette p=palette();
-  p.setColor(QPalette::Active,QPalette::Foreground,Qt::darkGreen);
-  p.setColor(QPalette::Inactive,QPalette::Foreground,Qt::darkGreen);
-  p.setColor(QPalette::Disabled,QPalette::Foreground,Qt::darkGreen);
+  p.setColor(QPalette::Active,QPalette::WindowText,Qt::darkGreen);
+  p.setColor(QPalette::Inactive,QPalette::WindowText,Qt::darkGreen);
+  p.setColor(QPalette::Disabled,QPalette::WindowText,Qt::darkGreen);
   label->setPalette(p);
 
   label=new QLabel(tr("Red = OFF Cart"),this);
   label->setGeometry(200,392,300,12);
   label->setFont(labelFont());
   label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
-  p.setColor(QPalette::Active,QPalette::Foreground,Qt::darkRed);
-  p.setColor(QPalette::Inactive,QPalette::Foreground,Qt::darkRed);
-  p.setColor(QPalette::Disabled,QPalette::Foreground,Qt::darkRed);
+  p.setColor(QPalette::Active,QPalette::WindowText,Qt::darkRed);
+  p.setColor(QPalette::Inactive,QPalette::WindowText,Qt::darkRed);
+  p.setColor(QPalette::Disabled,QPalette::WindowText,Qt::darkRed);
   label->setPalette(p);
 
   //
@@ -206,7 +206,7 @@ MainWidget::MainWidget(RDConfig *c,QWidget *parent)
 	  gpi_events_view,SLOT(resizeColumnsToContents()));
   connect(gpi_events_date_edit,SIGNAL(dateChanged(const QDate &)),
 	  gpi_events_model,SLOT(setDateFilter(const QDate &)));
-  connect(gpi_events_state_box,SIGNAL(activated(const QString &)),
+  connect(gpi_events_state_box,SIGNAL(textActivated(const QString &)),
 	  gpi_events_model,SLOT(setStateFilter(const QString &)));
   connect(gpi_events_model,SIGNAL(rowsInserted(const QModelIndex &,int,int)),
 	  this,SLOT(rowsInsertedData(const QModelIndex &,int,int)));
@@ -221,13 +221,13 @@ MainWidget::MainWidget(RDConfig *c,QWidget *parent)
 			    Qt::white);
   gpi_scroll_color.setColor(QPalette::Active,QPalette::Button,
 			    Qt::blue);
-  gpi_scroll_color.setColor(QPalette::Active,QPalette::Background,
+  gpi_scroll_color.setColor(QPalette::Active,QPalette::Window,
 			    Qt::lightGray);
   gpi_scroll_color.setColor(QPalette::Inactive,QPalette::ButtonText,
 			    Qt::white);
   gpi_scroll_color.setColor(QPalette::Inactive,QPalette::Button,
 			    Qt::blue);
-  gpi_scroll_color.setColor(QPalette::Inactive,QPalette::Background,
+  gpi_scroll_color.setColor(QPalette::Inactive,QPalette::Window,
 			    Qt::lightGray);
 
   gpi_events_report_button=new QPushButton(tr("Report"),this);

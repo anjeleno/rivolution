@@ -81,15 +81,14 @@ MainWidget::MainWidget(RDConfig *config,Qt::WindowFlags f)
   int v=0;
 
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(buttonData(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(buttonData(int)));
   RDProfile *profile=new RDProfile();
   profile->setSource(map_filename);
   key_columns=
     profile->intValue("SoftKeys","Columns",RDSOFTKEYS_DEFAULT_COLUMNS);
   int col=0;
   unsigned row=0;
-  while(!(rmlcmd=profile->stringValue("SoftKeys",QString().
-				   sprintf("Command%d",n+1),"")).isEmpty()) {
+  while(!(rmlcmd=profile->stringValue("SoftKeys",QString::asprintf("Command%d",n+1),"")).isEmpty()) {
     for(int i=0;i<rmlcmd.length();i++) {
       if(rmlcmd.at(i)==':') {
 	key_macros.push_back(rmlcmd.right(rmlcmd.length()-(i+1)));
@@ -104,7 +103,7 @@ MainWidget::MainWidget(RDConfig *config,Qt::WindowFlags f)
 					QString::asprintf("Color%d",n+1),"")).
 	   isEmpty()) {
 	  color=QColor(color_name);
-	  QPalette pal=QPalette(color,palette().color(QPalette::Background));
+	  QPalette pal=QPalette(color,palette().color(QPalette::Window));
 	  color.getHsv(&h,&s,&v);
 	  if((h>180)&&(h<300)) {
 	    v=255;

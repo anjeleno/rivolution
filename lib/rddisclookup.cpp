@@ -26,7 +26,6 @@
 #include <QDateTime>
 #include <QMessageBox>
 #include <QProcess>
-#include <QRegExp>
 #include <QTimer>
 
 #include "rdtempdirectory.h"
@@ -496,7 +495,7 @@ bool RDDiscLookup::ReadCdText(const QString &cdda_dev)
   //
   for(int i=0;i<lookup_record->tracks();i++) {
     title_profile->setSource(tempDirectoryPath()+
-                            QString().sprintf("/audio_%02d.inf",i+1));
+                            QString::asprintf("/audio_%02d.inf",i+1));
     str=title_profile->stringValue("","Albumtitle","");
     str.remove("'");
     if((!str.isEmpty())&&(str!="''")) {

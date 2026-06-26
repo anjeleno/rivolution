@@ -302,7 +302,7 @@ EditStation::EditStation(QString sname,QWidget *parent)
   station_cae_station_box->setEditable(false);
   station_cae_station_model=new RDStationListModel(false,sname,this);
   station_cae_station_box->setModel(station_cae_station_model);
-  connect(station_cae_station_box,SIGNAL(activated(const QString &)),
+  connect(station_cae_station_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(caeStationActivatedData(const QString &)));
   station_cae_station_label=new QLabel(tr("Core Audio Engine:"),this);
   station_cae_station_label->setFont(labelFont());

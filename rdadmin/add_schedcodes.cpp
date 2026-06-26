@@ -21,7 +21,8 @@
 
 #include <QMessageBox>
 #include <QPushButton>
-#include <QRegExpValidator>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 
 #include <rddb.h>
 #include <rdescape_string.h>
@@ -45,8 +46,10 @@ AddSchedCode::AddSchedCode(QWidget *parent)
   //
   d_code_edit=new QLineEdit(this);
   d_code_edit->setMaxLength(10);
-  QRegExpValidator *code_validator=
-    new QRegExpValidator(QRegExp("[a-z0-9 ]{1,10}",Qt::CaseInsensitive),this);
+  QRegularExpressionValidator *code_validator=
+    new QRegularExpressionValidator(QRegularExpression("[a-z0-9 ]{1,10}",
+				     QRegularExpression::CaseInsensitiveOption),
+				     this);
   d_code_edit->setValidator(code_validator);
   connect(d_code_edit,SIGNAL(textChanged(const QString &)),
 	  this,SLOT(codeChangedData(const QString &)));

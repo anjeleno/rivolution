@@ -38,13 +38,13 @@ void Journal::addSuccess(const QString &groupname,QString filename,
   QString body;
   RDGroup *group=new RDGroup(groupname);
   QStringList addrs=
-    group->notifyEmailAddress().split(",",QString::SkipEmptyParts);
+    group->notifyEmailAddress().split(",",Qt::SkipEmptyParts);
   if(!rda->user()->emailAddress().isEmpty()) {
     addrs.push_back(rda->user()->emailAddress());
   }
 
   if(addrs.size()>0) {
-    filename=filename.split("/",QString::SkipEmptyParts).last();
+    filename=filename.split("/",Qt::SkipEmptyParts).last();
     if(c_send_immediately) {
       subject=QObject::tr("Rivendell import for file")+": "+filename;
       body+=QObject::tr("Rivendell File Import Report")+"\n";
@@ -88,13 +88,13 @@ void Journal::addFailure(const QString &groupname,QString filename,
   QString body;
   RDGroup *group=new RDGroup(groupname);
   QStringList addrs=
-    group->notifyEmailAddress().split(",",QString::SkipEmptyParts);
+    group->notifyEmailAddress().split(",",Qt::SkipEmptyParts);
   if(!rda->user()->emailAddress().isEmpty()) {
     addrs.push_back(rda->user()->emailAddress());
   }
 
   if(addrs.size()>0) {
-    filename=filename.split("/",QString::SkipEmptyParts).last();
+    filename=filename.split("/",Qt::SkipEmptyParts).last();
     if(c_send_immediately) {
       subject=QObject::tr("Rivendell import FAILURE for file")+": "+filename;
       body+=QObject::tr("Rivendell File Import Report")+"\n";
@@ -139,7 +139,7 @@ void Journal::sendAll()
   used_addrs.clear();
   if(c_good_groups.size()>0) {
     QMultiMap<QString,QString> grp_map=GroupsByAddress(c_good_groups);
-    for(QMap<QString,QString>::const_iterator it=grp_map.begin();
+    for(QMultiMap<QString,QString>::const_iterator it=grp_map.begin();
 	it!=grp_map.end();it++) {
       if(!used_addrs.contains(it.key())) {
 	QString errors;
@@ -153,7 +153,7 @@ void Journal::sendAll()
 	}
 
 	from_addr=rda->system()->originEmailAddress();
-	to_addrs=it.key().split(",",QString::SkipEmptyParts);
+	to_addrs=it.key().split(",",Qt::SkipEmptyParts);
 	subject=QObject::tr("Rivendell import report")+"\n";
 
 	body+=QObject::tr("Rivendell File Import Report")+"\n";
@@ -187,7 +187,7 @@ void Journal::sendAll()
   used_addrs.clear();
   if(c_bad_groups.size()>0) {
     QMultiMap<QString,QString> grp_map=GroupsByAddress(c_bad_groups);
-    for(QMap<QString,QString>::const_iterator it=grp_map.begin();
+    for(QMultiMap<QString,QString>::const_iterator it=grp_map.begin();
 	it!=grp_map.end();it++) {
       if(!used_addrs.contains(it.key())) {
 	QString errors;
@@ -197,7 +197,7 @@ void Journal::sendAll()
 	QStringList to_addrs;
 
 	from_addr=rda->system()->originEmailAddress();
-	to_addrs=it.key().split(",",QString::SkipEmptyParts);
+	to_addrs=it.key().split(",",Qt::SkipEmptyParts);
 	if(!rda->user()->emailAddress().isEmpty()) {
 	  to_addrs.push_back(rda->user()->emailAddress());
 	}

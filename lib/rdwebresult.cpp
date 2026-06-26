@@ -101,6 +101,12 @@ bool RDWebResult::readXml(const QString &xml)
   // FIXME: This is totally ad-hoc, but should work until we settle on
   //        a proper XML parser.
   //
+  if(!xml.contains("<RDWebResult>")) {
+    // Not a recognizable response from this service at all (e.g. a CGI
+    // handler that never actually ran) -- a real parse failure, not an
+    // empty-but-valid result.
+    return false;
+  }
   QStringList list=xml.split("\r\n");
   for(int i=0;i<list.size();i++) {
     //printf("%d: %s\n",i,(const char *)list[i]);

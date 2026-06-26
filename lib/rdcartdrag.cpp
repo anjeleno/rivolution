@@ -82,7 +82,7 @@ bool RDCartDrag::decode(const QMimeData *e,RDLogLine *ll,
 }
 
 
-QVariant RDCartDrag::retrieveData(const QString &mimetype,QVariant::Type type)
+QVariant RDCartDrag::retrieveData(const QString &mimetype,QMetaType type)
   const
 {
   return d_data.value(mimetype,QVariant());

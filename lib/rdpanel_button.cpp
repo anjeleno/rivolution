@@ -164,7 +164,7 @@ void RDPanelButton::setColor(QColor color)
 {
   button_color=color;
   if(button_flash) {
-    if(color==palette().color(QPalette::Background)) {
+    if(color==palette().color(QPalette::Window)) {
       button_flashing=false;
     }
     else {
@@ -538,7 +538,7 @@ void RDPanelButton::WriteKeycap(int msecs)
       else {
 	if(button_active_length>=0) {
 	  QString lenstr=RDGetTimeLength(button_active_length+1000,true,false);
-	  p->drawText(pix->width()-p->fontMetrics().width(lenstr)-
+	  p->drawText(pix->width()-p->fontMetrics().horizontalAdvance(lenstr)-
 		      RDPANEL_BUTTON_MARGIN-2,
 		      pix->height()-2-RDPANEL_BUTTON_MARGIN,
 		      lenstr);
@@ -551,12 +551,12 @@ void RDPanelButton::WriteKeycap(int msecs)
     }
     else {
       QString lenstr=RDGetTimeLength(1000+msecs,true,false);
-      p->drawText(pix->width()-p->fontMetrics().width(lenstr)-
+      p->drawText(pix->width()-p->fontMetrics().horizontalAdvance(lenstr)-
 		  RDPANEL_BUTTON_MARGIN-2,
 		  pix->height()-2-RDPANEL_BUTTON_MARGIN,
 		  lenstr);
       p->setFont(bigLabelFont());
-      p->drawText((pix->width()-p->fontMetrics().width(button_output_text))/2,
+      p->drawText((pix->width()-p->fontMetrics().horizontalAdvance(button_output_text))/2,
 		  74*pix->height()/100,
       		  button_output_text);
     }
@@ -628,7 +628,7 @@ QString RDPanelButton::GetNextLine(QString *str,const QFontMetrics &m,int len)
   QString ret;
 
   for(int i=0;i<str->length();i++) {
-    if(m.width(str->left(i))>len) {
+    if(m.horizontalAdvance(str->left(i))>len) {
       int l=i;
       while((!str->at(l--).isSpace())&&(l>=0));
       if(l>0) {

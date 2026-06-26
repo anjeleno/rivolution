@@ -28,7 +28,6 @@
 
 #include <QObject>
 #include <QString>
-#include <QTextCodec>
 #include <QTranslator>
 #include <QSqlError>
 #include <QStringList>

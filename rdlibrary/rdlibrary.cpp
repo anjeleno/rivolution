@@ -357,11 +357,24 @@ void MainWidget::addData()
   cartnums.push_back(cart_num);
   EditCart *cart=
     new EditCart(cartnums,&lib_import_path,true,profile_ripping,this);
-  if(cart->exec()) {
+  bool keep_cart=cart->exec();
+  if(!keep_cart) {
+    // Closed/cancelled rather than confirmed with OK -- but if real audio
+    // was already imported into a cut before closing, that work is
+    // already persisted (cut row + audio file in place), so keep the
+    // cart regardless of how the dialog was closed rather than rolling
+    // back already-completed work.
+    QString sql=QString("select `LENGTH` from `CUTS` where ")+
+      QString::asprintf("`CART_NUMBER`=%u and `LENGTH`>0",cart_num);
+    RDSqlQuery *q2=new RDSqlQuery(sql);
+    keep_cart=q2->first();
+    delete q2;
+  }
+  if(keep_cart) {
     QModelIndex row=lib_cart_model->addCart(cart_num);
     SelectRow(row);
     SendNotification(RDNotification::AddAction,cart_num);
-  } 
+  }
   else {
     RDCart *rdcart=new RDCart(cart_num);
     rdcart->remove(rda->station(),rda->user(),rda->config());

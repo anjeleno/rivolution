@@ -19,10 +19,10 @@
 //
 
 #include <QApplication>
-#include <QDesktopWidget>
 #include <QDir>
 #include <QMessageBox>
 #include <QProcess>
+#include <QScreen>
 #include <QTranslator>
 
 #include <dbversion.h>
@@ -55,7 +55,7 @@ MainWidget::MainWidget(RDConfig *c,QWidget *parent)
   //
   monitor_config=new RDMonitorConfig();
   monitor_config->load();
-  QDesktopWidget *dw=qApp->desktop();
+  QSize dw=qApp->primaryScreen()->geometry().size();
   int width=sizeHint().width();
   int height=sizeHint().height();
   switch(monitor_config->position()) {
@@ -64,25 +64,25 @@ MainWidget::MainWidget(RDConfig *c,QWidget *parent)
     break;
 
   case RDMonitorConfig::UpperCenter:
-    setGeometry((dw->size().width()-width)/2,RDMONITOR_HEIGHT,width,height);
+    setGeometry((dw.width()-width)/2,RDMONITOR_HEIGHT,width,height);
     break;
 
   case RDMonitorConfig::UpperRight:
-    setGeometry(dw->size().width()-width,RDMONITOR_HEIGHT,width,height);
+    setGeometry(dw.width()-width,RDMONITOR_HEIGHT,width,height);
     break;
 
   case RDMonitorConfig::LowerLeft:
-    setGeometry(0,dw->size().height()-height+RDMONITOR_HEIGHT,width,height);
+    setGeometry(0,dw.height()-height+RDMONITOR_HEIGHT,width,height);
     break;
 
   case RDMonitorConfig::LowerCenter:
-    setGeometry((dw->size().width()-width)/2,
-		dw->size().height()-height+RDMONITOR_HEIGHT,width,height);
+    setGeometry((dw.width()-width)/2,
+		dw.height()-height+RDMONITOR_HEIGHT,width,height);
     break;
 
   case RDMonitorConfig::LowerRight:
-    setGeometry(dw->size().width()-width,
-		dw->size().height()-height+RDMONITOR_HEIGHT,width,height);
+    setGeometry(dw.width()-width,
+		dw.height()-height+RDMONITOR_HEIGHT,width,height);
     break;
 
   case RDMonitorConfig::LastPosition:
@@ -207,7 +207,7 @@ void MainWidget::okData()
   }
 
   QStringList f0=select_configs[rows.first().row()]->filename().
-    split("/",QString::SkipEmptyParts);
+    split("/",Qt::SkipEmptyParts);
   args.push_back(f0.last());
   proc=new QProcess(this);
   proc->start(QString(RD_PREFIX)+"/bin/rdselect_helper",args);

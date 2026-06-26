@@ -143,7 +143,7 @@ QVariant RDCutListModel::data(const QModelIndex &index,int role) const
     case Qt::FontRole:
       return d_font;
 
-    case Qt::TextColorRole:
+    case Qt::ForegroundRole:
       // Nothing to do!
       break;
 
@@ -176,7 +176,7 @@ QModelIndex RDCutListModel::addCut(const QString &name)
   }
   list[12]=name;
   d_texts.push_back(list);
-  d_colors.push_back(d_palette.color(QPalette::Background));
+  d_colors.push_back(d_palette.color(QPalette::Window));
   d_row_index.push_back(d_row_index.size());
   updateCutLine(d_texts.size()-1);
   sortRows(d_use_weighting);
@@ -297,7 +297,7 @@ void RDCutListModel::setCartNumber(unsigned cartnum)
     int row=0;
     while(q->next()) {
       d_texts.push_back(text);
-      d_colors.push_back(d_palette.color(QPalette::Background));
+      d_colors.push_back(d_palette.color(QPalette::Window));
       d_row_index.push_back(row++);
       updateRow(d_texts.size()-1,q);
     }
@@ -411,7 +411,7 @@ void RDCutListModel::updateRow(int row,RDSqlQuery *q)
       break;
 
     case RDCart::AlwaysValid:
-      d_colors[d_row_index.at(row)]=d_palette.color(QPalette::Background);
+      d_colors[d_row_index.at(row)]=d_palette.color(QPalette::Window);
       break;
     }
   }
@@ -481,7 +481,7 @@ void RDCutListModel::sortRows(int use_weighting)
       for(int i=0;i<(d_row_index.size()-1);i++) {
 	if(d_texts.at(d_row_index.at(i)).at(12).toString()>
 	   d_texts.at(d_row_index.at(i+1)).at(12).toString()) {
-	  d_row_index.swap(i,i+1);
+	  d_row_index.swapItemsAt(i,i+1);
 	  modified=true;
 	}
       }
@@ -494,7 +494,7 @@ void RDCutListModel::sortRows(int use_weighting)
       for(int i=0;i<(d_row_index.size()-1);i++) {
 	if(d_texts.at(d_row_index.at(i)).at(0).toInt()>
 	   d_texts.at(d_row_index.at(i+1)).at(0).toInt()) {
-	  d_row_index.swap(i,i+1);
+	  d_row_index.swapItemsAt(i,i+1);
 	  modified=true;
 	}
       }

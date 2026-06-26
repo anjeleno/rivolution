@@ -50,7 +50,7 @@ EventWidget::EventWidget(EventWidget::EventType type,QWidget *parent)
   d_location_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
   d_location_label->setFont(labelFont());
   d_location_box=new QComboBox(this);
-  connect(d_location_box,SIGNAL(activated(const QString &)),
+  connect(d_location_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(locationActivatedData(const QString &)));
 
   //
@@ -253,7 +253,7 @@ void EventWidget::fromRecording(unsigned record_id)
 
 void EventWidget::locationActivatedData(const QString &str)
 {
-  QStringList f0=str.split(":",QString::KeepEmptyParts);
+  QStringList f0=str.split(":",Qt::KeepEmptyParts);
 
   switch(f0.size()) {
   case 1:

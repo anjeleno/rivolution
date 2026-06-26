@@ -24,7 +24,7 @@ RDTimeEngine::RDTimeEngine(QObject *parent)
   : QObject(parent)
 {
   d_mapper=new QSignalMapper(this);
-  connect(d_mapper,SIGNAL(mapped(int)),this,SLOT(timerData(int)));
+  connect(d_mapper,SIGNAL(mappedInt(int)),this,SLOT(timerData(int)));
 }
 
 

@@ -27,11 +27,11 @@ RDTextValidator::RDTextValidator(QObject *parent,bool allow_quote)
   d_lower_case_only=false;
 
   if(!allow_quote) {
-    banned_chars.push_back(34);  // Double Quote
+    banned_chars.push_back(QChar(34));  // Double Quote
     }
-  banned_chars.push_back(39);  // Single Quote
-  banned_chars.push_back(92);  // Backslash Quote
-  banned_chars.push_back(96);  // Apostrophe Quote
+  banned_chars.push_back(QChar(39));  // Single Quote
+  banned_chars.push_back(QChar(92));  // Backslash Quote
+  banned_chars.push_back(QChar(96));  // Apostrophe Quote
 }
 
 
@@ -78,10 +78,10 @@ void RDTextValidator::setLowerCaseOnly(bool state)
 
 QString RDTextValidator::stripString(QString str)
 {
-  str.replace(34,"");  // Double Quote
-  str.replace(39,"");  // Single Quote
-  str.replace(92,"");  // Backslash Quote
-  str.replace(96,"");  // Apostrophe Quote
+  str.replace(QChar(34),"");  // Double Quote
+  str.replace(QChar(39),"");  // Single Quote
+  str.replace(QChar(92),"");  // Backslash Quote
+  str.replace(QChar(96),"");  // Apostrophe Quote
 
   return str;
 }

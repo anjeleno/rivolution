@@ -465,7 +465,7 @@ bool DriverJack::initialize(unsigned *next_cardnum)
   //
   if(rda->station()->startJack()) {
     QStringList args=
-      rda->station()->jackCommandLine().split(" ",QString::SkipEmptyParts);
+      rda->station()->jackCommandLine().split(" ",Qt::SkipEmptyParts);
     if(args.size()) {
       QString program=args.at(0);
       args.removeFirst();
@@ -628,11 +628,11 @@ bool DriverJack::initialize(unsigned *next_cardnum)
   // Stop & Fade Timers
   //
   QSignalMapper *stop_mapper=new QSignalMapper(this);
-  connect(stop_mapper,SIGNAL(mapped(int)),this,SLOT(stopTimerData(int)));
+  connect(stop_mapper,SIGNAL(mappedInt(int)),this,SLOT(stopTimerData(int)));
   QSignalMapper *fade_mapper=new QSignalMapper(this);
-  connect(fade_mapper,SIGNAL(mapped(int)),this,SLOT(fadeTimerData(int)));
+  connect(fade_mapper,SIGNAL(mappedInt(int)),this,SLOT(fadeTimerData(int)));
   QSignalMapper *record_mapper=new QSignalMapper(this);
-  connect(record_mapper,SIGNAL(mapped(int)),this,SLOT(recordTimerData(int)));
+  connect(record_mapper,SIGNAL(mappedInt(int)),this,SLOT(recordTimerData(int)));
   for(int i=0;i<RD_MAX_STREAMS;i++) {
     jack_stop_timer[i]=new QTimer(this);
     jack_stop_timer[i]->setSingleShot(true);
@@ -1421,7 +1421,7 @@ void DriverJack::clientStartData()
     QString cmd=RDDateDecode(q->value(1).toString(),QDate::currentDate(),
 			     rda->station(),rda->config(),
 			     rda->config()->provisioningServiceName(rda->config()->stationName()));
-    QStringList args=cmd.split(" ",QString::SkipEmptyParts);
+    QStringList args=cmd.split(" ",Qt::SkipEmptyParts);
     QString program=args.at(0);
     args.removeFirst();
     jack_clients.push_back(new QProcess(this));

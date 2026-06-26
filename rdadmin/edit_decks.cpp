@@ -137,7 +137,7 @@ EditDecks::EditDecks(RDStation *station,RDStation *cae_station,QWidget *parent)
   edit_swstation_label->setFont(labelFont());
   edit_swstation_label->setGeometry(10,190,110,24);
   edit_swstation_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
-  connect(edit_swstation_box,SIGNAL(activated(const QString &)),
+  connect(edit_swstation_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(stationActivatedData(const QString &)));
 
   //
@@ -151,7 +151,7 @@ EditDecks::EditDecks(RDStation *station,RDStation *cae_station,QWidget *parent)
   edit_swmatrix_label->setGeometry(10,214,110,24);
   edit_swmatrix_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
   edit_swmatrix_label->setDisabled(true);
-  connect(edit_swmatrix_box,SIGNAL(activated(const QString &)),
+  connect(edit_swmatrix_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(matrixActivatedData(const QString &)));
 
   //
@@ -260,7 +260,7 @@ EditDecks::EditDecks(RDStation *station,RDStation *cae_station,QWidget *parent)
   edit_event_section_label->setFont(sectionLabelFont());
 
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(eventCartSelectedData(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(eventCartSelectedData(int)));
   for(unsigned i=0;i<RD_CUT_EVENT_ID_QUAN;i+=2) {
     for(unsigned j=0;j<2;j++) {
       edit_event_labels[i+j]=new QLabel(QString::asprintf("%u:",i+j+1),this);

@@ -29,6 +29,8 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include <QRegularExpression>
+
 #include <rdapplication.h>
 #include <rd.h>
 #include <rdcart.h>
@@ -642,7 +644,8 @@ QString MainObject::SwapCase(const QString &str) const
 {
   QStringList parts=str.split(".");
   if(parts[parts.size()-1].
-     contains(QRegExp("*[a-z]*",Qt::CaseSensitive,QRegExp::Wildcard))>0) {
+     contains(QRegularExpression(
+		QRegularExpression::wildcardToRegularExpression("*[a-z]*")))) {
     parts[parts.size()-1]=parts[parts.size()-1].toUpper();
   }
   else {

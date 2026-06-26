@@ -376,7 +376,6 @@ void MainObject::InitStream()
     }
   }
   input_stream=new QTextStream(f,QIODevice::ReadOnly);
-  input_stream->setCodec("UTF-8");
 }
 
 

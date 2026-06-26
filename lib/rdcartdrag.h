@@ -46,7 +46,7 @@ class RDCartDrag : public QMimeData
 		     RDLogLine::TransType trans=RDLogLine::NoTrans);
 
  protected:
-  QVariant retrieveData(const QString &mimetype,QVariant::Type type) const;
+  QVariant retrieveData(const QString &mimetype,QMetaType type) const;
 
  private:
   void SetData(unsigned cartnum,const QColor &color,const QString &title);

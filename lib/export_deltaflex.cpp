@@ -48,7 +48,6 @@ bool RDReport::ExportDeltaflex(const QString &filename,const QDate &startdate,
     return false;
   }
   QTextStream *strm=new QTextStream(file);
-  strm->setCodec("UTF-8");
   if(useLeadingZeros()) {
     air_fmt=QString::asprintf("%%0%uu",cartDigits());
   }

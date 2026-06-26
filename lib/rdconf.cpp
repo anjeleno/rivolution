@@ -857,7 +857,7 @@ QString RDTempFile()
 QString RDTimeZoneName(const QDateTime &datetime)
 {
   char name[20];
-  time_t time=datetime.toTime_t();
+  time_t time=datetime.toSecsSinceEpoch();
   strftime(name,20,"%Z",localtime(&time));
   return QString(name);
 }
@@ -970,8 +970,8 @@ bool RDProcessActive(const QStringList &cmds)
     if(ok) {
       if((f=fopen((QString("/proc/")+dirs[i]+"/cmdline").toUtf8(),"r"))!=NULL) {
 	if(fgets(line,1024,f)!=NULL) {
-	  QStringList f1=QString(line).split(" ",QString::SkipEmptyParts);
-	  QStringList f2=f1[0].split("/",QString::SkipEmptyParts);
+	  QStringList f1=QString(line).split(" ",Qt::SkipEmptyParts);
+	  QStringList f2=f1[0].split("/",Qt::SkipEmptyParts);
 	  cmdline=f2[f2.size()-1];
 	  for(int j=0;j<cmds.size();j++) {
 	    if(cmdline==cmds[j]) {
@@ -1024,7 +1024,7 @@ QByteArray RDStringToData(const QString &str)
 	istate=1;
       }
       else {
-	ret+=str.at(i);
+	ret+=str.at(i).toLatin1();
       }
       break;
 
@@ -1081,7 +1081,6 @@ QList<pid_t> RDGetPids(const QString &program)
       QFile file(QString("/proc/")+files.at(i)+"/cmdline");
       if(file.open(QIODevice::ReadOnly)) {
 	QTextStream strm(&file);
-	strm.setCodec("UTF-8");
 	QStringList f0=strm.readLine().split(" ");
 	QStringList f1=f0.at(0).split("/");
 	if(f1.back().left(f1.back().length()-1)==program.trimmed()) {
@@ -1143,7 +1142,7 @@ QString RDMimeType(const QString &filename,bool *ok)
   }
   *ok=true;
   ret=QString(proc->readAllStandardOutput()).
-    split(":",QString::SkipEmptyParts).last().trimmed();
+    split(":",Qt::SkipEmptyParts).last().trimmed();
 
   delete proc;
 
@@ -1173,7 +1172,7 @@ QString RDMimeType(const QByteArray &data,bool *ok)
   *ok=true;
 
   ret=QString(proc->readAllStandardOutput()).
-    split(":",QString::SkipEmptyParts).last().trimmed();
+    split(":",Qt::SkipEmptyParts).last().trimmed();
 
   delete proc;
 
@@ -1185,7 +1184,7 @@ QString RDWrapText(const QString &str,int width)
 {
   QString line;
   QString ret;
-  QStringList f0=str.split(" ",QString::KeepEmptyParts);
+  QStringList f0=str.split(" ",Qt::KeepEmptyParts);
   int fn=0;
 
   while(fn<f0.size()) {

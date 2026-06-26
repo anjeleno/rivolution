@@ -6,6 +6,74 @@ This is **not** a feature roadmap or pipeline of planned work; see
 `docs/specs/` for that. Entries here get promoted to a real spec and
 branch once they're picked up.
 
+## `DOCBOOK_STYLESHEETS` not set for the RHEL case in `configure_build.sh`
+
+Fixed for Debian/Ubuntu (now exports `DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns`
+automatically — see `KNOWN_ISSUES.md`), but deliberately left unset
+for RHEL: `INSTALL`'s three RHEL sections (7/8/9) never document a
+confirmed path for it, only a pointer to the `docbook5-style-xsl`
+package, and there's no RHEL box available to verify where that
+package actually installs its stylesheet tree. Guessing a path here
+without verification risks being silently wrong in a way that's harder
+to notice than the current honest gap. Needs an actual RHEL box (or
+someone running one) to confirm before fixing for real.
+
+## Install prefix: resolved — use `configure_build.sh`, not raw `./configure`
+
+Today's dev install went to `--prefix=/usr/local`, but that wasn't
+because anything actually defaults there: `configure_build.sh`
+(upstream's own distro-detection wrapper) already hardcodes
+`--prefix=/usr` for every distro case (debian/rhel/ubuntu), matching
+every example in `INSTALL`'s distro-specific notes. `/usr/local` only
+happened because today's build invoked raw `./configure` directly
+(for speed/control while debugging Qt6 issues), bypassing that wrapper
+entirely.
+
+`/usr/local` was originally adopted on the old shared 24.04 box
+specifically to let `v4` (`/usr`) and `v6` coexist without `make
+install` overwriting `v4`'s binaries. That reason no longer applies on
+the dedicated `v6` box, and `/usr/local` has a real cost: it needs an
+explicit `sudo ldconfig` after every install that `/usr/lib` typically
+doesn't (see `KNOWN_ISSUES.md`), and it's non-standard relative to
+every script/config elsewhere in this toolchain (Apache config,
+systemd units, `rivendell-golden-ansible`'s provisioning scripts) that
+assumes the conventional `/usr`-rooted FHS layout. If this fork ever
+ships a real `.deb`, `/usr` is mandatory — Debian packaging conventions
+reserve `/usr/local` for software installed outside the package
+manager.
+
+**No code change needed** — just use `./configure_build.sh` for future
+builds instead of raw `./configure`, and clean up the stale
+`/usr/local`-installed files once a `/usr`-prefixed build replaces
+them.
+
+**Follow-up, 2026-06-24:** that cleanup didn't happen automatically and
+the stale `/usr/local` tree sat there silently shadowing the real
+`/usr` install for the better part of a day — `$PATH` and the XDG icon
+theme search order both prefer `/usr/local` over `/usr`, so binaries
+and icons kept resolving to the old build with zero indication
+anything was wrong, until two seemingly-unrelated symptoms (RDLibrary's
+group list, `rdimport`'s dropbox-watch) both got mis-diagnosed for a
+while before the stale install was found and manually removed. See
+`KNOWN_ISSUES.md` for the operator-facing symptom/check/cleanup detail.
+Still no automated detection — a `make install` (or a separate check)
+that flags a populated `/usr/local` Rivendell tree when installing to a
+different prefix would have caught this immediately instead of costing
+real debugging time.
+
+## `make install` doesn't refresh the linker cache
+
+Installing a new `librd-*.so` doesn't make it loadable until `sudo
+ldconfig` runs, independent of install prefix — see `KNOWN_ISSUES.md`
+for the symptom/workaround. `/usr/lib` only "stays fresh
+automatically" in the common case because `apt`/`dpkg` runs `ldconfig`
+as a post-install trigger; that's a property of installing through a
+package manager, not of the directory itself. This fork installs via
+raw `sudo make install` (a plain file copy via libtool), which never
+goes through `dpkg`, so the cache needs a manual refresh either way.
+Not fixed in the install target itself yet — worth an actual
+`install-exec-hook` fix.
+
 ## RD_CURL_TIMEOUT orphans server-side conversions on large/slow imports
 
 `RD_CURL_TIMEOUT` (`lib/rd.h:514`, 1200s) is shared by every HTTP-based

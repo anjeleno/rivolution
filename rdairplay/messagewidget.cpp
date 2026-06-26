@@ -20,7 +20,7 @@
 
 #include <QEvent>
 #include <QKeyEvent>
-#include <QWebFrame>
+#include <QWebEngineSettings>
 
 #include <rdapplication.h>
 #include <rdeventfilter.h>
@@ -49,7 +49,7 @@ MessageWidget::MessageWidget(QWidget *parent)
   d_label=new QLabel(this);
   d_label->setWordWrap(true);
   d_label->setAlignment(Qt::AlignCenter);
-  d_view=new QWebView(this);
+  d_view=new QWebEngineView(this);
   connect(d_view,SIGNAL(loadFinished(bool)),
 	  this,SLOT(webLoadFinishedData(bool)));
   d_view->hide();
@@ -86,8 +86,8 @@ void MessageWidget::setText(const QString &str,const QColor &col)
 {
   QPalette pal=d_label->palette();
 
-  pal.setColor(QPalette::Active,QPalette::Foreground,col);
-  pal.setColor(QPalette::Inactive,QPalette::Foreground,col);
+  pal.setColor(QPalette::Active,QPalette::WindowText,col);
+  pal.setColor(QPalette::Inactive,QPalette::WindowText,col);
   d_label->setPalette(pal);
   d_label->setFont(MessageFont(str));
   d_label->setText(str);
@@ -144,10 +144,8 @@ void MessageWidget::clear()
 
 void MessageWidget::webLoadFinishedData(bool state)
 {
-  d_view->page()->mainFrame()->
-    setScrollBarPolicy(Qt::Horizontal,Qt::ScrollBarAlwaysOff);
-  d_view->page()->mainFrame()->
-    setScrollBarPolicy(Qt::Vertical,Qt::ScrollBarAlwaysOff);
+  d_view->page()->settings()->
+    setAttribute(QWebEngineSettings::ShowScrollBars,false);
 }
 
 
@@ -168,7 +166,7 @@ void MessageWidget::resizeEvent(QResizeEvent *e)
 QFont MessageWidget::MessageFont(QString str) const
 {
   for(int i=(MESSAGE_FONT_QUANTITY-1);i>=0;i--) {
-    if(d_message_metrics[i]->width(str)<MESSAGE_WIDGET_WIDTH) {
+    if(d_message_metrics[i]->horizontalAdvance(str)<MESSAGE_WIDGET_WIDTH) {
       return d_message_fonts[i];
     }
   }

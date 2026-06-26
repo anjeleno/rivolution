@@ -66,7 +66,7 @@ RDAddCart::RDAddCart(QString *group,RDCart::Type *type,QString *title,
     }
   }
   delete q;
-  connect(cart_group_box,SIGNAL(activated(const QString &)),
+  connect(cart_group_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(groupActivatedData(const QString &)));
 
   //

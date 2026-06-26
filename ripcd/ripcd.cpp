@@ -95,10 +95,10 @@ MainObject::MainObject(QObject *parent)
   // Client Connections
   //
   ripcd_ready_mapper=new QSignalMapper(this);
-  connect(ripcd_ready_mapper,SIGNAL(mapped(int)),this,SLOT(readyReadData(int)));
+  connect(ripcd_ready_mapper,SIGNAL(mappedInt(int)),this,SLOT(readyReadData(int)));
 
   ripcd_kill_mapper=new QSignalMapper(this);
-  connect(ripcd_kill_mapper,SIGNAL(mapped(int)),this,SLOT(killData(int)));
+  connect(ripcd_kill_mapper,SIGNAL(mappedInt(int)),this,SLOT(killData(int)));
   server=new QTcpServer(this);
   if(!server->listen(QHostAddress::Any,RIPCD_TCP_PORT)) {
     rda->syslog(LOG_ERR,"unable to bind ripc port");
@@ -110,7 +110,7 @@ MainObject::MainObject(QObject *parent)
   // Macro Timers
   //
   QSignalMapper *mapper=new QSignalMapper(this);
-  connect(mapper,SIGNAL(mapped(int)),this,SLOT(macroTimerData(int)));
+  connect(mapper,SIGNAL(mappedInt(int)),this,SLOT(macroTimerData(int)));
   for(int i=0;i<RD_MAX_MACRO_TIMERS;i++) {
     ripc_macro_cart[i]=0;
     ripc_macro_timer[i]=new QTimer(this);
@@ -123,7 +123,7 @@ MainObject::MainObject(QObject *parent)
   // TTY Ready Read Mapper
   //
   ripcd_tty_ready_read_mapper=new QSignalMapper(this);
-  connect(ripcd_tty_ready_read_mapper,SIGNAL(mapped(int)),
+  connect(ripcd_tty_ready_read_mapper,SIGNAL(mappedInt(int)),
 	  this,SLOT(ttyReadyReadData(int)));
 
   ripcd_host_addr=rda->station()->address();
@@ -242,7 +242,7 @@ void MainObject::newConnectionData()
 void MainObject::notificationReceivedData(const QString &msg,
 					  const QHostAddress &addr)
 {
-  QStringList f0=msg.split(" ",QString::SkipEmptyParts);
+  QStringList f0=msg.split(" ",Qt::SkipEmptyParts);
   if(f0.at(0)=="NOTIFY") {
     RDNotification *notify=new RDNotification();
     if(!notify->read(msg)) {
@@ -494,7 +494,7 @@ bool MainObject::DispatchCommand(RipcdConnection *conn)
   QHostAddress addr;
 
   //printf("DispatchCommand(%s)\n",(const char *)conn->accum.toUtf8());
-  QStringList cmds=conn->accum.split(" ",QString::SkipEmptyParts);
+  QStringList cmds=conn->accum.split(" ",Qt::SkipEmptyParts);
 
   //
   // Common Commands
@@ -632,7 +632,7 @@ bool MainObject::DispatchCommand(RipcdConnection *conn)
       msg+=QString(cmds[i])+" ";
     }
     msg=msg.left(msg.length()-1);
-    QStringList f0=msg.split(" ",QString::SkipEmptyParts);
+    QStringList f0=msg.split(" ",Qt::SkipEmptyParts);
     if(f0.at(0)=="NOTIFY") {
       RDNotification *notify=new RDNotification();
       if(!notify->read(msg)) {
@@ -718,7 +718,7 @@ void MainObject::ReadRmlSocket(QUdpSocket *sock,RDMacro::Role role,
       if(macro.command()==RDMacro::AG) {
 	if(ripc_onair_flag) {
 	  QStringList f0=
-	    QString::fromUtf8(buffer).split(" ",QString::SkipEmptyParts);
+	    QString::fromUtf8(buffer).split(" ",Qt::SkipEmptyParts);
 	  f0.pop_front();
 	  QString rmlstr=f0.join(" ");
 	  macro=RDMacro::fromString(rmlstr);

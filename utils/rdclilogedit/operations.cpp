@@ -275,14 +275,12 @@ QString MainObject::ListLine(RDLogModel *model,int line) const
 
   switch(logline->timeType()) {
   case RDLogLine::Hard:
-    ret+=QString().
-      sprintf("T%s  ",logline->startTime(RDLogLine::Logged).
+    ret+=QString::asprintf("T%s  ",logline->startTime(RDLogLine::Logged).
 	      toString("hh:mm:ss").toUtf8().constData());
     break;
 
   case RDLogLine::Relative:
-    ret+=QString().
-      sprintf(" %s  ",model->blockStartTime(line).
+    ret+=QString::asprintf(" %s  ",model->blockStartTime(line).
 	      toString("hh:mm:ss").toUtf8().constData());
     break;
 

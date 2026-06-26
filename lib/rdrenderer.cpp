@@ -218,7 +218,7 @@ bool __RDRenderLogLine::GetCutFile(const QString &cutname,int start_pt,
 void __RDRenderLogLine::DeleteCutFile(const QString &dest_filename) const
 {
   unlink(dest_filename.toUtf8());
-  QStringList f0=dest_filename.split("/",QString::SkipEmptyParts);
+  QStringList f0=dest_filename.split("/",Qt::SkipEmptyParts);
   f0.removeLast();
   rmdir(("/"+f0.join("/")).toUtf8());
 }
@@ -637,7 +637,7 @@ bool RDRenderer::ImportCart(const QString &srcfile,unsigned cartnum,int cutnum,
 void RDRenderer::DeleteTempFile(const QString &filename) const
 {
   unlink(filename.toUtf8());
-  QStringList f0=filename.split("/",QString::SkipEmptyParts);
+  QStringList f0=filename.split("/",Qt::SkipEmptyParts);
   f0.removeLast();
   rmdir(("/"+f0.join("/")).toUtf8());
 }

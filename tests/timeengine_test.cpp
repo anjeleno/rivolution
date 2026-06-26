@@ -56,7 +56,7 @@ MainObject::MainObject(QObject *parent)
       int id;
       QTime time;
       QStringList f0=
-	rda->cmdSwitch()->value(i).split(":",QString::SkipEmptyParts);
+	rda->cmdSwitch()->value(i).split(":",Qt::SkipEmptyParts);
       if(f0.size()!=4) {
 	fprintf(stderr,"timeengine_test: invalid argument format\n");
 	exit(1);

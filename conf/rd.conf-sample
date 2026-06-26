@@ -59,7 +59,7 @@ Database=Rivendell
 ; The Qt SQL driver plug-in to use. It should seldom be necessary to
 ; change this.
 ;
-Driver=QMYSQL3
+Driver=QMYSQL
 
 ; The interval between 'keep-alive' queries to the MySQL server (seconds)
 HeartbeatInterval=360

@@ -206,7 +206,7 @@ QString RDNotification::dump() const
 {
   QString ret;
 
-  switch((QMetaType::Type)id().type()) {
+  switch((QMetaType::Type)id().typeId()) {
   case QMetaType::Int:
     ret+=QString::asprintf("id: %d\n",id().toInt());
     break;
@@ -220,7 +220,7 @@ QString RDNotification::dump() const
     break;
 
   default:
-    ret+="Unknown QMetaType type value: %u\n",id().type();
+    ret+=QString::asprintf("Unknown QMetaType type value: %u\n",id().typeId());
     break;
   }
   ret+="type: "+RDNotification::typeString(type())+"\n";

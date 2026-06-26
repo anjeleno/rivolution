@@ -917,7 +917,7 @@ void Xport::RemoveImage()  // Remove podcast image from the remote archive
 
 void Xport::RunCdnScript(const QString &cmd,const QStringList &args)
 {
-  QStringList f0=cmd.split("/",QString::KeepEmptyParts);
+  QStringList f0=cmd.split("/",Qt::KeepEmptyParts);
   f0.removeLast();
   QProcess *proc=new QProcess(this);
   QProcessEnvironment env=QProcessEnvironment::systemEnvironment();

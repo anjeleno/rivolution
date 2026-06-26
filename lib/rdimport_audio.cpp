@@ -71,7 +71,7 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   // Mode Group
   //
   import_mode_group=new QButtonGroup(this);
-  connect(import_mode_group,SIGNAL(buttonClicked(int)),
+  connect(import_mode_group,SIGNAL(idClicked(int)),
 	  this,SLOT(modeClickedData(int)));
 
   //
@@ -147,23 +147,38 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   import_autotrim_unit->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 
   //
+  // Format Override Check Box (Import mode only -- Export always
+  // requires an explicit format, so this has no meaning there). Lives
+  // in the Import zone, alongside the Format controls below, which
+  // reposition themselves into this same zone whenever Import mode is
+  // active (see modeClickedData()).
+  //
+  import_format_override_box=
+    new QCheckBox(tr("Override library default format"),this);
+  import_format_override_box->setGeometry(10,104,sizeHint().width()-20,15);
+  import_format_override_box->setFont(labelFont());
+  import_format_override_box->setChecked(false);
+  connect(import_format_override_box,SIGNAL(toggled(bool)),
+	  this,SLOT(formatOverrideCheckData(bool)));
+
+  //
   // Output Mode Button
   //
   import_exportmode_button=new QRadioButton(tr("Export File"),this);
   import_mode_group->addButton(import_exportmode_button,1);
-  import_exportmode_button->setGeometry(10,120,sizeHint().width()-40,15);
+  import_exportmode_button->setGeometry(10,165,sizeHint().width()-40,15);
   import_exportmode_button->setFont(sectionLabelFont());
 
   //
   // Output Filename
   //
   import_out_filename_edit=new QLineEdit(this);
-  import_out_filename_edit->setGeometry(85,140,sizeHint().width()-180,20);
+  import_out_filename_edit->setGeometry(85,185,sizeHint().width()-180,20);
   connect(import_out_filename_edit,SIGNAL(textChanged(const QString &)),
 	  this,SLOT(filenameChangedData(const QString &)));
   import_out_filename_edit->setReadOnly(true);
   import_out_filename_label=new QLabel(tr("Filename:"),this);
-  import_out_filename_label->setGeometry(10,140,70,20);
+  import_out_filename_label->setGeometry(10,185,70,20);
   import_out_filename_label->setFont(labelFont());
   import_out_filename_label->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
 
@@ -171,7 +186,7 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   // Output File Selector Button
   //
   import_out_selector_button=new QPushButton(tr("Select"),this);
-  import_out_selector_button->setGeometry(sizeHint().width()-85,137,70,26);
+  import_out_selector_button->setGeometry(sizeHint().width()-85,182,70,26);
   connect(import_out_selector_button,SIGNAL(clicked()),
 	  this,SLOT(selectOutputFileData()));
 
@@ -179,19 +194,21 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   // Output Metadata
   //
   import_out_metadata_box=new QCheckBox(tr("Export file metadata"),this);
-  import_out_metadata_box->setGeometry(95,161,sizeHint().width()-210,15);
+  import_out_metadata_box->setGeometry(95,206,sizeHint().width()-210,15);
   import_out_metadata_box->setChecked(*import_import_metadata);
   import_out_metadata_box->setFont(labelFont());
 
   //
-  // Output Format
+  // Output Format -- positioned here for Export mode; repositioned
+  // into the Import zone above, next to the override checkbox, by
+  // modeClickedData() whenever Import mode is active.
   //
   import_format_edit=new QLineEdit(this);
-  import_format_edit->setGeometry(85,181,sizeHint().width()-180,20);
+  import_format_edit->setGeometry(85,226,sizeHint().width()-180,20);
   import_format_edit->setReadOnly(true);
   import_format_edit->setText(import_settings->description());
   import_format_label=new QLabel(tr("Format:"),this);
-  import_format_label->setGeometry(10,181,70,20);
+  import_format_label->setGeometry(10,226,70,20);
   import_format_label->setFont(labelFont());
   import_format_label->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
 
@@ -199,7 +216,7 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   // Output Format Selector Button
   //
   import_out_format_button=new QPushButton(tr("Set"),this);
-  import_out_format_button->setGeometry(sizeHint().width()-85,178,70,26);
+  import_out_format_button->setGeometry(sizeHint().width()-85,223,70,26);
   connect(import_out_format_button,SIGNAL(clicked()),
 	  this,SLOT(selectOutputFormatData()));
 
@@ -207,13 +224,13 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   // Progress Bar
   //
   import_bar=new RDBusyBar(this);
-  import_bar->setGeometry(10,230,sizeHint().width()-20,20);
+  import_bar->setGeometry(10,275,sizeHint().width()-20,20);
 
   //
   // Normalize Check Box
   //
   import_normalize_box=new QCheckBox(tr("Normalize"),this);
-  import_normalize_box->setGeometry(10,262,113,15);
+  import_normalize_box->setGeometry(10,307,113,15);
   import_normalize_box->setChecked(true);
   import_normalize_box->setFont(labelFont());
   connect(import_normalize_box,SIGNAL(toggled(bool)),
@@ -223,14 +240,14 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   // Normalize Level
   //
   import_normalize_spin=new QSpinBox(this);
-  import_normalize_spin->setGeometry(160,260,40,20);
+  import_normalize_spin->setGeometry(160,305,40,20);
   import_normalize_spin->setRange(-30,0);
   import_normalize_label=new QLabel(tr("Level:"),this);
-  import_normalize_label->setGeometry(110,260,45,20);
+  import_normalize_label->setGeometry(110,305,45,20);
   import_normalize_label->setFont(labelFont());
   import_normalize_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
   import_normalize_unit=new QLabel(tr("dBFS"),this);
-  import_normalize_unit->setGeometry(205,260,40,20);
+  import_normalize_unit->setGeometry(205,305,40,20);
   import_normalize_unit->setFont(labelFont());
   import_normalize_unit->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 
@@ -274,7 +291,7 @@ RDImportAudio::~RDImportAudio()
 
 QSize RDImportAudio::sizeHint() const
 {
-  return QSize(470,332);
+  return QSize(470,377);
 }
 
 
@@ -359,15 +376,41 @@ void RDImportAudio::modeClickedData(int id)
   import_out_filename_edit->setEnabled(id);
   import_out_metadata_box->setEnabled(id);
   import_out_selector_button->setEnabled(id);
-  import_format_edit->setEnabled(id);
-  import_format_label->setEnabled(id);
-  import_out_format_button->setEnabled(id);
+  import_format_override_box->setEnabled(id==0);
+  if(id==0) {  // Import -- Format row sits in the Import zone, next
+               // to the override checkbox
+    import_format_label->setGeometry(10,124,70,20);
+    import_format_edit->setGeometry(85,124,sizeHint().width()-180,20);
+    import_out_format_button->setGeometry(sizeHint().width()-85,121,70,26);
+  }
+  else {  // Export -- Format row sits in its original Export-zone spot
+    import_format_label->setGeometry(10,226,70,20);
+    import_format_edit->setGeometry(85,226,sizeHint().width()-180,20);
+    import_out_format_button->setGeometry(sizeHint().width()-85,223,70,26);
+  }
+  UpdateFormatControls();
   if(id) {
     import_import_button->setText(tr("Export"));
   }
   else {
     import_import_button->setText(tr("Import"));
   }
+}
+
+
+void RDImportAudio::UpdateFormatControls()
+{
+  bool enable=(import_mode_group->checkedId()!=0)||
+    import_format_override_box->isChecked();
+  import_format_edit->setEnabled(enable);
+  import_format_label->setEnabled(enable);
+  import_out_format_button->setEnabled(enable);
+}
+
+
+void RDImportAudio::formatOverrideCheckData(bool)
+{
+  UpdateFormatControls();
 }
 
 
@@ -484,9 +527,9 @@ void RDImportAudio::paintEvent(QPaintEvent *e)
 {
   QPainter *p=new QPainter(this);
   p->setPen(QColor(Qt::black));
-  p->drawLine(10,110,sizeHint().width()-10,110);
-  p->drawLine(0,215,sizeHint().width(),215);
-  p->drawLine(0,216,sizeHint().width(),216);  
+  p->drawLine(10,155,sizeHint().width()-10,155);
+  p->drawLine(0,260,sizeHint().width(),260);
+  p->drawLine(0,261,sizeHint().width(),261);
   p->end();
   delete p;
 }
@@ -526,6 +569,10 @@ void RDImportAudio::Import()
   import_import_conv->setCartNumber(cut->cartNumber());
   import_import_conv->setCutNumber(cut->cutNumber());
   import_import_conv->setSourceFile(import_in_filename_edit->text());
+  if(import_format_override_box->isChecked()) {
+    import_import_conv->setFormat(import_settings->format());
+    settings.setFormat(import_settings->format());
+  }
   settings.setChannels(import_channels_box->currentIndex()+1);
   if(import_normalize_box->isChecked()) {
     settings.setNormalizationLevel(import_normalize_spin->value());
@@ -643,6 +690,7 @@ void RDImportAudio::StartBar()
   import_out_filename_edit->setDisabled(true);
   import_out_metadata_box->setDisabled(true);
   import_out_selector_button->setDisabled(true);
+  import_format_override_box->setDisabled(true);
   import_format_label->setDisabled(true);
   import_format_edit->setDisabled(true);
   import_out_format_button->setDisabled(true);

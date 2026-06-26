@@ -5,6 +5,6 @@ Categories=Qt;KDE;Rivendell;
 Name=RDAlsaConfig
 GenericName=Rivendell ALSA Configuration
 Exec=rdalsaconfig-root --manage-daemons
-Icon=rivendell
+Icon=rdalsaconfig
 Type=Application
 Terminal=false

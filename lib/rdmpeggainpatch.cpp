@@ -103,7 +103,7 @@ bool RDMpegGainPatch::MeasurePeak(double *max_amplitude)
   // Two header columns in, then one data row per input file:
   // File / MP3 gain / dB gain / Max Amplitude / Max global_gain / Min global_gain
   //
-  QStringList lines=output.split("\n",QString::SkipEmptyParts);
+  QStringList lines=output.split("\n",Qt::SkipEmptyParts);
   if(lines.size()<2) {
     return false;
   }

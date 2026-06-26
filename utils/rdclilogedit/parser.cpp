@@ -39,7 +39,7 @@ void MainObject::DispatchCommand(QString cmd)
     overwrite=true;
     cmd=cmd.left(cmd.length()-1).trimmed();
   }
-  cmds=cmd.split(" ",QString::SkipEmptyParts);
+  cmds=cmd.split(" ",Qt::SkipEmptyParts);
   verb=cmds[0].toLower();
 
   //

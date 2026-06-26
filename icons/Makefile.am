@@ -186,6 +186,36 @@ install-exec-am:
 	cp rdpanel-512x512.png $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rdpanel.png
 	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps
 	cp rdpanel-128x128.png $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rdpanel.png
+	cp rdalsaconfig-16x16.png $(DESTDIR)@prefix@/share/icons/hicolor/16x16/apps/rdalsaconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/22x22/apps
+	cp rdalsaconfig-22x22.png $(DESTDIR)@prefix@/share/icons/hicolor/22x22/apps/rdalsaconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/32x32/apps
+	cp rdalsaconfig-32x32.png $(DESTDIR)@prefix@/share/icons/hicolor/32x32/apps/rdalsaconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/64x64/apps
+	cp rdalsaconfig-64x64.png $(DESTDIR)@prefix@/share/icons/hicolor/64x64/apps/rdalsaconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps
+	cp rdalsaconfig-128x128.png $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rdalsaconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps
+	cp rdalsaconfig-256x256.png $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps/rdalsaconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps
+	cp rdalsaconfig-512x512.png $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rdalsaconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps
+	cp rdalsaconfig-128x128.png $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rdalsaconfig.png
+	cp rddbconfig-16x16.png $(DESTDIR)@prefix@/share/icons/hicolor/16x16/apps/rddbconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/22x22/apps
+	cp rddbconfig-22x22.png $(DESTDIR)@prefix@/share/icons/hicolor/22x22/apps/rddbconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/32x32/apps
+	cp rddbconfig-32x32.png $(DESTDIR)@prefix@/share/icons/hicolor/32x32/apps/rddbconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/64x64/apps
+	cp rddbconfig-64x64.png $(DESTDIR)@prefix@/share/icons/hicolor/64x64/apps/rddbconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps
+	cp rddbconfig-128x128.png $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rddbconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps
+	cp rddbconfig-256x256.png $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps/rddbconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps
+	cp rddbconfig-512x512.png $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rddbconfig.png
+	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps
+	cp rddbconfig-128x128.png $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rddbconfig.png
 	mkdir -p $(DESTDIR)@prefix@/share/pixmaps/rivendell
 	cp rdairplay_logo.png $(DESTDIR)@prefix@/share/pixmaps/rivendell/
 	cp rdairplay_white_logo.png $(DESTDIR)@prefix@/share/pixmaps/rivendell/
@@ -276,6 +306,20 @@ uninstall-local:
 	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rdpanel-128x128.png
 	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps/rdpanel.png
 	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rdpanel.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/16x16/apps/rdalsaconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/22x22/apps/rdalsaconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/32x32/apps/rdalsaconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/64x64/apps/rdalsaconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rdalsaconfig-128x128.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps/rdalsaconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rdalsaconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/16x16/apps/rddbconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/22x22/apps/rddbconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/32x32/apps/rddbconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/64x64/apps/rddbconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rddbconfig-128x128.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps/rddbconfig.png
+	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rddbconfig.png
 	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivendell/rdairplay_logo.png
 	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivendell/rdairplay_white_logo.png
 	./update_icons.sh
@@ -479,6 +523,22 @@ EXTRA_DIST = admin.xpm\
              rdpanel-512x512.xpm\
              rdpanel-64x64.xpm\
              rdpanel.ico\
+             rdalsaconfig-128x128.png\
+             rdalsaconfig-16x16.png\
+             rdalsaconfig-22x22.png\
+             rdalsaconfig-256x256.png\
+             rdalsaconfig-32x32.png\
+             rdalsaconfig-512x512.png\
+             rdalsaconfig-64x64.png\
+             rdalsaconfig.ico\
+             rddbconfig-128x128.png\
+             rddbconfig-16x16.png\
+             rddbconfig-22x22.png\
+             rddbconfig-256x256.png\
+             rddbconfig-32x32.png\
+             rddbconfig-512x512.png\
+             rddbconfig-64x64.png\
+             rddbconfig.ico\
              rivendell-128x128.png\
              rivendell-1400x1400.png\
              rivendell-16x16.png\

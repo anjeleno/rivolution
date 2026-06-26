@@ -34,7 +34,7 @@ RDDatePicker::RDDatePicker(int low_year,int high_year,QWidget *parent)
   pick_month_box=new QComboBox(this);
   pick_month_box->setGeometry(0,0,120,26);
   for(int i=1;i<13;i++) {
-    pick_month_box->insertItem(pick_month_box->count(),QDate::longMonthName(i));
+    pick_month_box->insertItem(pick_month_box->count(),QLocale::system().monthName(i,QLocale::LongFormat));
   }
   connect(pick_month_box,SIGNAL(activated(int)),
 	  this,SLOT(monthActivatedData(int)));
@@ -66,10 +66,10 @@ RDDatePicker::RDDatePicker(int low_year,int high_year,QWidget *parent)
   // Date Labels
   //
   QPalette weekend_palette=palette();
-  weekend_palette.setColor(QPalette::Active,QPalette::Background,
+  weekend_palette.setColor(QPalette::Active,QPalette::Window,
 			   palette().color(QPalette::Active,
 					   QPalette::Mid));
-  weekend_palette.setColor(QPalette::Inactive,QPalette::Background,
+  weekend_palette.setColor(QPalette::Inactive,QPalette::Window,
 			   palette().color(QPalette::Active,
 					   QPalette::Mid));
 
@@ -252,10 +252,10 @@ void RDDatePicker::PrintDays()
   // Clear Days
   //
   QPalette weekend_palette=palette();
-  weekend_palette.setColor(QPalette::Active,QPalette::Background,
+  weekend_palette.setColor(QPalette::Active,QPalette::Window,
 			   palette().color(QPalette::Active,
 					   QPalette::Mid));
-  weekend_palette.setColor(QPalette::Inactive,QPalette::Background,
+  weekend_palette.setColor(QPalette::Inactive,QPalette::Window,
 			   palette().color(QPalette::Active,
 					   QPalette::Mid));
   for(int i=0;i<6;i++) {
@@ -311,26 +311,26 @@ void RDDatePicker::SelectDay(int day,int dow_offset,bool state)
   int dow=slot-7*week;
   QPalette pal=palette();
   if(state) {
-    pal.setColor(QPalette::Active,QPalette::Foreground,
+    pal.setColor(QPalette::Active,QPalette::WindowText,
 		 palette().
 		 color(QPalette::Active,QPalette::HighlightedText));
-    pal.setColor(QPalette::Active,QPalette::Background,
+    pal.setColor(QPalette::Active,QPalette::Window,
 		 palette().color(QPalette::Active,QPalette::Highlight));
-    pal.setColor(QPalette::Inactive,QPalette::Foreground,
+    pal.setColor(QPalette::Inactive,QPalette::WindowText,
 		 palette().
 		 color(QPalette::Active,QPalette::HighlightedText));
-    pal.setColor(QPalette::Inactive,QPalette::Background,
+    pal.setColor(QPalette::Inactive,QPalette::Window,
 		 palette().color(QPalette::Active,QPalette::Highlight));
   }
   else {
-    pal.setColor(QPalette::Active,QPalette::Foreground,
+    pal.setColor(QPalette::Active,QPalette::WindowText,
 		 palette().color(QPalette::Active,QPalette::Text));
-    pal.setColor(QPalette::Active,QPalette::Background,
-		 palette().color(QPalette::Active,QPalette::Background));
-    pal.setColor(QPalette::Inactive,QPalette::Foreground,
+    pal.setColor(QPalette::Active,QPalette::Window,
+		 palette().color(QPalette::Active,QPalette::Window));
+    pal.setColor(QPalette::Inactive,QPalette::WindowText,
 		 palette().color(QPalette::Active,QPalette::Text));
-    pal.setColor(QPalette::Inactive,QPalette::Background,
-		 palette().color(QPalette::Active,QPalette::Background));
+    pal.setColor(QPalette::Inactive,QPalette::Window,
+		 palette().color(QPalette::Active,QPalette::Window));
   }
   pick_date_label[week][dow]->setPalette(pal);
 }

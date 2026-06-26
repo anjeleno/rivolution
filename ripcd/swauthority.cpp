@@ -63,7 +63,7 @@ SoftwareAuthority::SoftwareAuthority(RDMatrix *matrix,QObject *parent)
   connect(swa_socket,SIGNAL(disconnected()),this,SLOT(connectionClosedData()));
   connect(swa_socket,SIGNAL(readyRead()),
 	  this,SLOT(readyReadData()));
-  connect(swa_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(swa_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
   ipConnect();
 }
@@ -321,7 +321,7 @@ void SoftwareAuthority::DispatchCommand()
       RDSqlQuery::apply(sql);
       return;
     }
-    f0=line_in.split("\t",QString::KeepEmptyParts);
+    f0=line_in.split("\t",Qt::KeepEmptyParts);
 
     //
     // Insert null zero or more '[null]' entries to cover holes
@@ -378,7 +378,7 @@ void SoftwareAuthority::DispatchCommand()
       }
       return;
     }
-    f0=line_in.split("\t",QString::KeepEmptyParts);
+    f0=line_in.split("\t",Qt::KeepEmptyParts);
 
     //
     // Insert null zero or more '[null]' entries to cover holes

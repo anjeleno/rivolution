@@ -157,7 +157,7 @@ void BtSs41Mlr::readyReadData()
 	break;
 
       default:
-	bt_accum+=buffer[i];
+	bt_accum+=QChar(buffer[i]);
 	break;
       }
     }

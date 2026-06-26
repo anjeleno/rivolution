@@ -23,7 +23,6 @@
 
 #include <qapplication.h>
 #include <qdatetime.h>
-#include <qregexp.h>
 #include <qtimer.h>
 
 #include "rdapplication.h"
@@ -43,7 +42,7 @@ RDCddbLookup::RDCddbLookup(const QString &caption,FILE *profile_msgs,
   //
   lookup_socket=new QTcpSocket(this);
   connect(lookup_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(lookup_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(lookup_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
 }
 
@@ -232,7 +231,7 @@ void RDCddbLookup::readyReadData()
 	QApplication::restoreOverrideCursor();
 	if((index_line=exec())>=0) {
 	  QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-	  f0=titlesKey()->at(index_line).split(" ",QString::SkipEmptyParts);
+	  f0=titlesKey()->at(index_line).split(" ",Qt::SkipEmptyParts);
 	  if(f0.size()!=2) {
 	    FinishCddbLookup(RDCddbLookup::LookupError,
 			     "Unexpected response from CDDB server");

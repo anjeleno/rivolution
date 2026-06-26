@@ -634,8 +634,7 @@ void MainObject::RunLocalMacros(RDMacro *rml_in)
 	  }
 	}
       }
-      if(system(QString().
-		sprintf("rdpopup -display %s %s %s",
+      if(system(QString::asprintf("rdpopup -display %s %s %s",
 			rml.arg(0).toUtf8().constData(),
 			rml.arg(1).toUtf8().constData(),
 			RDEscapeString(rml.rollupArgs(2)).toUtf8().constData()).toUtf8().constData())<0) {

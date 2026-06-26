@@ -50,7 +50,7 @@ VersionString::VersionString()
 VersionString::VersionString(const char *str)
   : QString(str)
 {
-  QStringList f0=QString(str).split(".",QString::KeepEmptyParts);
+  QStringList f0=QString(str).split(".",Qt::KeepEmptyParts);
   ver_major=f0[0].toInt();
   if(f0.size()>=2) {
     ver_minor=f0[1].toInt();
@@ -180,7 +180,7 @@ int MainObject::GetVersionSchema(const QString &ver) const
   if(version.left(1).toLower()=="v") {
     version=version.right(version.length()-1);
   }
-  QStringList f0=version.split(".",QString::KeepEmptyParts);
+  QStringList f0=version.split(".",Qt::KeepEmptyParts);
   if(f0.size()!=3) {
     return 0;
   }

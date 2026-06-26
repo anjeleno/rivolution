@@ -1224,10 +1224,10 @@ QString RDWaveData::dump() const
   ret+="\n";
   for(int i=1;i<8;i++) {
     if(dayOfWeek(i)) {
-      ret+=QDate::longDayName(i)+": true\n";
+      ret+=QLocale::system().dayName(i,QLocale::LongFormat)+": true\n";
     }
     else {
-      ret+=QDate::longDayName(i)+": false\n";
+      ret+=QLocale::system().dayName(i,QLocale::LongFormat)+": false\n";
     }
   }
   ret+="daypartStartTime: ";

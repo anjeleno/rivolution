@@ -1224,7 +1224,7 @@ void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
   }
   if(data->startDate().isValid() && 
      (data->startDate()>QDate(1900,1,1))&&(data->endDate().year()<8000)) {
-    QDateTime startDateTime(data->startDate());
+    QDateTime startDateTime(data->startDate(),QTime());
     if(data->startTime().isValid()) {
       startDateTime.setTime(data->startTime());
     }
@@ -1234,7 +1234,7 @@ void RDCut::setMetadata(RDWaveData *data,bool incl_str_fields) const
     sql+=QString("`START_DATETIME`=")+
       RDCheckDateTime(startDateTime,"yyyy-MM-dd hh:mm:ss")+",";      
     if(data->endDate().isValid()&&(data->endDate().year()<8000)) {
-      QDateTime endDateTime(data->endDate());      
+      QDateTime endDateTime(data->endDate(),QTime());
       if(data->endTime().isValid()) {
         endDateTime.setTime(data->endTime());
       }

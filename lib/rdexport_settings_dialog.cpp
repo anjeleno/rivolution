@@ -51,7 +51,7 @@ RDExportSettingsDialog::RDExportSettingsDialog(const QString &caption,
   // Format
   //
   lib_format_box=new QComboBox(this);
-  connect(lib_format_box,SIGNAL(activated(const QString &)),
+  connect(lib_format_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(formatData(const QString &)));
   lib_format_label=new QLabel(tr("Format")+":",this);
   lib_format_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
@@ -69,7 +69,7 @@ RDExportSettingsDialog::RDExportSettingsDialog(const QString &caption,
   // Sample Rate
   //
   lib_samprate_box=new QComboBox(this);
-  connect(lib_samprate_box,SIGNAL(activated(const QString &)),
+  connect(lib_samprate_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(samprateData(const QString &)));
   lib_samprate_label=new QLabel(tr("Sample Rate")+":",this);
   lib_samprate_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
@@ -82,7 +82,7 @@ RDExportSettingsDialog::RDExportSettingsDialog(const QString &caption,
   lib_bitrate_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
   lib_bitrate_label->setFont(labelFont());
   lib_bitrate_box=new QComboBox(this);
-  connect(lib_bitrate_box,SIGNAL(activated(const QString &)),
+  connect(lib_bitrate_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(bitrateData(const QString &)));
   lib_bitrate_unit=new QLabel("kbps",this);
   lib_bitrate_unit->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);

@@ -63,7 +63,7 @@ EditRecording::EditRecording(QString *filter,QWidget *parent)
   // Start Parameters
   //
   edit_starttype_group=new QButtonGroup(this);
-  connect(edit_starttype_group,SIGNAL(buttonClicked(int)),
+  connect(edit_starttype_group,SIGNAL(idClicked(int)),
 	  this,SLOT(startTypeClickedData(int)));
 
   edit_start_groupbox=new QGroupBox(tr("Start Parameters"),this);
@@ -123,7 +123,7 @@ EditRecording::EditRecording(QString *filter,QWidget *parent)
   // End Parameters
   //
   edit_endtype_group=new QButtonGroup(this);
-  connect(edit_endtype_group,SIGNAL(buttonClicked(int)),
+  connect(edit_endtype_group,SIGNAL(idClicked(int)),
 	  this,SLOT(endTypeClickedData(int)));
 
   edit_end_groupbox=new QGroupBox(tr("End Parameters"),this);

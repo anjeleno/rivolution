@@ -49,7 +49,7 @@ EditEvent::EditEvent(RDLogPlay *log,QWidget *parent)
   // Grace Time
   //
   edit_grace_bgroup=new QButtonGroup(this);
-  connect(edit_grace_bgroup,SIGNAL(buttonClicked(int)),
+  connect(edit_grace_bgroup,SIGNAL(idClicked(int)),
 	  this,SLOT(graceClickedData(int)));
   edit_grace_bgroup->setExclusive(true);
   edit_grace_group=
@@ -99,7 +99,7 @@ EditEvent::EditEvent(RDLogPlay *log,QWidget *parent)
   QPainter *p=new QPainter(pix);
   p->setPen(Qt::black);
   p->setBrush(Qt::black);
-  p->fillRect(0,0,sizeHint().width(),3,palette().color(QPalette::Background));
+  p->fillRect(0,0,sizeHint().width(),3,palette().color(QPalette::Window));
   p->drawLine(10,1,sizeHint().width()-10,1);
   p->end();
   edit_horizrule_label->setPixmap(*pix);
