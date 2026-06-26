@@ -461,8 +461,30 @@ if test -z $DOCBOOK_DISABLED ; then
   USING_DOCBOOK=yes
 fi
 AM_CONDITIONAL([DOCBOOK_AM], [test "$USING_DOCBOOK" = yes])
-if test $DOCBOOK_STYLESHEETS ; then
+
+# Auto-detect the DocBook XSL-NS stylesheet tree by checking the
+# filesystem directly, rather than trusting a distro-name guess --
+# $DOCBOOK_STYLESHEETS (if already set in the environment) always
+# takes precedence, for unusual setups not covered by the candidates
+# below. Each candidate is verified by checking for fo/docbook.xsl
+# itself, not just directory existence, so an empty/wrong directory
+# can't pass silently. Add to this list once a real, verified path for
+# another distro family is confirmed -- see BACKLOG.md for what's
+# still unverified (RHEL).
+if test -z "$DOCBOOK_STYLESHEETS" ; then
+  for ar_docbook_candidate in \
+      /usr/share/xml/docbook/stylesheet/docbook-xsl-ns \
+      ; do
+    if test -f "$ar_docbook_candidate/fo/docbook.xsl" ; then
+      DOCBOOK_STYLESHEETS=$ar_docbook_candidate
+      break
+    fi
+  done
+fi
+if test -n "$DOCBOOK_STYLESHEETS" ; then
    ln -s $DOCBOOK_STYLESHEETS helpers/docbook
+else
+   AC_MSG_WARN([DocBook XSL-NS stylesheets not found -- 'make' will fail when building docs/. Set \$DOCBOOK_STYLESHEETS manually if your distro installs them somewhere not yet recognized.])
 fi
 
 #

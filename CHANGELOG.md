@@ -16,7 +16,12 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   chained with `&&`. Now reference `$(top_srcdir)/helpers/docbook`
   instead, the symlink `configure.ac` already creates once at
   configure time, removing the dependency on shell environment state
-  entirely.
+  entirely. Also moved the stylesheet-path detection itself into
+  `configure.ac`, checking the filesystem for the real file rather than
+  trusting a distro-name guess in `configure_build.sh` — works for any
+  distro sharing the same `docbook-xsl-ns` package layout, and warns
+  clearly at configure time if no candidate path is found instead of
+  failing later with a cryptic FOP error.
 - Fixed three more Qt6 signal renames that silently fail to connect
   at runtime without any compiler diagnostic, found by auditing every
   `SIGNAL(...)` call site in the tree against the actual installed

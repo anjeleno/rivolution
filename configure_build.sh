@@ -70,23 +70,26 @@ if [ -z $DISTRO_TYPE ]; then
     exit 1
 fi
 
+# DOCBOOK_STYLESHEETS is no longer set here -- configure.ac now
+# auto-detects the real stylesheet path itself by checking the
+# filesystem directly (see its "DocBook" section), which works for any
+# distro using the same docbook-xsl-ns package layout, not just the
+# ones named below. Exporting it here would have been redundant, and
+# previously masked the fact that this export never actually reached
+# any later, separate `make` invocation anyway -- see KNOWN_ISSUES.md.
+
 case $DISTRO_TYPE in
     debian)
     export MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
-    export DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
     CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled $@"
     ;;
 
     rhel)
-    # NOTE: DOCBOOK_STYLESHEETS intentionally not set here -- INSTALL
-    # doesn't document a confirmed path for RHEL, and this hasn't been
-    # verified on an actual RHEL box. See KNOWN_ISSUES.md.
     CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib64 --libexecdir=/var/www/rd-bin --sysconfdir=/etc/httpd/conf.d $@"
     ;;
 
     ubuntu)
     export MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
-    export DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns
     CONFIGURE="./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled $@"
     ;;
 esac

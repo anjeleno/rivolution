@@ -57,14 +57,32 @@ somewhere the variable happens to still be set from an earlier,
 separate `source`d session — the build works by coincidence there,
 exactly the kind of masking this doc exists to flag.
 
-**Fixed for real:** the four `Makefile.am` files now reference
-`$(top_srcdir)/helpers/docbook` directly instead of the environment
-variable, so the doc build depends only on the symlink created once at
-configure time — a real file on disk, not shell state — and works
-regardless of how `make` is invoked or in how many separate shell
-sessions. Confirmed by rebuilding with `DOCBOOK_STYLESHEETS` explicitly
-unset. Still not fixed for RHEL, since the symlink itself is never
-created there in the first place — see `BACKLOG.md`.
+**Fixed for real, in two parts:**
+
+1. The four `Makefile.am` files now reference
+   `$(top_srcdir)/helpers/docbook` directly instead of the environment
+   variable, so the doc build depends only on the symlink created once
+   at configure time — a real file on disk, not shell state — and
+   works regardless of how `make` is invoked or in how many separate
+   shell sessions.
+2. `configure.ac` itself now auto-detects the real stylesheet path by
+   checking the filesystem directly (does `fo/docbook.xsl` actually
+   exist at a known candidate location?), instead of trusting
+   `configure_build.sh`'s distro-name guess. This works for any distro
+   using the same `docbook-xsl-ns` package layout, not just the ones
+   `configure_build.sh` happens to name explicitly, and an explicit
+   `$DOCBOOK_STYLESHEETS` set beforehand still overrides it for unusual
+   setups. `configure_build.sh` no longer exports this variable at all
+   — it was redundant with the new detection, and exporting it there
+   never actually reached `make` anyway (see above).
+
+Confirmed by removing the symlink, unsetting
+`DOCBOOK_STYLESHEETS`, and re-running plain `./configure` directly
+(not `configure_build.sh`) — the symlink was recreated correctly from
+filesystem detection alone. Still not fixed for RHEL, since no
+candidate path is verified there yet; `configure` now warns clearly at
+configure time when no candidate matches, instead of failing later
+with a cryptic FOP error deep in `make` — see `BACKLOG.md`.
 
 ## Binaries fail with "cannot open shared object file" after a fresh install
 

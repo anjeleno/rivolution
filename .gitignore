@@ -31,6 +31,7 @@
 .libs
 ARCHITECTURE.md
 CLAUDE.md
+COPYING
 aclocal.m4
 apis/rivwebcapi/rivwebcapi.pc
 apis/rivwebcapi/tests/*_test

@@ -6,17 +6,23 @@ This is **not** a feature roadmap or pipeline of planned work; see
 `docs/specs/` for that. Entries here get promoted to a real spec and
 branch once they're picked up.
 
-## `DOCBOOK_STYLESHEETS` not set for the RHEL case in `configure_build.sh`
+## No verified DocBook stylesheet path for RHEL
 
-Fixed for Debian/Ubuntu (now exports `DOCBOOK_STYLESHEETS=/usr/share/xml/docbook/stylesheet/docbook-xsl-ns`
-automatically — see `KNOWN_ISSUES.md`), but deliberately left unset
-for RHEL: `INSTALL`'s three RHEL sections (7/8/9) never document a
-confirmed path for it, only a pointer to the `docbook5-style-xsl`
-package, and there's no RHEL box available to verify where that
-package actually installs its stylesheet tree. Guessing a path here
-without verification risks being silently wrong in a way that's harder
-to notice than the current honest gap. Needs an actual RHEL box (or
-someone running one) to confirm before fixing for real.
+`configure.ac` auto-detects the DocBook XSL-NS stylesheet tree by
+checking the filesystem directly against a list of known candidate
+paths (see `KNOWN_ISSUES.md`), rather than guessing per distro name.
+Only one verified candidate is in that list so far — the Debian/Ubuntu
+`docbook-xsl-ns` package's path. RHEL has no candidate yet: `INSTALL`'s
+three RHEL sections (7/8/9) never document a confirmed path, only a
+pointer to the `docbook5-style-xsl` package, and there's no RHEL box
+available to verify where that package actually installs its
+stylesheet tree. Guessing a path here without verification risks being
+silently wrong in a way that's harder to notice than the current
+honest gap. `configure` now warns clearly at configure time when no
+candidate matches, rather than failing later with a cryptic FOP error
+deep in `make` — but the actual fix (adding a verified RHEL candidate
+to `configure.ac`'s list) still needs an actual RHEL box, or someone
+running one, to confirm.
 
 ## Install prefix: resolved — use `configure_build.sh`, not raw `./configure`
 
