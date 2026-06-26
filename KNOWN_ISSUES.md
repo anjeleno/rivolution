@@ -39,27 +39,32 @@ cannot parse ../../helpers/docbook/template/titlepage.xsl
 on a build that otherwise compiled cleanly.
 
 **Cause:** `configure.ac` creates a `helpers/docbook` symlink to the
-system's DocBook stylesheet tree at `./configure` time, but only if
-`$DOCBOOK_STYLESHEETS` is set in the environment first — `INSTALL.md`
-documents this as required for every Ubuntu section, but
-`configure_build.sh` never exported it, so the symlink silently never
-got created. `docs/apis`, `docs/manpages`, `docs/dtds`, and
-`docs/rivwebcapi` all depend on the same variable and would hit
-equivalent failures if their targets are built. Easy to miss on a
-build machine that already has a copy of this same stylesheet file
-sitting locally outside the symlink's expected path — the build works
-by coincidence there, which is exactly what made this gap hard to spot
-until a genuinely clean checkout hit it directly.
+system's DocBook stylesheet tree at `./configure` time, if
+`$DOCBOOK_STYLESHEETS` is set in the environment at that moment. A
+previous fix made `configure_build.sh` export that variable
+automatically for Debian/Ubuntu, which does make the symlink itself get
+created correctly — but `docs/apis`, `docs/manpages`, `docs/dtds`, and
+`docs/rivwebcapi`'s `Makefile.am` rules never actually referenced that
+symlink; they referenced the raw `$(DOCBOOK_STYLESHEETS)` environment
+variable directly, at *make* time, not configure time. `export` inside
+a script only affects that script's own process and its children —
+once `configure_build.sh` exits, the variable is gone from the
+invoking shell, so any later, separate `make` invocation (even chained
+in the same command line with `&&`) never sees it, and the path
+resolves to a bare `/fo/docbook.xsl` with no prefix at all. Easy to
+miss if a build machine already has a copy of this stylesheet sitting
+somewhere the variable happens to still be set from an earlier,
+separate `source`d session — the build works by coincidence there,
+exactly the kind of masking this doc exists to flag.
 
-**Workaround:** export the variable before configuring, or just create
-the symlink directly if you're resuming a build that already ran
-`./configure` without it:
-```bash
-ln -s /usr/share/xml/docbook/stylesheet/docbook-xsl-ns helpers/docbook
-```
-Fixed going forward: `configure_build.sh` now exports
-`DOCBOOK_STYLESHEETS` for Debian/Ubuntu automatically. Not yet fixed
-for RHEL — see `BACKLOG.md`.
+**Fixed for real:** the four `Makefile.am` files now reference
+`$(top_srcdir)/helpers/docbook` directly instead of the environment
+variable, so the doc build depends only on the symlink created once at
+configure time — a real file on disk, not shell state — and works
+regardless of how `make` is invoked or in how many separate shell
+sessions. Confirmed by rebuilding with `DOCBOOK_STYLESHEETS` explicitly
+unset. Still not fixed for RHEL, since the symlink itself is never
+created there in the first place — see `BACKLOG.md`.
 
 ## Binaries fail with "cannot open shared object file" after a fresh install
 

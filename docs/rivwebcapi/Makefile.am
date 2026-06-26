@@ -23,13 +23,13 @@
 ## Build Dependencies
 ##
 %.html:	%.xml
-	xsltproc -o $@ $(DOCBOOK_STYLESHEETS)/xhtml/docbook.xsl $<
+	xsltproc -o $@ $(top_srcdir)/helpers/docbook/xhtml/docbook.xsl $<
 
 %.pdf:	%.xml
-	xsltproc $(DOCBOOK_STYLESHEETS)/fo/docbook.xsl $< | fop - -pdf $@
+	xsltproc $(top_srcdir)/helpers/docbook/fo/docbook.xsl $< | fop - -pdf $@
 
 %.7:	%.xml
-	xsltproc $(DOCBOOK_STYLESHEETS)/manpages/docbook.xsl $<
+	xsltproc $(top_srcdir)/helpers/docbook/manpages/docbook.xsl $<
 
 all-local:	rd_addcart.html\
                 rd_addcart.pdf\

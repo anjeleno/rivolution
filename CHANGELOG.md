@@ -7,6 +7,16 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-26
 
+- Fixed `docs/apis`, `docs/manpages`, `docs/dtds`, and
+  `docs/rivwebcapi`'s DocBook PDF/HTML build failing on a freshly
+  configured tree: their `Makefile.am` rules referenced
+  `$(DOCBOOK_STYLESHEETS)` directly at `make` time, but that variable
+  only ever existed inside `configure_build.sh`'s own process — it
+  never persists into a separate, later `make` invocation, even when
+  chained with `&&`. Now reference `$(top_srcdir)/helpers/docbook`
+  instead, the symlink `configure.ac` already creates once at
+  configure time, removing the dependency on shell environment state
+  entirely.
 - Fixed three more Qt6 signal renames that silently fail to connect
   at runtime without any compiler diagnostic, found by auditing every
   `SIGNAL(...)` call site in the tree against the actual installed

@@ -23,13 +23,13 @@
 ## Build Dependencies
 ##
 %.html:	%.xml
-	xsltproc -o $@ $(DOCBOOK_STYLESHEETS)/xhtml/docbook.xsl $<
+	xsltproc -o $@ $(top_srcdir)/helpers/docbook/xhtml/docbook.xsl $<
 %.pdf:	%.xml
-	xsltproc $(DOCBOOK_STYLESHEETS)/fo/docbook.xsl $< | fop - -pdf $@
+	xsltproc $(top_srcdir)/helpers/docbook/fo/docbook.xsl $< | fop - -pdf $@
 %.1:	%.xml
-	xsltproc $(DOCBOOK_STYLESHEETS)/manpages/docbook.xsl $<
+	xsltproc $(top_srcdir)/helpers/docbook/manpages/docbook.xsl $<
 %.8:	%.xml
-	xsltproc $(DOCBOOK_STYLESHEETS)/manpages/docbook.xsl $<
+	xsltproc $(top_srcdir)/helpers/docbook/manpages/docbook.xsl $<
 
 install-exec-local:	
 	mkdir -p $(DESTDIR)$(prefix)/share/rivendell/apis

@@ -23,9 +23,9 @@
 ## Build Dependencies
 ##
 %.html:	%.xml
-	xsltproc -o $@ $(DOCBOOK_STYLESHEETS)/xhtml/docbook.xsl $<
+	xsltproc -o $@ $(top_srcdir)/helpers/docbook/xhtml/docbook.xsl $<
 %.pdf:	%.xml
-	xsltproc $(DOCBOOK_STYLESHEETS)/fo/docbook.xsl $< | fop - -pdf $@
+	xsltproc $(top_srcdir)/helpers/docbook/fo/docbook.xsl $< | fop - -pdf $@
 
 all-local:	direct.html\
                 direct.pdf\
