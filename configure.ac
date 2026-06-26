@@ -257,6 +257,12 @@ case "$ar_distro_id" in
        AC_SUBST(RIVENDELL_PAM_FILE,"rivendell-ubuntu.pam")  
      ;;
 
+     # RedHat family: deliberately abandoned but left in place in case
+     # someone else wants to develop on top of RHEL (CentOS losing
+     # upstream support was the deciding factor for this fork). Not
+     # being developed, tested, or verified going forward. See
+     # ARCHITECTURE.md's "Copyright/version strings and the
+     # build-system's distro-detection layer" section.
      centos|fedora|rhel|rocky)
        AC_MSG_NOTICE([Distro is RedHat-ish])
        DISTRO_FAMILY="|                       Distribution Family ... RedHat    |"

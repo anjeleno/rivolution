@@ -79,10 +79,11 @@ exactly the kind of masking this doc exists to flag.
 Confirmed by removing the symlink, unsetting
 `DOCBOOK_STYLESHEETS`, and re-running plain `./configure` directly
 (not `configure_build.sh`) — the symlink was recreated correctly from
-filesystem detection alone. Still not fixed for RHEL, since no
-candidate path is verified there yet; `configure` now warns clearly at
-configure time when no candidate matches, instead of failing later
-with a cryptic FOP error deep in `make` — see `BACKLOG.md`.
+filesystem detection alone. No candidate path is listed for RHEL —
+deliberately abandoned but left in place in case someone else wants to
+develop on top of RHEL, see `ARCHITECTURE.md`; `configure` now warns
+clearly at configure time when no candidate matches, instead of
+failing later with a cryptic FOP error deep in `make`.
 
 ## Binaries fail with "cannot open shared object file" after a fresh install
 

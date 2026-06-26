@@ -26,7 +26,7 @@
 /*
  * Copyright Notice
  */
-#define RD_COPYRIGHT_NOTICE "© 2002-2023 Fred Gleason\nRivolution modifications © 2026 Brandon"
+#define RD_COPYRIGHT_NOTICE "© 2002-2023 Fred Gleason"
 
 /*
  * License Notice
