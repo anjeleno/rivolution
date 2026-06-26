@@ -137,7 +137,7 @@ EditDecks::EditDecks(RDStation *station,RDStation *cae_station,QWidget *parent)
   edit_swstation_label->setFont(labelFont());
   edit_swstation_label->setGeometry(10,190,110,24);
   edit_swstation_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
-  connect(edit_swstation_box,SIGNAL(activated(const QString &)),
+  connect(edit_swstation_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(stationActivatedData(const QString &)));
 
   //
@@ -151,7 +151,7 @@ EditDecks::EditDecks(RDStation *station,RDStation *cae_station,QWidget *parent)
   edit_swmatrix_label->setGeometry(10,214,110,24);
   edit_swmatrix_label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
   edit_swmatrix_label->setDisabled(true);
-  connect(edit_swmatrix_box,SIGNAL(activated(const QString &)),
+  connect(edit_swmatrix_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(matrixActivatedData(const QString &)));
 
   //

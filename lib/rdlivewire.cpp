@@ -122,7 +122,7 @@ RDLiveWire::RDLiveWire(unsigned id,QObject *parent)
   connect(live_socket,SIGNAL(disconnected()),
 	  this,SLOT(connectionClosedData()));
   connect(live_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(live_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(live_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
 
   //

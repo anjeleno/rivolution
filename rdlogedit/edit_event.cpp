@@ -70,7 +70,7 @@ EditEvent::EditEvent(QWidget *parent)
   edit_grace_timeedit->setDisplayFormat("mm:ss");
   connect(edit_timetype_box,SIGNAL(toggled(bool)),
 	  this,SLOT(timeToggledData(bool)));
-  connect(edit_grace_bgroup,SIGNAL(buttonClicked(int)),
+  connect(edit_grace_bgroup,SIGNAL(idClicked(int)),
 	  this,SLOT(graceClickedData(int)));
 
   //

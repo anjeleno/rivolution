@@ -36,7 +36,7 @@ WheatnetSlio::WheatnetSlio(RDMatrix *matrix,QObject *parent)
   slio_socket=new QTcpSocket(this);
   connect(slio_socket,SIGNAL(connected()),this,SLOT(connectedData()));
   connect(slio_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(slio_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(slio_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
   slio_socket->connectToHost(slio_ip_address.toString(),slio_ip_port);
 

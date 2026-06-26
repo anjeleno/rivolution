@@ -30,7 +30,7 @@ RDRssCategoryBox::RDRssCategoryBox(QWidget *parent)
   // Category
   //
   c_box=new QComboBox(this);
-  connect(c_box,SIGNAL(activated(const QString &)),
+  connect(c_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(boxActivatedData(const QString &)));
   c_edit=new QLineEdit(this);
   c_edit->setMaxLength(64);
@@ -48,7 +48,7 @@ RDRssCategoryBox::RDRssCategoryBox(QWidget *parent)
   c_sub_box=new QComboBox(this);
   c_sub_edit=new QLineEdit(this);
   c_sub_edit->setMaxLength(64);
-  connect(c_sub_box,SIGNAL(activated(const QString &)),
+  connect(c_sub_box,SIGNAL(textActivated(const QString &)),
 	  c_sub_edit,SLOT(setText(const QString &)));
 }
 

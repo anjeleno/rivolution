@@ -84,7 +84,7 @@ RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
   d_group_label=new QLabel(tr("Group:"),this);
   d_group_label->setFont(labelFont());
   d_group_label->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
-  connect(d_group_box,SIGNAL(activated(const QString &)),
+  connect(d_group_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(groupChangedData(const QString &)));
 
   //
@@ -94,7 +94,7 @@ RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
   d_codes_label=new QLabel(tr("Scheduler Codes:"),this);
   d_codes_label->setFont(labelFont());
   d_codes_label->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
-  connect(d_codes_box,SIGNAL(activated(const QString &)),
+  connect(d_codes_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(schedulerCodeChangedData(const QString &)));
   d_and_codes_box=new QComboBox(this);
   d_and_codes_box->setDisabled(true);
@@ -103,7 +103,7 @@ RDCartFilter::RDCartFilter(bool show_drag_box,bool user_is_admin,
   d_and_codes_label->setAlignment(Qt::AlignVCenter|Qt::AlignRight);
   d_and_codes_box->insertItem(0,tr("[none]"));
   d_and_codes_label->setDisabled(true);
-  connect(d_and_codes_box,SIGNAL(activated(const QString &)),
+  connect(d_and_codes_box,SIGNAL(textActivated(const QString &)),
 	  this,SLOT(andSchedulerCodeChangedData(const QString &)));
 
   //

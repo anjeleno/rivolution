@@ -37,7 +37,7 @@ WheatnetLio::WheatnetLio(RDMatrix *matrix,QObject *parent)
   lio_socket=new QTcpSocket(this);
   connect(lio_socket,SIGNAL(connected()),this,SLOT(connectedData()));
   connect(lio_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(lio_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(lio_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
   lio_socket->connectToHost(lio_ip_address.toString(),lio_ip_port);
 

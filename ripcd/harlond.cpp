@@ -61,7 +61,7 @@ Harlond::Harlond(RDMatrix *matrix,QObject *parent)
   connect(bt_socket,SIGNAL(connected()),this,SLOT(socketConnectedData()));
   connect(bt_socket,SIGNAL(disconnected()),this,SLOT(socketDisconnectedData()));
   connect(bt_socket,SIGNAL(readyRead()),this,SLOT(socketReadyReadData()));
-  connect(bt_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(bt_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(socketErrorData(QAbstractSocket::SocketError)));
   bt_watchdog_timer=new QTimer(this);
   bt_watchdog_timer->setSingleShot(true);

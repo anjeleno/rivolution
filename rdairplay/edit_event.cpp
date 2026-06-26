@@ -49,7 +49,7 @@ EditEvent::EditEvent(RDLogPlay *log,QWidget *parent)
   // Grace Time
   //
   edit_grace_bgroup=new QButtonGroup(this);
-  connect(edit_grace_bgroup,SIGNAL(buttonClicked(int)),
+  connect(edit_grace_bgroup,SIGNAL(idClicked(int)),
 	  this,SLOT(graceClickedData(int)));
   edit_grace_bgroup->setExclusive(true);
   edit_grace_group=

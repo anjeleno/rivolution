@@ -94,12 +94,12 @@ Quartz1::Quartz1(RDMatrix *matrix,QObject *parent)
 	      closed_mapper,SLOT(map()));
       switch(i) {
       case 0:
-	connect(sas_socket[i],SIGNAL(error(QAbstractSocket::SocketError)),
+	connect(sas_socket[i],SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 		this,SLOT(error0Data(QAbstractSocket::SocketError)));
 	break;
 
       case 1:
-	connect(sas_socket[i],SIGNAL(error(QAbstractSocket::SocketError)),
+	connect(sas_socket[i],SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 		this,SLOT(error1Data(QAbstractSocket::SocketError)));
 	break;
       }

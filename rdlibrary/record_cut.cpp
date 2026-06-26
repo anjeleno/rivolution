@@ -199,7 +199,7 @@ RecordCut::RecordCut(RDCart *cart,QString cut,bool use_weight,QWidget *parent)
   cut_killdatetime_groupbox=new QGroupBox(tr("Air Date/Time"),this);
   cut_killdatetime_groupbox->setFont(labelFont());
   cut_killdatetime_group=new QButtonGroup(this);
-  connect(cut_killdatetime_group,SIGNAL(buttonClicked(int)),
+  connect(cut_killdatetime_group,SIGNAL(idClicked(int)),
 	  this,SLOT(airDateButtonData(int)));
   cut_startdatetime_enable_button=new QRadioButton(tr("Enabled"),this);
   cut_killdatetime_group->addButton(cut_startdatetime_enable_button,true);
@@ -221,7 +221,7 @@ RecordCut::RecordCut(RDCart *cart,QString cut,bool use_weight,QWidget *parent)
   cut_daypart_groupbox=new QGroupBox(tr("Daypart"),this);
   cut_daypart_groupbox->setFont(labelFont());
   cut_daypart_group=new QButtonGroup(this);
-  connect(cut_daypart_group,SIGNAL(buttonClicked(int)),
+  connect(cut_daypart_group,SIGNAL(idClicked(int)),
 	  this,SLOT(daypartButtonData(int)));
   cut_startdaypart_enable_button=new QRadioButton(tr("Enabled"),this);
   cut_daypart_group->addButton(cut_startdaypart_enable_button,true);

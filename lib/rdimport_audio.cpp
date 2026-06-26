@@ -71,7 +71,7 @@ RDImportAudio::RDImportAudio(QString cutname,QString *path,
   // Mode Group
   //
   import_mode_group=new QButtonGroup(this);
-  connect(import_mode_group,SIGNAL(buttonClicked(int)),
+  connect(import_mode_group,SIGNAL(idClicked(int)),
 	  this,SLOT(modeClickedData(int)));
 
   //

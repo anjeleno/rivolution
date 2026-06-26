@@ -44,7 +44,7 @@ Modbus::Modbus(RDMatrix *matrix,QObject *parent)
   modbus_socket=new QTcpSocket(this);
   connect(modbus_socket,SIGNAL(connected()),this,SLOT(connectedData()));
   connect(modbus_socket,SIGNAL(readyRead()),this,SLOT(readyReadData()));
-  connect(modbus_socket,SIGNAL(error(QAbstractSocket::SocketError)),
+  connect(modbus_socket,SIGNAL(errorOccurred(QAbstractSocket::SocketError)),
 	  this,SLOT(errorData(QAbstractSocket::SocketError)));
   modbus_socket->connectToHost(modbus_ip_address.toString(),modbus_ip_port);
 

@@ -29,6 +29,7 @@
 #include <math.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <rdapplication.h>
@@ -1519,6 +1520,7 @@ RDAudioConvert::ErrorCode RDAudioConvert::Stage3Layer3(SNDFILE *src_sf,
   wave->setRdxlContents(conv_dst_rdxl);
   unlink(dstfile.toUtf8());
   if(!wave->createWave(conv_dst_wavedata,conv_start_point)) {
+    rda->syslog(LOG_WARNING,"createWave failed: %s",strerror(errno));
     delete wave;
     return RDAudioConvert::ErrorNoDestination;
   }

@@ -84,7 +84,7 @@ EventWidget::EventWidget(QWidget *parent)
   event_grace_edit->setDisplayFormat("mm:ss");
   connect(event_timetype_check,SIGNAL(toggled(bool)),
 	  this,SLOT(timeToggledData(bool)));
-  connect(event_grace_group,SIGNAL(buttonClicked(int)),
+  connect(event_grace_group,SIGNAL(idClicked(int)),
 	  this,SLOT(graceClickedData(int)));
 
   // *******************************
@@ -177,7 +177,7 @@ EventWidget::EventWidget(QWidget *parent)
   event_imports_label->setFont(labelFont());
   
   event_source_group=new QButtonGroup(this);
-  connect(event_source_group,SIGNAL(buttonClicked(int)),
+  connect(event_source_group,SIGNAL(idClicked(int)),
 	  this,SLOT(importClickedData(int)));
   event_source_none_radio=new QRadioButton(this);
   event_source_group->addButton(event_source_none_radio,RDEventLine::None);

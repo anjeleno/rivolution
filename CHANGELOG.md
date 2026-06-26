@@ -5,6 +5,22 @@ Notable changes to the Rivendell v6 fork. Newest entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-26
+
+- Fixed three more Qt6 signal renames that silently fail to connect
+  at runtime without any compiler diagnostic, found by auditing every
+  `SIGNAL(...)` call site in the tree against the actual installed
+  Qt6 headers: `QComboBox::activated(const QString &)` (now
+  `textActivated`), `QButtonGroup::buttonClicked(int)` (now
+  `idClicked`), and `QAbstractSocket::error(QAbstractSocket::
+  SocketError)` (now `errorOccurred`). The `QComboBox` one is why
+  `RDLibrary`'s manual "Add Cart" dialog would reject a cart number as
+  "outside of the permitted range for this group" after switching
+  groups in the dropdown — the auto-fill logic that recalculates the
+  next free cart number for the newly-selected group never re-ran.
+  Fixed at all 46 occurrences across 32 files; see `docs/specs/
+  0006-qt6-migration.md` for the full file list.
+
 ## 2026-06-24
 
 - Fixed `ripcd` never processing any client's login handshake:

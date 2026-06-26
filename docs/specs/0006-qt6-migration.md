@@ -356,3 +356,77 @@ signal name that no longer exists, it just never connects.
   should grep for `SIGNAL(mapped(` (and the equivalent for any other
   signal with Qt6-disambiguated overloads) rather than relying on a
   clean build as proof the migration is complete.
+
+### A third category, found by auditing every `SIGNAL(...)` call site
+
+Following the recommendation above, every distinct `SIGNAL(...)`
+signature in the tree was checked against the actual installed Qt6
+headers rather than assumed. Three more renamed/removed signals turned
+up, all the same failure shape as `QSignalMapper::mapped(int)` above
+— compiles clean, connects silently fail at runtime, only symptom is
+an easy-to-miss `QObject::connect` warning on stderr.
+
+- **`QComboBox::activated(const QString &)` removed**, replaced by
+  `textActivated(const QString &)`. Confirmed against this system's
+  actual Qt6 `qcombobox.h`. 20 occurrences across 11 files:
+  `lib/rdadd_cart.cpp`, `lib/rdcartfilter.cpp`,
+  `lib/rdexport_settings_dialog.cpp`, `lib/rdrsscategorybox.cpp`,
+  `rdadmin/edit_svc.cpp`, `rdadmin/edit_decks.cpp`,
+  `rdadmin/edit_station.cpp`, `rdcatch/edit_switchevent.cpp`,
+  `rdcatch/eventwidget.cpp`, `rdlogedit/edit_log.cpp`,
+  `utils/rdgpimon/rdgpimon.cpp`. The concrete, user-visible symptom:
+  `lib/rdadd_cart.cpp`'s "Add Cart" dialog (used by `RDLibrary`'s
+  manual "Add" button) auto-fills the next free cart number once, from
+  a direct call in its own constructor, but never again — selecting a
+  *different* group from the dropdown afterward never re-runs that
+  logic, since the signal telling the dialog the dropdown changed
+  never connected. The stale cart number then fails the new group's
+  enforced-range check on submit, producing "the cart number is
+  outside of the permitted range for this group!" even though the
+  number would have been valid for whichever group was selected when
+  the dialog first opened. This is a `RDLibrary`-only symptom because
+  `RDAudioImport`'s own cart-creation path (`group->nextFreeCart()` in
+  `web/rdxport/import.cpp`) never goes through this dialog or this
+  signal at all.
+
+- **`QButtonGroup::buttonClicked(int)` removed**, replaced by
+  `idClicked(int)`. Confirmed against this system's actual Qt6
+  `qbuttongroup.h` (`buttonClicked(QAbstractButton *)` survives;
+  the `int`-id overload doesn't). 10 occurrences across 8 files:
+  `lib/rdimport_audio.cpp`, `lib/rdlogeventdialog.cpp`,
+  `rdairplay/edit_event.cpp`, `rdcatch/edit_recording.cpp`,
+  `rdlibrary/record_cut.cpp`, `rdlogedit/edit_event.cpp`,
+  `rdlogmanager/eventwidget.cpp`. The `lib/rdimport_audio.cpp`
+  occurrence is the shared Import/Export dialog used by `RDLibrary`'s
+  manual Import flow: its Import-File/Export-File radio toggle never
+  called `modeClickedData()` on a live click, only from the two
+  call sites that invoke it directly and explicitly — meaning the
+  dialog's mode-dependent widgets never actually updated in response
+  to the user clicking the radio buttons themselves.
+
+- **`QAbstractSocket::error(QAbstractSocket::SocketError)` removed**,
+  replaced by `errorOccurred(QAbstractSocket::SocketError)`. Confirmed
+  against this system's actual Qt6 `qabstractsocket.h`. 16 occurrences
+  across 14 files: `lib/rdripc.cpp`, `lib/rdsocket.cpp`,
+  `lib/rdcddblookup.cpp`, `lib/rdlivewire.cpp`, and most of `ripcd`'s
+  hardware-driver sockets (`btu41mlrweb.cpp`, `quartz1.cpp`,
+  `gvc7000.cpp`, `modbus.cpp`, `sasusi.cpp`, `swauthority.cpp`,
+  `btsentinel4web.cpp`, `wheatnet_slio.cpp`, `wheatnet_lio.cpp`,
+  `harlond.cpp`). `lib/rdripc.cpp`'s occurrence is the same
+  client-side `RDRipc` connection class as the `mapped(int)` fix
+  above (a different signal on the same socket, not a duplicate of
+  that fix) — if the TCP connection to `ripcd` ever actually errors
+  (refused, reset, auth-rejected), `errorData()` never fires, so
+  there's no log line and no retry signal, just silence. Whether this
+  one is actually load-bearing in any currently-open bug is unconfirmed
+  — flagged here because it's the same pattern in the same subsystem,
+  not because a specific symptom has been traced to it yet.
+
+Fixed at all 46 occurrences across 32 files (`lib/rdaudioconvert.cpp`'s
+unrelated `errno`-logging addition from the same session is not part
+of this count). Each rename only changes the `SIGNAL()` macro's signal
+name — in every case the existing slot's parameter type already
+matched, so no slot signatures needed to change. All 32 files were
+scope-compiled individually (`make <file>.o`/`.lo`) after the change;
+all came back clean. Not yet covered by a full `make && sudo make
+install` as of this writing.
