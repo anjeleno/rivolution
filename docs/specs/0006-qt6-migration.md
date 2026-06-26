@@ -417,10 +417,11 @@ an easy-to-miss `QObject::connect` warning on stderr.
   above (a different signal on the same socket, not a duplicate of
   that fix) — if the TCP connection to `ripcd` ever actually errors
   (refused, reset, auth-rejected), `errorData()` never fires, so
-  there's no log line and no retry signal, just silence. Whether this
-  one is actually load-bearing in any currently-open bug is unconfirmed
-  — flagged here because it's the same pattern in the same subsystem,
-  not because a specific symptom has been traced to it yet.
+  there's no log line and no retry signal, just silence. Confirmed
+  load-bearing on a real `ripcd` connection blip after the fix: the
+  journal showed `errorData()` → `watchdogRetryData()` →
+  `connectedData()` firing and recovering correctly, a sequence that
+  would have stayed completely silent without this fix.
 
 Fixed at all 46 occurrences across 32 files (`lib/rdaudioconvert.cpp`'s
 unrelated `errno`-logging addition from the same session is not part
@@ -428,5 +429,6 @@ of this count). Each rename only changes the `SIGNAL()` macro's signal
 name — in every case the existing slot's parameter type already
 matched, so no slot signatures needed to change. All 32 files were
 scope-compiled individually (`make <file>.o`/`.lo`) after the change;
-all came back clean. Not yet covered by a full `make && sudo make
-install` as of this writing.
+all came back clean, and the cart-range-dropdown symptom this fix
+addresses was confirmed resolved against a full `make && sudo make
+install` rebuild.

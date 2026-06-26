@@ -40,6 +40,9 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   Edit Cart dialog was closed any way other than the explicit OK button
   — now checks for already-persisted audio before allowing any rollback,
   regardless of how the dialog was closed.
+- Updated `INSTALL.md`'s generic prerequisites list from "Qt5 Toolkit,
+  v5.9 or better" to Qt6, listing the actual modules `configure.ac`
+  requires and the verified-working version.
 
 ## 2026-06-24
 

@@ -61,18 +61,6 @@ that flags a populated `/usr/local` Rivendell tree when installing to a
 different prefix would have caught this immediately instead of costing
 real debugging time.
 
-## `INSTALL` is stale for the Qt6/v6 fork
-
-Still says "Qt5 Toolkit, v5.9 or better" in the prerequisites list, and
-every distro's required-build-packages line still lists Qt5 packages
-(`qtbase5-dev`, `libqt5sql5-mysql`, `libqt5webkit5-dev`,
-`qttools5-dev-tools`, etc.) instead of their Qt6 equivalents. Inherited
-unchanged from upstream's `v4`; nobody's gone through and updated it
-for this fork's actual Qt6 dependency yet. Low risk of silently
-breaking anything (it's documentation, not code), but actively
-misleading for anyone trying to build this fork from source by
-following it literally.
-
 ## `make install` doesn't refresh the linker cache
 
 Installing a new `librd-*.so` doesn't make it loadable until `sudo

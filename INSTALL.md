@@ -84,9 +84,13 @@ Requests, v2.12.5 or later
 HTTP transfer library for Python. Available at 
 http://docs.python-requests.org/.
 
-Qt5 Toolkit, v5.9 or better
-Most modern Linux distros include this. It can also be downloaded directly
-at http://www.qt.io/.
+Qt6 Toolkit
+Most modern Linux distros include this. `configure.ac` requires the
+`Qt6Core`, `Qt6Widgets`, `Qt6Gui`, `Qt6Network`, `Qt6Sql`, `Qt6Xml`, and
+`Qt6WebEngineWidgets` modules; no specific minimum version is enforced
+by the build itself, but this fork is verified working against Qt6
+6.10.2 (see the Ubuntu 26.04 section below for the actual package
+names). It can also be downloaded directly at http://www.qt.io/.
 
 Secret Rabbit Code
 A sample-rate converter library, written by Erik de Castro Lopo. Included
