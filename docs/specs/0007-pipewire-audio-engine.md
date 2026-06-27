@@ -9,7 +9,7 @@ native AES67 audio-over-IP support, and (2) real-time, any-to-any audio
 routing across every backend `caed` supports (ALSA, JACK, AudioScience
 HPI, and the new PipeWire/AES67 path), with no exclusivity between
 them. This touches `caed`, the highest-risk code in this project
-(per `BACKLOG.md`), and is scoped accordingly.
+(per [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)), and is scoped accordingly.
 
 ## Background
 

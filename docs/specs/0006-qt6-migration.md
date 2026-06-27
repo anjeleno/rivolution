@@ -302,7 +302,7 @@ initial grep sweep) is what made this migration exhaustive.
 
 Everything above was caught by the compiler during the original
 migration push and is reflected in the "build now succeeds end-to-end"
-milestone recorded in `CHANGELOG.md` (2026-06-23). The item below is
+milestone recorded in [`CHANGELOG.md`](https://github.com/anjeleno/rivolution/blob/main/CHANGELOG.md) (2026-06-23). The item below is
 categorically different: it compiles cleanly under Qt6 with zero
 warnings, so it survived that entire milestone undetected. The only
 symptom is a runtime-only `QObject::connect` warning printed at

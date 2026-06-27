@@ -1,9 +1,10 @@
 # Roadmap
 
 Planned features and direction for this fork, written as
-a blueprint rather than a backlog of bugs (that's `BACKLOG.md`). An
+a blueprint rather than a backlog of bugs (that's [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)). An
 entry here is a destination, not a commitment to a timeline. Once an
-entry is actually picked up, it gets a real spec in `docs/specs/` and a
+entry is actually picked up, it gets a real spec in
+[`docs/specs/`](https://github.com/anjeleno/rivolution/tree/main/docs/specs) and a
 branch; this file should then link to that spec rather than duplicate
 its detail.
 
@@ -44,7 +45,7 @@ changes required. Needs its own spec before implementation starts.
 
 ## Missing-audio library audit tool
 
-Companion to the bug tracked in `BACKLOG.md` ("RDAirplay plays silence
+Companion to the bug tracked in [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md) ("RDAirplay plays silence
 for a cart with a missing audio file, instead of skipping it") — that
 entry is the playout-time bug fix; this is the separate, proactive
 feature that would help catch the underlying data problem before it
@@ -76,7 +77,7 @@ speculative for the items below.
   HTTP/XML API (46 commands, already documented in
   `docs/apis/web_api.xml`) — not a new transport, and never touches RML
   (RML stays exclusively internal to the native apps). See
-  `docs/specs/0005-go-api-foundation.md` for the full bucket-based
+  [`docs/specs/0005-go-api-foundation.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0005-go-api-foundation.md) for the full bucket-based
   risk classification, Phase 1 scope, and the authentication design
   (JWT for browser sessions, layered over `rdxport.cgi`'s existing
   IP-bound ticket system).
@@ -84,7 +85,7 @@ speculative for the items below.
   medium-sized, mechanically tractable scope (a handful of
   `QWebView`/`QRegExp`/`QString::KeepEmptyParts` migrations plus a
   `configure.ac` module-detection change) — see
-  `docs/specs/0006-qt6-migration.md`. No technical dependency on the Go
+  [`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md). No technical dependency on the Go
   API work; the two proceed in parallel.
 - **Native PipeWire support in `caed`, for AES67 and real cross-driver
   routing.** `caed` already runs ALSA/JACK/AudioScience HPI
@@ -94,7 +95,7 @@ speculative for the items below.
   discovery, available from PipeWire 1.1 — confirmed packaged in Ubuntu
   26.04) is the target architecture for closing that gap, not just
   adding AES67 as an isolated fourth driver. See
-  `docs/specs/0007-pipewire-audio-engine.md` for the full design,
+  [`docs/specs/0007-pipewire-audio-engine.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0007-pipewire-audio-engine.md) for the full design,
   including the requirement that the new routing UI (likely the Go
   dashboard) fully replace `qjackctl`, and the core/CPU-affinity-tuning
   feature scoped alongside it.
@@ -102,7 +103,7 @@ speculative for the items below.
   Tool, VLC, persistent patch connections) **as Go-managed
   configuration**, so an operator never hand-edits any of these tools'
   native config files directly. See
-  `docs/specs/0008-broadcast-tool-suite-integration.md`.
+  [`docs/specs/0008-broadcast-tool-suite-integration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0008-broadcast-tool-suite-integration.md).
 
 **Repo structure, sequencing decided:** finish verifying and merging
 the currently in-flight branches into `v4` first; only then copy that
@@ -111,14 +112,14 @@ for the v6 modernization work itself. This repo continues to exist and
 be maintained independently for production use — the new repo is
 additive, not a replacement.
 
-**Product naming — not decided.** A renamed public identity (distinct
-from repo/internal naming) is under consideration. Any internal-code
-renaming (the `RD`-prefixed class names, the `rd` user/group
-convention, `rd.conf`, `/var/snd`, binary names) is explicitly out of
-scope regardless of what name is eventually chosen — only the brand/
-marketing layer (product name, package name, documentation) would
-change. The name itself needs real trademark clearance before
-committing, not a roadmap decision.
+**Product naming — decided: Rivolution.** Trademark clearance is done.
+Public identity has been live since 2026-06-22 (the GitHub repository
+itself, [`anjeleno/rivolution`](https://github.com/anjeleno/rivolution))
+and 2026-06-23 (the [rivolution.dev](https://rivolution.dev/) landing
+page). As planned, this is brand/marketing-layer only — internal code
+(the `RD`-prefixed class names, the `rd` user/group convention,
+`rd.conf`, `/var/snd`, binary names) was never in scope for renaming
+and remains unchanged.
 
 **Still genuinely open:**
 - Container-forward design is an agreed principle for new components
@@ -131,3 +132,25 @@ committing, not a roadmap decision.
 - Which `rdxport.cgi`-proxied endpoints (if any) eventually move to
   native Go — deliberately case-by-case, not pre-decided (spec 0005).
 - Exact per-tool config schema/validation design for spec 0008.
+
+## Wiki source moves into the main repo, synced to the live wiki via CI
+
+The GitHub wiki (`anjeleno/rivolution.wiki`) is, architecturally,
+always its own separate git repository — that's true for every GitHub
+repo with the wiki feature enabled, not a choice made for this project
+specifically. Right now its two pages (`Home.md`,
+`Build-From-Source.md`) only exist there, so cloning `rivolution` alone
+doesn't get you the wiki's source content.
+
+**Requested change:** move the wiki's markdown source into
+`rivolution/docs/wiki/` as the canonical copy, and add a GitHub Actions
+workflow that syncs it to the wiki repo on every push to `main` that
+touches that path — so the live wiki stays current automatically
+instead of needing two separate manual edits.
+
+Not yet scoped: the workflow itself needs a Personal Access Token
+stored as a repo secret, since the default `GITHUB_TOKEN` doesn't
+reliably have write access to the wiki repo; whether to hand-write the
+sync step or use an existing marketplace action; and the exact
+direction of truth if a wiki page is ever edited directly through
+GitHub's web UI instead of through `rivolution`.

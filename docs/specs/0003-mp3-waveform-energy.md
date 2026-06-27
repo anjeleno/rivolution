@@ -411,7 +411,7 @@ revisiting later, rather than relying on chat history.
   import silently ignored Dropbox normalization (and autotrim).** Not a
   bug in this spec's own code — a pre-existing gap in `import.cpp`'s
   passthrough decision, introduced in spec 0001
-  (`docs/specs/0001-mp3-import-format.md`, commit `e97dc2e1`,
+  ([`docs/specs/0001-mp3-import-format.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0001-mp3-import-format.md), commit `e97dc2e1`,
   2026-06-17, already merged to `v4`) — but found and fixed here because
   the user identified it as this branch's actual remaining goal.
   `do_passthrough` checked source/target format and sample rate but

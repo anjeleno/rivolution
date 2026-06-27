@@ -322,7 +322,7 @@ directly to the compressed bitstream, without decoding/re-encoding.
 Without it, a normalized MP3 import still works, but silently falls
 back to a full decode/re-encode instead of the fast bitstream-level
 passthrough — correct output, much slower, and easy to mistake for an
-unrelated bug (see `docs/specs/0004-mp3-gain-patch.md`).
+unrelated bug (see [`docs/specs/0004-mp3-gain-patch.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0004-mp3-gain-patch.md)).
 
 #### Run the following command, which detects the distro and applies the same script invocation below automatically
 
@@ -330,7 +330,7 @@ unrelated bug (see `docs/specs/0004-mp3-gain-patch.md`).
 ./configure_build.sh
 ```
 
-#### Or to configure the script invocation manually, run
+#### Or to configure the script invocation manually, run:
 
 ```bash
 ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-enabled --enable-rdxport-debug MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"

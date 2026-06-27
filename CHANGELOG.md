@@ -1,12 +1,24 @@
 # Changelog
 
-Notable changes to the Rivendell v6 fork. Newest entries first.
+Notable changes to Rivolution, a parallel Qt6 fork of Rivendell
+developed independently of Fred Gleason's original project. Newest
+entries first.
 
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
 ## 2026-06-26
 
+- Confirmed this fork's local checkout had been lagging behind its own
+  already-established GitHub identity: the remote had been
+  `anjeleno/rivolution` all along, not a separately named
+  `rivendell-v6` repo, and every push this session had already been
+  landing on its `main` branch. Cloned a fresh checkout at
+  `~/dev/rivolution` to match (a plain rename was avoided since
+  autotools/libtool can cache the old absolute source path in
+  already-generated build files); the old `~/rivendell-v6` directory
+  was kept in place, unmodified, as a build-verified fallback rather
+  than deleted outright.
 - Fixed `docs/apis`, `docs/manpages`, `docs/dtds`, and
   `docs/rivwebcapi`'s DocBook PDF/HTML build failing on a freshly
   configured tree: their `Makefile.am` rules referenced
@@ -21,7 +33,12 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   trusting a distro-name guess in `configure_build.sh` — works for any
   distro sharing the same `docbook-xsl-ns` package layout, and warns
   clearly at configure time if no candidate path is found instead of
-  failing later with a cryptic FOP error.
+  failing later with a cryptic FOP error. Also added `COPYING` to
+  `.gitignore`: `automake --add-missing` regenerates a stock GPLv3
+  template whenever it's absent, but this project uses GPLv2
+  (`LICENSES/GPLv2.txt`) and deliberately removed `COPYING` in 2021 —
+  the regenerated file was stray noise from rerunning `autogen.sh`,
+  not a real project file.
 - Fixed three more Qt6 signal renames that silently fail to connect
   at runtime without any compiler diagnostic, found by auditing every
   `SIGNAL(...)` call site in the tree against the actual installed
@@ -33,31 +50,50 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   "outside of the permitted range for this group" after switching
   groups in the dropdown — the auto-fill logic that recalculates the
   next free cart number for the newly-selected group never re-ran.
-  Fixed at all 46 occurrences across 32 files; see `docs/specs/
-  0006-qt6-migration.md` for the full file list.
+  Fixed at all 46 occurrences across 32 files; see
+  [`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md)
+  for the full file list.
 - Fixed `RDWaveFile::createWave()` clobbering `errno` via an unconditional
   `unlink()` of a nonexistent `.energy` sidecar file between the actual
   file open and the caller's check of whether it succeeded, masking the
   real reason a destination file failed to open.
-- Documented `mp3gain` as a required runtime dependency in `INSTALL.md`
-  and the golden-image package list — its absence silently forces a full
-  decode/re-encode instead of bitstream-level loudness normalization,
-  with no error, just a much slower import.
+- Documented `mp3gain` as a required runtime dependency in [`INSTALL.md`](https://github.com/anjeleno/rivolution/blob/main/INSTALL.md)
+  and the golden-image package list — without it, an MP3-to-MP3 import
+  or export that requests loudness normalization silently falls back to
+  a full decode/re-encode instead of the bitstream-level gain-patch,
+  with no error, just a much slower conversion. Only affects
+  normalization on MP3-passthrough-eligible transfers; normalization on
+  any other format pair was never affected.
 - Fixed `RDImportAudio::Import()` (RDLibrary's manual Import dialog)
   never actually transmitting the user's selected output format to the
   server, and the Format control being unconditionally disabled in
   Import mode by original design. Added an explicit, opt-in "Override
   library default format" checkbox so manual imports can request MP3
   passthrough deliberately, consistent with the Dropbox/`rdimport`
-  format-override controls.
+  format-override controls, and reworked the dialog's layout so the
+  checkbox and Format row sit in the actual Import-zone instead of
+  overlapping the divider line meant for the Export section.
 - Fixed RDLibrary's "Add" cart flow deleting a newly-imported cart's
   audio (both the database row and the file in `/var/snd`) whenever the
   Edit Cart dialog was closed any way other than the explicit OK button
   — now checks for already-persisted audio before allowing any rollback,
   regardless of how the dialog was closed.
-- Updated `INSTALL.md`'s generic prerequisites list from "Qt5 Toolkit,
+- Updated [`INSTALL.md`](https://github.com/anjeleno/rivolution/blob/main/INSTALL.md)'s generic prerequisites list from "Qt5 Toolkit,
   v5.9 or better" to Qt6, listing the actual modules `configure.ac`
   requires and the verified-working version.
+- Marked RHEL/CentOS/Fedora/Rocky support as deliberately abandoned,
+  with CentOS losing upstream support being the deciding factor —
+  the existing build-system code (`configure.ac`'s distro-detection
+  branch, `rivendell.spec.in`, `conf/rivendell-rhel.pam`, the `make
+  rpm` target) is left in place as a starting point for anyone who
+  wants to pick it back up, just no longer tested or developed
+  against. Removed a [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
+  entry about an unverified RHEL stylesheet path accordingly, and
+  reframed the related [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) mention to match.
+- Dropped a personal name from `RD_COPYRIGHT_NOTICE` (`lib/rd.h`,
+  shown in RDAdmin's System Info dialog and every CLI tool's
+  `--version` output) — only the original author's credit belongs
+  there — and updated its year range to 2002–2026.
 
 ## 2026-06-24
 
@@ -70,9 +106,10 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   caused `RDLibrary`'s group/category list to come up empty and
   `rdimport`'s dropbox-watch mode to never start scanning after
   launch — both depend on the same post-login signal chain. Fixed at
-  all 52 occurrences across 32 files; see `docs/specs/
-  0006-qt6-migration.md` for the full file list and why this evaded
-  the original migration's build-clean verification.
+  all 52 occurrences across 32 files; see
+  [`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md)
+  for the full file list and why this evaded the original migration's
+  build-clean verification.
 - Replaced launcher and in-app icons for `rdadmin`, `rdairplay`,
   `rdcatch`, `rdlibrary`, `rdlogedit`, and `rdlogmanager` (PNG, `.ico`,
   and `.xpm` sets, plus the `RDIconEngine`-embedded window icon for
@@ -97,6 +134,8 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-23
 
+- Published this fork's first public landing page at
+  [rivolution.dev](https://rivolution.dev/).
 - Qt6 migration complete: `./configure && make` now succeeds
   end-to-end against Qt6 on Ubuntu 26.04. Beyond the patterns already
   logged below (2026-06-22), full-build verification surfaced 18 more
@@ -115,7 +154,7 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   iterator-type split; a missing `QFile` include; `QWidget::enterEvent`'s
   widened `QEnterEvent*` signature; `QDateTime(const QDate&)`; and
   `QLabel::pixmap()`'s value-vs-pointer return change. Full detail in
-  `docs/specs/0006-qt6-migration.md`.
+  [`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md).
 - Version bumped to `6.0.0int0` (from `4.4.1int3`) in
   `versions/PACKAGE_VERSION`. `versions/README.txt` gained a short
   explanation of the existing `intN` pre-release suffix convention
@@ -147,6 +186,11 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-22
 
+- Established this fork's public identity as Rivolution: the GitHub
+  repository was created under that name
+  ([`anjeleno/rivolution`](https://github.com/anjeleno/rivolution)),
+  distinct from "rivendell-v6," the working name used locally and in
+  conversation for some time afterward.
 - Qt6 migration (in progress, `feature/qt6-migration`, not yet merged):
   `configure.ac` now requires Qt6 (`Qt6Core`/`Qt6Widgets`/`Qt6Gui`/
   `Qt6Network`/`Qt6Sql`/`Qt6Xml`/`Qt6WebEngineWidgets`) instead of Qt5,
@@ -163,8 +207,8 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   in `RDAirPlay`'s message-display widget, including a real behavioral
   fix (`QWebEnginePage` has no `mainFrame()` — scrollbar hiding moves to
   a `QWebEngineSettings::ShowScrollBars` page setting instead). See
-  `docs/specs/0006-qt6-migration.md` and
-  `docs/specs/0009-qtwebengine-migration.md`.
+  [`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md) and
+  [`docs/specs/0009-qtwebengine-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0009-qtwebengine-migration.md).
 - Fixed: MP3 gain-patch normalization (added 2026-06-21) silently never
   applied any gain shift. The requested level was read as hundredths of
   a dB, but every consumer of this setting elsewhere in the pipeline
@@ -174,7 +218,7 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   the computed gain-patch step to zero. `mp3gain` still ran and rewrote
   some header bytes, so the import completed normally with no error,
   just a still-unnormalized file. See
-  `docs/specs/0004-mp3-gain-patch.md`.
+  [`docs/specs/0004-mp3-gain-patch.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0004-mp3-gain-patch.md).
 - Added the configured Target Audio Format (PCM16/PCM24/MPEG Layer 2/
   MPEG Layer 3) to the Dropbox-flags dump at the top of `rdimport.log`,
   alongside the other already-logged per-Dropbox settings.
@@ -188,20 +232,20 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   falling through to a full decode/re-encode. Falls back to the existing
   conversion path whenever the patch isn't cleanly applicable. New
   runtime dependency: `mp3gain` (packaged for Ubuntu and Debian, amd64
-  and arm64). See `docs/specs/0004-mp3-gain-patch.md`.
+  and arm64). See [`docs/specs/0004-mp3-gain-patch.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0004-mp3-gain-patch.md).
 - Fixed: MP3 passthrough (import) ignored a Dropbox's configured
   normalization/autotrim level whenever the source was already MP3 and
   the target format was also MP3 — the only acknowledgment was a syslog
   warning, never actually applied. Normalization/autotrim now requires
   falling through to the full decode/process/re-encode path, since
   neither is possible on a byte-for-byte passthrough copy. See
-  `docs/specs/0003-mp3-waveform-energy.md`.
+  [`docs/specs/0003-mp3-waveform-energy.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0003-mp3-waveform-energy.md).
 - Fixed two more bugs in the new MP3 waveform/peak energy feature, found
   during pre-build review: peaks computed during MP3 import/encoding
   could be undercounted (a signed-value comparison ignored negative-going
   excursions), and a same-format passthrough import could persist a
   permanently-empty peak chunk, leaving that cut's waveform blank
-  forever with no recovery. See `docs/specs/0003-mp3-waveform-energy.md`.
+  forever with no recovery. See [`docs/specs/0003-mp3-waveform-energy.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0003-mp3-waveform-energy.md).
 - Fixed generated helper scripts (`helpers/install_python.sh`,
   `helpers/rdi18n_helper.sh`, `xdg/install_usermode.sh`, `build_debs.sh`)
   losing their executable bit whenever `make` triggers automake's
@@ -216,7 +260,7 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   decoded peak data via `libmad`, persisted to the file's own `LEVL`
   chunk so repeat views don't re-decode from scratch. Previously MP3
   cuts had no real waveform in "Edit Markers" at all. See
-  `docs/specs/0003-mp3-waveform-energy.md`.
+  [`docs/specs/0003-mp3-waveform-energy.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0003-mp3-waveform-energy.md).
 
 ## 2026-06-18
 
@@ -226,7 +270,7 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   pitch/speed-shifted ("helium") playback. Passthrough now requires
   the source's real sample rate to match the system rate; otherwise it
   falls through to the existing, correct conversion path. See
-  `docs/specs/0001-mp3-import-format.md`.
+  [`docs/specs/0001-mp3-import-format.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0001-mp3-import-format.md).
 
 ## 2026-06-17
 
@@ -236,13 +280,13 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   element's tail finishes, instead of firing instantly at the segue
   marker regardless of how much lead-in the next element has. No
   effect when "No fade on segue out" is unchecked. See
-  `docs/specs/0002-segue-backtiming.md`.
+  [`docs/specs/0002-segue-backtiming.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0002-segue-backtiming.md).
 - Added selectable MP3 (MPEG Layer III) as an import coding format,
   alongside the existing PCM16/PCM24/MPEG Layer II options: a new
   `--audio-format=<0|1|2|3>` flag on `rdimport`, a matching override on
   the web import service (`rdxport.cgi`), a per-Dropbox "Target Audio
   Format" setting in RDAdmin, and an MP3 entry in the host-level default
-  format dropdown. See `docs/specs/0001-mp3-import-format.md`.
+  format dropdown. See [`docs/specs/0001-mp3-import-format.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0001-mp3-import-format.md).
 - Added a true passthrough import mode: whenever the source file is
   genuinely MP3 and the target format is also MP3, the server always
   copies the file directly instead of decoding and re-encoding it

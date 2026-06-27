@@ -3,7 +3,7 @@
 Known technical debt and deferred fixes — things we've found, scoped,
 and deliberately decided not to fix yet, with the reasoning for why.
 This is **not** a feature roadmap or pipeline of planned work; see
-`docs/specs/` for that. Entries here get promoted to a real spec and
+[`docs/specs/`](https://github.com/anjeleno/rivolution/tree/main/docs/specs) for that. Entries here get promoted to a real spec and
 branch once they're picked up.
 
 ## Install prefix: resolved — use `configure_build.sh`, not raw `./configure`
@@ -22,7 +22,7 @@ specifically to let `v4` (`/usr`) and `v6` coexist without `make
 install` overwriting `v4`'s binaries. That reason no longer applies on
 the dedicated `v6` box, and `/usr/local` has a real cost: it needs an
 explicit `sudo ldconfig` after every install that `/usr/lib` typically
-doesn't (see `KNOWN_ISSUES.md`), and it's non-standard relative to
+doesn't (see [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md)), and it's non-standard relative to
 every script/config elsewhere in this toolchain (Apache config,
 systemd units, `rivendell-golden-ansible`'s provisioning scripts) that
 assumes the conventional `/usr`-rooted FHS layout. If this fork ever
@@ -43,7 +43,7 @@ and icons kept resolving to the old build with zero indication
 anything was wrong, until two seemingly-unrelated symptoms (RDLibrary's
 group list, `rdimport`'s dropbox-watch) both got mis-diagnosed for a
 while before the stale install was found and manually removed. See
-`KNOWN_ISSUES.md` for the operator-facing symptom/check/cleanup detail.
+[`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the operator-facing symptom/check/cleanup detail.
 Still no automated detection — a `make install` (or a separate check)
 that flags a populated `/usr/local` Rivendell tree when installing to a
 different prefix would have caught this immediately instead of costing
@@ -52,7 +52,7 @@ real debugging time.
 ## `make install` doesn't refresh the linker cache
 
 Installing a new `librd-*.so` doesn't make it loadable until `sudo
-ldconfig` runs, independent of install prefix — see `KNOWN_ISSUES.md`
+ldconfig` runs, independent of install prefix — see [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md)
 for the symptom/workaround. `/usr/lib` only "stays fresh
 automatically" in the common case because `apt`/`dpkg` runs `ldconfig`
 as a post-install trigger; that's a property of installing through a
@@ -92,7 +92,7 @@ materially bigger than expected:
   meaningfully more delicate than a quick patch.
 
 **Current mitigation:** none server-side. Operationally, keep imports
-well under the 20-minute mark. See `KNOWN_ISSUES.md` for the
+well under the 20-minute mark. See [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the
 user-facing version of this.
 
 **Needs to be fixed before any public install** of this fork — an
@@ -102,7 +102,7 @@ under the timeout. Not urgent for current single-station use.
 ## caed's MPEG playback path doesn't resample mismatched-rate audio
 
 Full trace and planned fix shape: see "Known issue, deferred" in
-`docs/specs/0001-mp3-import-format.md`. Short version: `caed`
+[`docs/specs/0001-mp3-import-format.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0001-mp3-import-format.md). Short version: `caed`
 (`cae/driver_alsa.cpp`'s `WAVE_FORMAT_MPEG` case) never applies the
 sample-rate-correction `ratio` that the PCM/Vorbis cases already do, so
 any MP3 file whose real sample rate doesn't match the system's output
@@ -162,7 +162,7 @@ assuming sequential.
 
 **Current mitigation:** manually remove/replace kill-dated carts from
 their rotation category before they expire, rather than relying on the
-scheduler to skip them automatically. See `KNOWN_ISSUES.md` for the
+scheduler to skip them automatically. See [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the
 user-facing version.
 
 **Deferred for now** at the reporter's request — not investigated yet,
@@ -187,11 +187,11 @@ Not yet investigated — no file/line citations yet for where
 `RDAirplay`'s playout logic decides "does this cart have audio" (likely
 checking cut-record existence rather than file existence).
 
-**Current mitigation:** none. See `KNOWN_ISSUES.md` for the user-facing
+**Current mitigation:** none. See [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the user-facing
 version.
 
 **Deferred for now** — not investigated yet, but tracked here given the
-priority (dead air on a live broadcast). See `ROADMAP.md` for the
+priority (dead air on a live broadcast). See [`ROADMAP.md`](https://github.com/anjeleno/rivolution/blob/main/ROADMAP.md) for the
 related feature request (a library-wide missing-audio audit tool) that
 came up alongside this report — distinct from this bug fix itself.
 
@@ -216,6 +216,79 @@ sample mapping runs past the actual sample count at high zoom).
 
 **Current mitigation:** manually zoom out two or three steps from
 maximum when placing markers near the end of a file.
+
+## RDLibrary's manual "Add" cart flow may still lose audio after a confirmed OK click — suspected Qt6-migration regression
+
+**High priority** — flagged 2026-06-27. Suspected regression: the
+reporter states this didn't happen before the Qt6 migration — not yet
+bisected to confirm or to a specific change.
+
+A related cart-audio-loss bug was already found and fixed (see
+[`CHANGELOG.md`](https://github.com/anjeleno/rivolution/blob/main/CHANGELOG.md#2026-06-26), 2026-06-26): `rdlibrary.cpp`'s `addData()` deleted a
+newly-added cart's audio whenever `EditCart::exec()` returned anything
+other than true — every dialog-close path except OK. That fix removed
+the rollback's dependence on which button closed the dialog.
+
+The two original field reports that prompted that investigation both
+involved the OK button specifically being clicked — confirmed directly
+by the reporter, not assumed. `rdlibrary/edit_cart.cpp`'s `EditCart`
+dialog has exactly two exit paths: `okData()`'s `done(true)` (OK only,
+and only when no validation warning blocks it first) and
+`cancelData()`'s `done(false)` (every other close, including via
+`closeEvent()`). `addData()` only deletes a cart when `exec()` returns
+false. That code does not explain audio loss following a confirmed OK
+click. Whatever caused the two original incidents isn't yet
+identified, and may be a second, separate bug from the one already
+fixed.
+
+**Not yet investigated** — no file/line citation yet for any mechanism
+that could make `EditCart::exec()` return non-true despite the OK
+button being clicked, or for any other path that could delete a cart's
+audio independent of `EditCart::exec()`'s return value. Worth checking
+first whether any Qt6 signal/connection rename of the kind already
+found elsewhere in this migration ([`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md))
+touches `ok_button`'s `clicked()` connection or `okData()`'s own
+control flow — the OK path looks unaffected on a first read, but that
+first read is exactly what missed the other three renames already
+found and fixed in this codebase.
+
+**Current mitigation:** none. See [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the
+user-facing version.
+
+**Deferred for now** at the reporter's request — tracked here given the
+priority (live audio loss on a broadcast system), to be investigated in
+a future session.
+
+## Add-cart rollback fix doesn't distinguish an explicit Cancel from an incidental dialog close — too broad
+
+**Flagged 2026-06-27**, found during a documentation-accuracy review of
+the 2026-06-26 cart-deletion-on-close fix.
+
+The governing principle should be: audio already written to
+`/var/snd` with a matching database row is persisted, full stop, and
+no dialog-close path should be able to destroy it — except an explicit
+Cancel, which is the user actively saying "discard this," and should
+still roll back regardless of whether audio was already imported.
+
+The fix as shipped doesn't draw that line. `rdlibrary.cpp`'s
+`addData()` now keeps any cart with real audio (`CUTS.LENGTH > 0`)
+"regardless of how the dialog was closed" — which also covers an
+explicit Cancel click, not just incidental closes like Escape or the
+window's X. `rdlibrary/edit_cart.cpp`'s `EditCart` dialog can't
+currently tell Cancel apart from those other closes: both reach
+`cancelData()` → `done(false)` via the identical path (`closeEvent()`
+calls `cancelData()` directly). Distinguishing them would need
+`cancelData()`/`closeEvent()` to record which one actually fired, or a
+dedicated signal for the Cancel button specifically.
+
+**Current mitigation:** none — clicking Cancel after a successful
+import currently still keeps the cart, the opposite of what Cancel
+implies. See [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the user-facing version.
+
+**Deferred for now** — found during documentation review, not yet
+scoped as a real fix. Worth picking up alongside the item above (the
+confirmed-OK-click cart loss), since both touch the same rollback
+decision in `addData()`.
 
 ## xrdp/dbus session-bus bug after a host reboot or xrdp restart
 
