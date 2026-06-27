@@ -26,7 +26,7 @@
 /*
  * Copyright Notice
  */
-#define RD_COPYRIGHT_NOTICE "© 2002-2023 Fred Gleason"
+#define RD_COPYRIGHT_NOTICE "© 2002-2026 Fred Gleason"
 
 /*
  * License Notice
