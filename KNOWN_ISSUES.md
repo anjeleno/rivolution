@@ -117,6 +117,21 @@ and `/usr/local/etc/rd-bin.conf`. Run `sudo ldconfig` afterward to drop
 the removed `librd*.so` entries from the linker cache. Not yet
 automated — see [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md).
 
+## Missing `mp3gain` makes MP3 imports silently much slower, not broken
+
+**Symptom:** importing and normalizing an MP3 still works, but takes
+noticeably longer than expected, with no error — easy to mistake for
+an unrelated performance problem rather than a missing package.
+
+**Cause:** `mp3gain` is a runtime-only dependency, never linked
+against at build time — it's invoked at import time to apply MP3
+loudness normalization directly to the compressed bitstream. Without
+it, normalization still happens, but falls back to a full decode and
+re-encode instead of the fast bitstream-level patch.
+
+**Workaround:** install `mp3gain` (see the build dependency list in
+[Build From Source](https://github.com/anjeleno/rivolution/wiki/Build-From-Source)).
+
 ## Submitted mixes must be encoded at the system's sample rate
 
 **Symptom:** an imported MP3 plays back pitch-shifted ("helium"
