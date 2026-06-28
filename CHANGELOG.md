@@ -7,6 +7,17 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-28
+
+- Confirmed Rivolution builds natively on arm64 with no changes
+  required: verified end-to-end on Ubuntu 26.04 arm64 (UTM guest on
+  Apple Silicon), same build time and steps as the existing x86_64
+  verification. `debian/control` already declares `Architecture: any`
+  for every binary package, and neither `configure.ac` nor
+  `configure_build.sh` contain any architecture-conditional logic — the
+  build system was already architecture-agnostic by construction, this
+  just confirms it empirically on real arm64 hardware.
+
 ## 2026-06-27
 
 - Worked around an intermittent JVM crash in the DocBook PDF build
