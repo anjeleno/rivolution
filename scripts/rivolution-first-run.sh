@@ -13,9 +13,23 @@
 # not arbitrary -- kept for permission consistency across any future
 # cloned/networked Rivendell hosts.
 #
+# RIVENDELL_USER (default 'rd') -- the unprivileged account that should
+# be added to the 'audio' group below, if you've built this under a
+# different account than the conventional 'rd'.
+#
+# RIVENDELL_SKIP_DB_SETUP (default unset) -- set to any non-empty value
+# to skip rd.conf creation, password generation, and the database
+# create/grant/schema steps entirely, leaving only the user/group,
+# /var/snd, PulseAudio, and service-enablement steps. For pointing this
+# host at a database that already exists elsewhere (e.g. a separate
+# database server, or a database you're populating yourself) instead of
+# creating one locally.
+#
 # Run with: sudo bash rivolution-first-run.sh
 
 set -e
+
+RIVENDELL_USER="${RIVENDELL_USER:-rd}"
 
 getent group rivendell >/dev/null || groupadd -r -g 150 rivendell
 id rivendell >/dev/null 2>&1 || useradd -o -u 150 -g rivendell -s /bin/false -r -c "Rivendell radio automation system" -d /var/snd rivendell
@@ -25,31 +39,32 @@ mkdir -p /var/snd
 chown rivendell:rivendell /var/snd
 chmod 775 /var/snd
 
-# Copy rd.conf sample file -- resolved relative to this script's own
-# location (repo_root/scripts/this_file -> repo_root/conf/rd.conf-sample)
-# rather than a hardcoded path, since the repo can be cloned anywhere.
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-cp "$script_dir/../conf/rd.conf-sample" /etc/rd.conf
+if [ -z "$RIVENDELL_SKIP_DB_SETUP" ]; then
+  # Copy rd.conf sample file -- resolved relative to this script's own
+  # location (repo_root/scripts/this_file -> repo_root/conf/rd.conf-sample)
+  # rather than a hardcoded path, since the repo can be cloned anywhere.
+  script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  cp "$script_dir/../conf/rd.conf-sample" /etc/rd.conf
 
-# Generate a long, unique password for 'rduser' -- the sample ships with
-# a fixed, public default ('hackme') -- and write it into rd.conf's
-# [mySQL] section so it's the one actually used below and by Rivendell
-# itself afterward.
-mysql_pass=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
-sed -i "/^\[mySQL\]/,/^\[/{s/^Password=.*/Password=$mysql_pass/}" /etc/rd.conf
+  # Generate a long, unique password for 'rduser' -- the sample ships with
+  # a fixed, public default ('hackme') -- and write it into rd.conf's
+  # [mySQL] section so it's the one actually used below and by Rivendell
+  # itself afterward.
+  mysql_pass=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
+  sed -i "/^\[mySQL\]/,/^\[/{s/^Password=.*/Password=$mysql_pass/}" /etc/rd.conf
 
-# Read the remaining MySQL connection parameters straight from rd.conf's
-# [mySQL] section -- the same values RDConfig itself uses -- rather than
-# hardcoding them here.
-mysql_host=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Hostname"{print $2}' /etc/rd.conf)
-mysql_user=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Loginname"{print $2}' /etc/rd.conf)
-mysql_db=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Database"{print $2}' /etc/rd.conf)
+  # Read the remaining MySQL connection parameters straight from rd.conf's
+  # [mySQL] section -- the same values RDConfig itself uses -- rather than
+  # hardcoding them here.
+  mysql_host=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Hostname"{print $2}' /etc/rd.conf)
+  mysql_user=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Loginname"{print $2}' /etc/rd.conf)
+  mysql_db=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Database"{print $2}' /etc/rd.conf)
 
-# Recreate the database empty and re-grant 'rduser' -- mirrors
-# RDDBConfig's CreateDb::create() (utils/rddbconfig/createdb.cpp) minus
-# its trailing 'rddbmgr --create' call, so the schema/seed/test-tone
-# step below can run against a genuinely empty database.
-mysql -h "$mysql_host" <<SQL
+  # Recreate the database empty and re-grant 'rduser' -- mirrors
+  # RDDBConfig's CreateDb::create() (utils/rddbconfig/createdb.cpp) minus
+  # its trailing 'rddbmgr --create' call, so the schema/seed/test-tone
+  # step below can run against a genuinely empty database.
+  mysql -h "$mysql_host" <<SQL
 drop database if exists \`$mysql_db\`;
 create database if not exists \`$mysql_db\`;
 drop user if exists '$mysql_user'@'%';
@@ -61,10 +76,11 @@ grant select,insert,update,delete,create,drop,index,alter,lock tables on \`$mysq
 flush privileges;
 SQL
 
-# Creates the schema, seeds default data, generates the test-tone audio
-# file, and adds it to the library/audio store -- all in one pass since
-# the database above is empty.
-rddbmgr --create --generate-audio
+  # Creates the schema, seeds default data, generates the test-tone audio
+  # file, and adds it to the library/audio store -- all in one pass since
+  # the database above is empty.
+  rddbmgr --create --generate-audio
+fi
 
 # Disable PulseAudio and configure audio priorities, so caed/ALSA get
 # uncontended, real-time access to the sound device instead of fighting
@@ -72,7 +88,7 @@ rddbmgr --create --generate-audio
 killall pulseaudio || true
 sed -i 's/# autospawn = yes/autospawn = no/' /etc/pulse/client.conf
 gpasswd -d pulse audio || true
-usermod -aG audio rd
+usermod -aG audio "$RIVENDELL_USER"
 usermod -aG audio rivendell
 grep -qF '@audio      hard      memlock     unlimited' /etc/security/limits.conf || cat >> /etc/security/limits.conf <<'EOF'
 @audio      hard      rtprio          90

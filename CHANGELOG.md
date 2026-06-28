@@ -9,6 +9,13 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-28
 
+- Parameterized `scripts/rivolution-first-run.sh`: `RIVENDELL_USER`
+  (default `rd`) replaces a hardcoded username, and a new
+  `RIVENDELL_SKIP_DB_SETUP` flag skips rd.conf creation and the
+  database create/grant/schema steps entirely, for pointing a host at
+  a database that already exists elsewhere instead of creating one
+  locally. Both default to this script's original unparameterized
+  behavior, so existing usage is unaffected.
 - Confirmed Rivolution builds natively on arm64 with no changes
   required: verified end-to-end on Ubuntu 26.04 arm64 (UTM guest on
   Apple Silicon), same build time and steps as the existing x86_64
