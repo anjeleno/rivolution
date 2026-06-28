@@ -80,8 +80,8 @@ a simpler path exists.
 it's the canonical reference implementation or the algorithm itself
 inside Rivendell's own ISO/IEC research. Confirmed against the real
 package archives (not assumed) that it's packaged for every OS/arch
-combination this project targets, matching [`rivendell-golden-ansible`'s
-existing ARM64/Debian support matrix](https://github.com/anjeleno/rivendell-golden-ansible/blob/main/docs/specs/0002-arm64-debian-support.md):
+combination this project targets, matching [`rivolution-unified-installer`'s
+existing ARM64/Debian support matrix](https://github.com/anjeleno/rivolution-unified-installer/blob/main/docs/specs/0002-arm64-debian-support.md):
 
 | | amd64 | arm64 |
 |---|---|---|
@@ -90,8 +90,8 @@ existing ARM64/Debian support matrix](https://github.com/anjeleno/rivendell-gold
 
 Same small C codebase across all four (only runtime dependency:
 `libmpg123`) — no architecture-specific surprise the way QtWebKit/id3lib
-had package-naming differences during the `rivendell-golden-ansible`
-ARM64 work.
+had package-naming differences during the [`rivolution-unified-installer`
+ARM64 work](https://github.com/anjeleno/rivolution-unified-installer/blob/main/docs/specs/0002-arm64-debian-support.md).
 
 Shelling out to an external CLI tool is not a new pattern for this
 codebase: `lib/rddisclookup.cpp:467-469` already invokes
@@ -225,7 +225,7 @@ per-cut there too rather than only logging it.
 - Modified: `web/rdxport/import.cpp` (passthrough-eligibility split above)
 - Modified: `lib/Makefile.am` (register the new source files)
 - `mp3gain` added to [`INSTALL.md`](https://github.com/anjeleno/rivolution/blob/main/INSTALL.md)'s required-dependencies list and to
-  [`rivendell-golden-ansible`](https://github.com/anjeleno/rivendell-golden-ansible)'s base package list (2026-06-26) — this had
+  [`rivolution-unified-installer`'s base package list](https://github.com/anjeleno/rivolution-unified-installer/blob/main/roles/base/tasks/main.yml) (2026-06-26) — this had
   been deferred as a separate-repo follow-up when this spec first landed
   and was missed on both fronts, which meant a fresh build never actually
   had the dependency this shells out to. The runtime effect of a missing
