@@ -176,24 +176,27 @@ and remains unchanged.
   native Go — deliberately case-by-case, not pre-decided (spec 0005).
 - Exact per-tool config schema/validation design for spec 0008.
 
-## Wiki source moves into the main repo, synced to the live wiki via CI
+## Wiki markdown copied into the main repo for portability
 
 The GitHub wiki (`anjeleno/rivolution.wiki`) is, architecturally,
 always its own separate git repository — that's true for every GitHub
 repo with the wiki feature enabled, not a choice made for this project
 specifically. Right now its two pages (`Home.md`,
 `Build-From-Source.md`) only exist there, so cloning `rivolution` alone
-doesn't get you the wiki's source content.
+doesn't get you the wiki's source content, and a fork of `rivolution`
+doesn't carry the wiki along with it.
 
-**Requested change:** move the wiki's markdown source into
-`rivolution/docs/wiki/` as the canonical copy, and add a GitHub Actions
-workflow that syncs it to the wiki repo on every push to `main` that
-touches that path — so the live wiki stays current automatically
-instead of needing two separate manual edits.
-
-Not yet scoped: the workflow itself needs a Personal Access Token
-stored as a repo secret, since the default `GITHUB_TOKEN` doesn't
-reliably have write access to the wiki repo; whether to hand-write the
-sync step or use an existing marketplace action; and the exact
-direction of truth if a wiki page is ever edited directly through
-GitHub's web UI instead of through `rivolution`.
+**Decided approach: a manual, documented copy step, not CI.** An
+earlier version of this entry planned a GitHub Actions workflow to
+auto-sync the wiki on every push to `main`, but that needs a real
+GitHub wiki write workaround — the default `GITHUB_TOKEN` issued to
+Actions runs doesn't have write access to a repo's wiki, only to the
+repo itself, so the workflow would have needed a separate Personal
+Access Token stored as a repo secret just to push there. Decided that
+overhead isn't worth it for two pages: instead, periodically copy
+`rivolution.wiki`'s current markdown into `rivolution/docs/wiki/` by
+hand (`cp` + commit), purely so the content travels with a clone or
+fork of `rivolution`. The wiki repo itself stays the live, editable
+source — `docs/wiki/` is a point-in-time mirror, not a synced copy, and
+won't necessarily reflect the latest wiki edit until the next manual
+pass.
