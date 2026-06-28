@@ -25,7 +25,7 @@
 %.html:	%.xml
 	xsltproc -o $@ $(top_srcdir)/helpers/docbook/xhtml/docbook.xsl $<
 %.pdf:	%.xml
-	xsltproc $(top_srcdir)/helpers/docbook/fo/docbook.xsl $< | fop - -pdf $@
+	xsltproc $(top_srcdir)/helpers/docbook/fo/docbook.xsl $< | JAVA_TOOL_OPTIONS="-XX:-TieredCompilation" fop - -pdf $@
 %.1:	%.xml
 	xsltproc $(top_srcdir)/helpers/docbook/manpages/docbook.xsl $<
 %.8:	%.xml

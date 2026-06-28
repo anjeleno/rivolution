@@ -7,6 +7,28 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-27
+
+- Worked around an intermittent JVM crash in the DocBook PDF build
+  (`docs/rivwebcapi`, `docs/manpages`, `docs/opsguide`, `docs/dtds`,
+  `docs/apis`): `fop` was randomly segfaulting inside JIT-compiled core
+  JDK methods unrelated to the document being rendered, roughly 1 run
+  in 8 on this OpenJDK build. Added `JAVA_TOOL_OPTIONS=
+  "-XX:-TieredCompilation"` to each directory's `fop` invocation in
+  `Makefile.am`, which skips the JIT tier where the crash originates;
+  confirmed clean across multiple repeated runs with the flag where the
+  same input reproducibly crashed without it. See
+  [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
+  for the full root-cause writeup and removal condition.
+- Fixed `autoreconf -fi` failing repo-wide with `required file
+  './ChangeLog' not found`: automake's default GNU strictness requires
+  a literal `ChangeLog` file at the repo root, which this fork doesn't
+  have under that exact name (its changelog convention is
+  `CHANGELOG.md`). Added `ChangeLog` as a symlink to `CHANGELOG.md`
+  rather than a second, separately-maintained file — automake's check
+  is existence-only and follows symlinks, so this satisfies it with no
+  duplicate content to keep in sync.
+
 ## 2026-06-26
 
 - Confirmed this fork's local checkout had been lagging behind its own

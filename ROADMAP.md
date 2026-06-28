@@ -8,6 +8,49 @@ entry is actually picked up, it gets a real spec in
 branch; this file should then link to that spec rather than duplicate
 its detail.
 
+## Evaluate replacing the DocBook-XSL + FOP documentation toolchain
+
+The current docs pipeline (`docs/rivwebcapi`, `docs/manpages`,
+`docs/opsguide`, `docs/dtds`, `docs/apis`) transforms DocBook XML
+through custom XSLT stylesheets, then renders PDF output via Apache
+FOP, a Java/JVM-based renderer. Two separate rough edges surfaced
+while debugging an unrelated build crash in this pipeline (see
+[`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
+for the crash itself): FOP doesn't implement `table-layout="auto"`,
+and the toolchain's only failure mode for a renderer crash is a raw
+JVM `hs_err_pid*.log` dump, with no graceful fallback. Worth a
+deliberate evaluation of whether to keep this pipeline as-is or replace
+it, rather than letting incremental crash workarounds accumulate.
+
+Two candidate directions, neither evaluated in depth yet:
+
+- **Swap only the PDF renderer, keep DocBook XML as the source
+  format:** `dblatex` (DocBook → LaTeX → PDF) as a replacement for the
+  FOP half of the pipeline. Smaller-scope change — the existing DocBook
+  XML sources stay untouched — but this fork already has a customized
+  FO stylesheet (`helpers/docbook/fo/docbook.xsl`) controlling FOP's
+  output; `dblatex` doesn't consume that file at all, so switching
+  means either accepting `dblatex`'s own default styling or re-porting
+  those customizations into `dblatex`'s separate (LaTeX-based)
+  customization mechanism — unscoped until someone actually compares
+  output quality side by side. No JVM involved, so this entire class of
+  crash disappears outright.
+- **Move off DocBook entirely:** rewrite the source documents in a
+  more actively maintained format — AsciiDoc (`asciidoctor-pdf`) or
+  Markdown (`pandoc`) are the two obvious candidates. Far larger
+  scope: every one of the ~50+ XML sources across all five doc
+  directories would need rewriting, not just the rendering step, and
+  every directory's `Makefile.am` build rules would need rewriting to
+  match. Gets the most modern, best-maintained tooling of the two
+  options, at the highest cost.
+
+Not picked up yet — deliberately deferred rather than decided under
+time pressure while a build was actively blocked on the unrelated JIT
+crash above. Whichever direction (if any) gets picked up should get a
+real spec in
+[`docs/specs/`](https://github.com/anjeleno/rivolution/tree/main/docs/specs)
+once decided.
+
 ## Nested cart rotation (carts containing carts, not just cuts)
 
 Today a single cart can hold multiple cuts, and the log scheduler

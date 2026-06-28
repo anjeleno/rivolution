@@ -6,6 +6,92 @@ This is **not** a feature roadmap or pipeline of planned work; see
 [`docs/specs/`](https://github.com/anjeleno/rivolution/tree/main/docs/specs) for that. Entries here get promoted to a real spec and
 branch once they're picked up.
 
+## Intermittent FOP/JIT crash during DocBook PDF builds — worked around, not eliminated
+
+**Symptom:** building any DocBook PDF target (`docs/rivwebcapi`,
+`docs/manpages`, `docs/opsguide`, `docs/dtds`, `docs/apis`)
+intermittently fails with `fop` exiting via SIGABRT and a
+`hs_err_pid*.log` JVM crash dump — roughly one run in eight observed
+during testing. The failure isn't tied to which document is being
+rendered: repeated runs against the identical input produced both
+clean output and crashes, and different crashes landed in different,
+unrelated core JDK methods (`java.lang.AbstractStringBuilder.<init>`,
+`com.sun.org.apache.xerces.internal.util.XMLChar.isContent`,
+`java.lang.Byte.toUnsignedInt`) — never inside FOP's own rendering
+logic. Each JVM crash report identifies the fault as a SIGSEGV inside
+C1-tier JIT-compiled code.
+
+**Cause:** appears to be a JIT-compiler bug in this OpenJDK build
+(`25.0.3+9`, Ubuntu 26.04.2), not anything in this fork's DocBook
+sources or stylesheets. Heap usage at crash time was a few MB out of a
+3.8GB max in every captured crash, ruling out memory pressure as the
+cause. A `clibsummary.xml`-specific JVM heap theory raised in an
+earlier session's handoff notes was checked directly against the crash
+logs and the actual output files on disk and doesn't hold up:
+`clibsummary.pdf` had already built successfully by the time of the
+first crash, and both crash logs' command lines point to a different,
+much smaller file. The crash isn't input-specific.
+
+**Workaround applied:** each affected `Makefile.am`'s `fop` invocation
+now sets `JAVA_TOOL_OPTIONS="-XX:-TieredCompilation"`, which forces the
+JVM straight to the C2 compiler and skips the C1 tier where every
+observed crash originated. Across more than a dozen repeated test runs
+each, the same input that crashed intermittently under default JIT
+settings produced zero crashes with this flag set, at comparable
+speed to the default.
+
+**Not fixed, just mitigated:** this doesn't address the underlying JIT
+bug, and the test sample isn't large enough to call the crash provably
+eliminated — only much less likely. Revisit and drop the flag once the
+distro's OpenJDK package moves past `25.0.3+9` and the bug can be
+confirmed fixed upstream.
+
+**Confirmed against the real build, not just the single-file test:**
+ran the full `docs/rivwebcapi` build end to end with the fix in place
+— 45 PDFs, 45 HTML files, and 44 man pages all built clean, zero
+`hs_err_pid*.log` crash dumps, zero zero-byte/truncated PDFs. This is
+the same ~50-file directory that originally surfaced the crash.
+
+**Related, larger question, deliberately deferred:** whether to
+replace the FOP+DocBook-XSL rendering pipeline entirely — see
+[`ROADMAP.md`](https://github.com/anjeleno/rivolution/blob/main/ROADMAP.md).
+
+## `autoreconf` failing repo-wide on missing top-level `ChangeLog` file — resolved
+
+**Symptom:** running `autoreconf -fi` from a clean checkout failed with
+`Makefile.am: error: required file './ChangeLog' not found`, before
+automake got far enough to process any individual directory's rules.
+Confirmed this was **pre-existing and unrelated** to any specific
+directory's build rules: reproduced identically against an unmodified
+checkout (verified via `git stash` before re-running), so it wasn't
+caused by, or specific to, the DocBook/FOP work above.
+
+**Cause:** `configure.ac`'s `AM_INIT_AUTOMAKE([1.9 tar-pax])` doesn't
+pass the `foreign` option, so automake defaults to GNU-package
+strictness, which requires a literal `ChangeLog` file to exist at the
+top level (along with `NEWS`, `README`, `AUTHORS`, `COPYING`, all of
+which this repo already has). It's purely a filename-existence check —
+automake doesn't read or validate the file's contents, it just checks
+the name is present. This fork's actual changelog convention is
+`CHANGELOG.md` (see this repo's own internal conventions for why); the
+literal `ChangeLog` filename automake checks for didn't exist — only
+the frozen, never-appended-to `ChangeLog.upstream-v4` did, which
+doesn't match the name automake looks for.
+
+**Fix:** `ln -s CHANGELOG.md ChangeLog` at the repo root. Since
+automake's check is existence-only and follows symlinks, this
+satisfies it with zero duplicate content and zero drift risk — it's
+the same file under a second name, not a second changelog to keep in
+sync. Deliberately chosen over the two heavier alternatives considered
+first: adding `foreign` to `AM_INIT_AUTOMAKE` would have also disabled
+every *other* GNU-convention check it currently performs (not just
+this one), and a real standalone `ChangeLog` file would have meant two
+changelogs that could silently drift apart. Verified directly:
+`autoreconf -fi` now completes cleanly end-to-end, and all five
+DocBook directories' `Makefile.in` files regenerated correctly with
+the JIT workaround from the entry above intact. Tracked in git as a
+normal symlink (`git add ChangeLog`).
+
 ## Install prefix: resolved — use `configure_build.sh`, not raw `./configure`
 
 Today's dev install went to `--prefix=/usr/local`, but that wasn't

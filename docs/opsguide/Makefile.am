@@ -380,7 +380,7 @@ OPSGUIDE_DEPS = $(OPSGUIDE_IMAGES) \
 opsguide.pdf:	$(OPSGUIDE_DEPS) ../../versions/PACKAGE_VERSION\
                 ../stylesheets/book-fo.xml\
                 ../stylesheets/book-fo-titlepages.xsl
-	xsltproc ../stylesheets/book-fo.xml opsguide.xml | fop - -pdf opsguide.pdf
+	xsltproc ../stylesheets/book-fo.xml opsguide.xml | JAVA_TOOL_OPTIONS="-XX:-TieredCompilation" fop - -pdf opsguide.pdf
 
 install-exec-local:	
 	mkdir -p $(DESTDIR)$(prefix)/share/rivendell/html
