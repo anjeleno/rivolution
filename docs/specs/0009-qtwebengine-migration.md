@@ -11,7 +11,7 @@ standing between this repo and a clean Qt6 build.
 
 `Qt5WebKitWidgets`/`QWebView` is the one remaining hard blocker for
 building this fork on Debian 13 (trixie) — see
-[`rivendell-golden-ansible`'s `docs/specs/0002-arm64-debian-support.md`](https://github.com/anjeleno/rivendell-golden-ansible/blob/main/docs/specs/0002-arm64-debian-support.md) — and
+[`rivolution-unified-installer`'s `docs/specs/0002-arm64-debian-support.md`](https://github.com/anjeleno/rivolution-unified-installer/blob/main/docs/specs/0002-arm64-debian-support.md) — and
 has no Qt6 equivalent at all, making it also a hard blocker for
 [`0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md) in this repo. WebKit has been dead upstream for
 years; Debian dropped the package (binary and source) starting trixie,
@@ -107,8 +107,9 @@ references either type.
 
 - **Sandboxing.** `QWebEngineView` is Chromium-based, and Chromium's
   sandbox refuses to run as root without an explicit opt-out flag.
-  Checked [`rivendell-golden-ansible`'s `rivolution-first-run.sh.j2`](https://github.com/anjeleno/rivendell-golden-ansible/blob/main/roles/provision/templates/rivolution-first-run.sh.j2) (the
-  Ansible side) directly: `rdairplay` runs as a normal user with
+  Checked [`scripts/rivolution-first-run.sh`](https://github.com/anjeleno/rivolution/blob/main/scripts/rivolution-first-run.sh) directly (the script
+  `rivolution-unified-installer`'s `roles/provision` runs to set up a
+  fresh box): `rdairplay` runs as a normal user with
   `audio`-group membership and real-time scheduling limits, not as
   root — so this is unlikely to be a real problem here, but should be
   confirmed by actually running RDAirPlay under the new code rather
@@ -174,7 +175,7 @@ the plan above were applied.
   [`0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md) — this spec's own scope is still only the
   WebKit→WebEngine swap, now landing on top of an already-Qt6 codebase
   rather than a Qt5 one.
-- Any change to how [`rivendell-golden-ansible`'s Ansible playbook](https://github.com/anjeleno/rivendell-golden-ansible/blob/main/roles/base/tasks/main.yml) installs
+- Any change to how [`rivolution-unified-installer`'s Ansible playbook](https://github.com/anjeleno/rivolution-unified-installer/blob/main/roles/base/tasks/main.yml) installs
   build dependencies — once this lands, `roles/base`'s existing
   Ubuntu-specific `libqt5webkit5-dev` entry becomes
   `qtwebengine5-dev`/`libqt5webenginewidgets5-dev` on *every* target

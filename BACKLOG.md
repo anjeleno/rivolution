@@ -110,7 +110,7 @@ the dedicated `v6` box, and `/usr/local` has a real cost: it needs an
 explicit `sudo ldconfig` after every install that `/usr/lib` typically
 doesn't (see [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md)), and it's non-standard relative to
 every script/config elsewhere in this toolchain (Apache config,
-systemd units, `rivendell-golden-ansible`'s provisioning scripts) that
+systemd units, [`rivolution-unified-installer`'s provisioning scripts](https://github.com/anjeleno/rivolution-unified-installer/tree/main/roles/provision)) that
 assumes the conventional `/usr`-rooted FHS layout. If this fork ever
 ships a real `.deb`, `/usr` is mandatory — Debian packaging conventions
 reserve `/usr/local` for software installed outside the package
