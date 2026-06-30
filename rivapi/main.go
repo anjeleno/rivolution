@@ -12,6 +12,7 @@ import (
 	"github.com/anjeleno/rivolution/rivapi/api"
 	"github.com/anjeleno/rivolution/rivapi/auth"
 	"github.com/anjeleno/rivolution/rivapi/config"
+	"github.com/anjeleno/rivolution/rivapi/dashboard"
 	"github.com/anjeleno/rivolution/rivapi/store"
 )
 
@@ -33,13 +34,14 @@ func main() {
 	tickets := auth.NewTicketCache()
 	groupStore := store.NewGroupDB(db)
 	cartStore := store.NewCartProxy(cfg.RdxportURL)
+	dash := dashboard.New(cfg, groupStore, cartStore, tickets)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	// JSON API — Bearer token auth
 	r.Post("/api/v1/auth/login", auth.LoginHandler(cfg, tickets))
-
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(cfg))
 		r.Get("/api/v1/groups", api.ListGroups(groupStore))
@@ -47,8 +49,31 @@ func main() {
 		r.Get("/api/v1/carts/{number}", api.GetCart(cartStore, tickets))
 	})
 
+	// Dashboard — browser cookie auth
+	r.Get("/login", dash.LoginPage)
+	r.Post("/login", auth.DashboardLoginHandler(cfg, tickets))
+	r.Get("/logout", auth.LogoutHandler())
+
+	// Static assets (vendored CSS/JS + app.css)
+	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServerFS(dashboard.Assets())))
+
+	r.Group(func(r chi.Router) {
+		r.Use(auth.DashboardMiddleware(cfg))
+		r.Get("/", dash.Root)
+		r.Get("/groups", dash.Groups)
+		r.Get("/carts", dash.Carts)
+		r.Get("/carts/{number}", dash.CartDetail)
+	})
+
 	log.Printf("rivapi listening on %s", cfg.ListenAddr)
-	if err := http.ListenAndServe(cfg.ListenAddr, r); err != nil {
-		log.Fatal(err)
+	if cfg.TLSCert != "" && cfg.TLSKey != "" {
+		log.Printf("TLS enabled (cert: %s)", cfg.TLSCert)
+		if err := http.ListenAndServeTLS(cfg.ListenAddr, cfg.TLSCert, cfg.TLSKey, r); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		if err := http.ListenAndServe(cfg.ListenAddr, r); err != nil {
+			log.Fatal(err)
+		}
 	}
 }

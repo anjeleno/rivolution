@@ -1,0 +1,74 @@
+{{define "base"}}<!DOCTYPE html>
+<html lang="en"
+      x-data="themeManager()"
+      x-init="init()"
+      :data-theme="theme"
+      {{if .Branding.AccentColor}}style="--rivolution-accent: {{.Branding.AccentColor}}"{{end}}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{if .PageTitle}}{{.PageTitle}} — {{end}}{{.Branding.StationName}}</title>
+    <link rel="stylesheet" href="/static/vendor/pico.min.css">
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="/static/vendor/alpine.min.js" defer></script>
+    <script src="/static/vendor/htmx.min.js" defer></script>
+</head>
+<body>
+
+<nav class="rivolution-nav">
+    <a href="/" class="brand">
+        {{if .Branding.LogoURL}}<img src="{{.Branding.LogoURL}}" alt="{{.Branding.StationName}} logo">{{end}}
+        <span>{{.Branding.StationName}}</span>
+    </a>
+    <ul class="nav-links">
+        <li><a href="/groups"{{if eq .ActiveNav "groups"}} class="active"{{end}}>Groups</a></li>
+        <li><a href="/carts"{{if eq .ActiveNav "carts"}} class="active"{{end}}>Carts</a></li>
+        <li><a href="/logs"{{if eq .ActiveNav "logs"}} class="active"{{end}}>Logs</a></li>
+    </ul>
+    <div class="nav-end" style="display:flex; align-items:center; gap:0.75rem;">
+        <button class="outline contrast theme-toggle"
+                @click="toggle()"
+                :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+                aria-label="Toggle light/dark mode">
+            <span x-show="theme === 'dark'">☀</span>
+            <span x-show="theme !== 'dark'">☾</span>
+        </button>
+        <a href="/logout" role="button" class="outline secondary">Log out</a>
+    </div>
+</nav>
+
+<main class="dashboard-content container-fluid">
+    {{template "content" .}}
+</main>
+
+<script>
+function themeManager() {
+    return {
+        theme: 'auto',
+        init() {
+            const saved = localStorage.getItem('rivapi-theme');
+            if (saved === 'light' || saved === 'dark') {
+                this.theme = saved;
+            } else {
+                // Follow system preference; 'auto' lets Pico do it natively.
+                this.theme = 'auto';
+            }
+        },
+        toggle() {
+            // Cycle: auto → dark → light → dark (auto is the initial state;
+            // once the user explicitly picks one, we stay in explicit mode).
+            const sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            if (this.theme === 'auto') {
+                // First click: flip away from the system default.
+                this.theme = sys === 'dark' ? 'light' : 'dark';
+            } else {
+                this.theme = this.theme === 'dark' ? 'light' : 'dark';
+            }
+            localStorage.setItem('rivapi-theme', this.theme);
+        }
+    }
+}
+</script>
+
+</body>
+</html>{{end}}

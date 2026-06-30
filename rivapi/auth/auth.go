@@ -70,9 +70,41 @@ type loginResponse struct {
 	Expires string `json:"expires"`
 }
 
-// LoginHandler handles POST /api/v1/auth/login.
-// Credentials are forwarded to rdxport.cgi as RDXPORT_COMMAND_CREATETICKET;
-// on success a JWT is issued and the rdxport ticket stored server-side.
+// SessionCookieName is the HttpOnly cookie carrying the JWT for browser clients.
+const SessionCookieName = "rivapi_session"
+
+// createTicket forwards credentials to rdxport.cgi and returns (signedJWT, expires, error).
+// Shared by LoginHandler (JSON API) and DashboardLoginHandler (browser form).
+func createTicket(cfg *config.Config, tickets *TicketCache, username, password string) (string, time.Time, error) {
+	resp, err := http.PostForm(cfg.RdxportURL, url.Values{
+		"COMMAND":    {"31"}, // RDXPORT_COMMAND_CREATETICKET
+		"LOGIN_NAME": {username},
+		"PASSWORD":   {password},
+	})
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("authentication service unavailable: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", time.Time{}, fmt.Errorf("invalid credentials")
+	}
+
+	var info ticketInfo
+	if err := xml.NewDecoder(resp.Body).Decode(&info); err != nil || info.Ticket == "" {
+		return "", time.Time{}, fmt.Errorf("invalid credentials")
+	}
+
+	expires := parseRdxportExpiry(info.Expires)
+	tickets.Set(username, info.Ticket, expires)
+
+	signed, err := IssueToken(cfg, username, expires)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return signed, expires, nil
+}
+
+// LoginHandler handles POST /api/v1/auth/login (JSON API clients).
 func LoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req loginRequest
@@ -81,41 +113,13 @@ func LoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 			return
 		}
 
-		// POST to rdxport.cgi from our fixed IP — ticket binds to this address
-		resp, err := http.PostForm(cfg.RdxportURL, url.Values{
-			"COMMAND":    {"31"}, // RDXPORT_COMMAND_CREATETICKET
-			"LOGIN_NAME": {req.Username},
-			"PASSWORD":   {req.Password},
-		})
+		signed, expires, err := createTicket(cfg, tickets, req.Username, req.Password)
 		if err != nil {
-			http.Error(w, "authentication service unavailable", http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			http.Error(w, "invalid credentials", http.StatusUnauthorized)
-			return
-		}
-
-		var info ticketInfo
-		if err := xml.NewDecoder(resp.Body).Decode(&info); err != nil || info.Ticket == "" {
-			http.Error(w, "invalid credentials", http.StatusUnauthorized)
-			return
-		}
-
-		expires := parseRdxportExpiry(info.Expires)
-		tickets.Set(req.Username, info.Ticket, expires)
-
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
-			RegisteredClaims: jwt.RegisteredClaims{
-				Subject:   req.Username,
-				ExpiresAt: jwt.NewNumericDate(expires),
-				IssuedAt:  jwt.NewNumericDate(time.Now()),
-			},
-		})
-		signed, err := token.SignedString([]byte(cfg.JWTSecret))
-		if err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			if err.Error() == "invalid credentials" {
+				http.Error(w, "invalid credentials", http.StatusUnauthorized)
+			} else {
+				http.Error(w, err.Error(), http.StatusBadGateway)
+			}
 			return
 		}
 
@@ -124,6 +128,56 @@ func LoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 			Token:   signed,
 			Expires: expires.Format(time.RFC3339),
 		})
+	}
+}
+
+// DashboardLoginHandler handles POST /login (browser form submission).
+// Sets an HttpOnly cookie instead of returning JSON, then redirects to /.
+func DashboardLoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+		if username == "" || password == "" {
+			http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
+			return
+		}
+
+		signed, expires, err := createTicket(cfg, tickets, username, password)
+		if err != nil {
+			http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
+			return
+		}
+
+		secure := cfg.CookieSecure
+		if !secure && cfg.TrustProxyHeaders {
+			secure = r.Header.Get("X-Forwarded-Proto") == "https"
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     SessionCookieName,
+			Value:    signed,
+			Expires:  expires,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteLaxMode,
+		})
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+}
+
+// LogoutHandler clears the session cookie and redirects to /login.
+func LogoutHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{
+			Name:     SessionCookieName,
+			Value:    "",
+			MaxAge:   -1,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+		})
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	}
 }
 

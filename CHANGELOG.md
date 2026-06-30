@@ -7,6 +7,46 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-30 (continued)
+
+- Added `rivapi/dashboard/` — browser-facing HTML dashboard shell (spec
+  0012). Implements: cookie-based browser session (`rivapi_session`
+  HttpOnly cookie carrying the same JWT already used by the JSON API;
+  `DashboardLoginHandler` sets it, `LogoutHandler` clears it);
+  `DashboardMiddleware` redirects unauthenticated browser requests to
+  `/login` instead of returning 401; `GET /login` + `POST /login` +
+  `GET /logout` routes; `GET /`, `/groups`, `/carts`, `/carts/{number}`
+  dashboard views reusing existing `GroupStore`/`CartStore` interfaces;
+  htmx partial-render pattern (same route returns fragment on
+  `HX-Request`, full page otherwise); server-rendered Go templates with
+  Pico.css + htmx + Alpine.js all vendored in
+  `rivapi/dashboard/static/vendor/` (no npm/Node dependency). Base
+  layout includes user-switchable light/dark mode via Alpine.js
+  `themeManager()` (persists preference to `localStorage`; follows
+  system default on first load) and branding slots (station name, logo,
+  accent colour, configurable via env vars). Network topology fully
+  configurable via `RIVAPI_TRUST_PROXY_HEADERS` and
+  `RIVAPI_COOKIE_SECURE`; TLS listener available via `RIVAPI_TLS_CERT` /
+  `RIVAPI_TLS_KEY` for direct Tailscale cert use.
+
+- Added `docs/specs/0012-dashboard-foundation.md` — session model, cookie
+  auth design, network topology config, template layout and routing
+  conventions, branding placeholders, CSRF deferral rationale.
+
+- Added `docs/specs/0013-rdadmin-parity-roadmap.md` — classifies all ~48
+  RDAdmin management sections into four implementation buckets (rdxport
+  full CRUD, rdxport read-only, native Go+DB with established pattern,
+  native Go+DB new surface) and establishes build order. Includes
+  Rivolution-exclusive sections (Tailscale, Station Branding, systemd
+  stack control) as a separate track.
+
+- Added `docs/specs/0014-tailscale-integration.md` — three-piece design:
+  installer Ansible role (`roles/tailscale/`), dashboard Network section
+  with auth-key activation + status display, MagicDNS/TLS cert
+  provisioning via `tailscale cert`. Documents the hard limit that
+  enabling HTTPS Certs tailnet-wide requires the Tailscale admin console,
+  not the local CLI.
+
 ## 2026-06-30
 
 - Fixed three bugs found during rivapi Phase 1 end-to-end verification:

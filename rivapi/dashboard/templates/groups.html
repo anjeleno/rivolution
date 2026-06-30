@@ -1,0 +1,9 @@
+{{define "content"}}
+<h2>Groups</h2>
+<div id="groups-list"
+     hx-get="/groups?partial=1"
+     hx-trigger="load"
+     hx-indicator="#spinner">
+    <span id="spinner" class="htmx-indicator">Loading…</span>
+</div>
+{{end}}
