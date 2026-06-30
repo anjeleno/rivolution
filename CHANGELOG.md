@@ -9,6 +9,16 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-30
 
+- Added `rivapi/` — Go REST API foundation (spec 0005, Phase 1).
+  Module path `github.com/anjeleno/rivolution/rivapi`, binary name `rivapi`.
+  Implements: `POST /api/v1/auth/login` (rdxport ticket acquisition + JWT
+  issuance); `GET /api/v1/groups` (native MariaDB, mirrors
+  `web/rdxport/groups.cpp:ListGroups` + `lib/rdgroup.cpp:RDGroup::xml()`);
+  `GET /api/v1/carts` and `GET /api/v1/carts/{number}` (rdxport proxy,
+  commands 6/7). Internal `GroupStore`/`CartStore` interface boundary allows
+  proxy and native-DB implementations to be swapped without HTTP handler
+  changes. Builds clean on ARM64 (`go build ./...`).
+
 - Renamed `debian/control`, `debian/control.src`, and `debian/control.src2`:
   source package and all binary packages renamed from `rivendell`/`rivendell-*`
   to `rivolution`/`rivolution-*`; Maintainer updated to Anjeleno
