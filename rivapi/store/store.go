@@ -19,6 +19,7 @@ type Group struct {
 
 // Cart mirrors the core cart-level fields from lib/rdcart.cpp:RDCart::xml().
 // Full field list: lib/rdcart.cpp:1464 (xmlSql). Cut fields excluded from Phase 1.
+// ForcedLength and AverageLength are rdxport time strings ("MM:SS.S"), not integers.
 type Cart struct {
 	Number        uint   `json:"number"`
 	Type          string `json:"type"`
@@ -26,15 +27,15 @@ type Cart struct {
 	Title         string `json:"title"`
 	Artist        string `json:"artist"`
 	Album         string `json:"album"`
-	Year          int    `json:"year"`
+	Year          string `json:"year,omitempty"`
 	Label         string `json:"label"`
 	Client        string `json:"client"`
 	Agency        string `json:"agency"`
 	Publisher     string `json:"publisher"`
 	Composer      string `json:"composer"`
 	UserDefined   string `json:"userDefined"`
-	ForcedLength  int    `json:"forcedLength"`
-	AverageLength int    `json:"averageLength"`
+	ForcedLength  string `json:"forcedLength"`
+	AverageLength string `json:"averageLength"`
 	CutQuantity   uint   `json:"cutQuantity"`
 }
 

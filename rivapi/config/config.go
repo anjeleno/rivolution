@@ -26,7 +26,7 @@ func Load() *Config {
 		DBUser:     getenv("RIVAPI_DB_USER", "rduser"),
 		DBPassword: getenv("RIVAPI_DB_PASSWORD", ""),
 		DBName:     getenv("RIVAPI_DB_NAME", "Rivendell"),
-		RdxportURL: getenv("RIVAPI_RDXPORT_URL", "http://localhost/cgi-bin/rdxport.cgi"),
+		RdxportURL: getenv("RIVAPI_RDXPORT_URL", "http://127.0.0.1/rd-bin/rdxport.cgi"),
 		JWTSecret:  getenv("RIVAPI_JWT_SECRET", ""),
 		ListenAddr: getenv("RIVAPI_LISTEN_ADDR", ":8080"),
 	}

@@ -37,15 +37,15 @@ type xmlCart struct {
 	Title         string `xml:"title"`
 	Artist        string `xml:"artist"`
 	Album         string `xml:"album"`
-	Year          int    `xml:"year"`
+	Year          string `xml:"year"`
 	Label         string `xml:"label"`
 	Client        string `xml:"client"`
 	Agency        string `xml:"agency"`
 	Publisher     string `xml:"publisher"`
 	Composer      string `xml:"composer"`
 	UserDefined   string `xml:"userDefined"`
-	ForcedLength  int    `xml:"forcedLength"`
-	AverageLength int    `xml:"averageLength"`
+	ForcedLength  string `xml:"forcedLength"`
+	AverageLength string `xml:"averageLength"`
 	CutQuantity   uint   `xml:"cutQuantity"`
 }
 

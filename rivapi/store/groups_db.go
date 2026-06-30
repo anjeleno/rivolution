@@ -49,8 +49,11 @@ func (g *GroupDB) fetchGroup(ctx context.Context, name string) (*Group, error) {
 	var enforceCartRange, reportTfc, reportMus string
 
 	err := g.db.QueryRowContext(ctx,
-		"SELECT `DESCRIPTION`, `DEFAULT_CART_TYPE`, `DEFAULT_LOW_CART`, `DEFAULT_HIGH_CART`,"+
-			" `CUT_SHELFLIFE`, `DEFAULT_TITLE`, `ENFORCE_CART_RANGE`, `REPORT_TFC`, `REPORT_MUS`, `COLOR`"+
+		"SELECT COALESCE(`DESCRIPTION`,''), COALESCE(`DEFAULT_CART_TYPE`,0),"+
+			" COALESCE(`DEFAULT_LOW_CART`,0), COALESCE(`DEFAULT_HIGH_CART`,0),"+
+			" COALESCE(`CUT_SHELFLIFE`,-1), COALESCE(`DEFAULT_TITLE`,''),"+
+			" COALESCE(`ENFORCE_CART_RANGE`,'N'), COALESCE(`REPORT_TFC`,'N'),"+
+			" COALESCE(`REPORT_MUS`,'N'), COALESCE(`COLOR`,'')"+
 			" FROM `GROUPS` WHERE `NAME` = ?",
 		name,
 	).Scan(

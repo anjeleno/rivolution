@@ -9,6 +9,18 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-06-30
 
+- Fixed three bugs found during rivapi Phase 1 end-to-end verification:
+  (1) `config/config.go`: default `RIVAPI_RDXPORT_URL` corrected to
+  `http://127.0.0.1/rd-bin/rdxport.cgi` — `localhost` resolves to `::1`
+  on this host, which misses rdxport.cgi's IPv4 loopback auth bypass and
+  causes a 403; (2) `store/groups_db.go`: `GROUPS` query wrapped in
+  `COALESCE()` for all nullable columns — `COLOR` is NULL in a fresh
+  install and a bare `string` scan returns an error; (3) `store/store.go`
+  and `store/carts_proxy.go`: `ForcedLength`, `AverageLength`, and `Year`
+  fields changed from `int` to `string` — rdxport serialises lengths as
+  `"MM:SS.S"` time strings and year as an empty string when unset, both
+  of which fail XML-to-int decoding.
+
 - Added `rivapi/` — Go REST API foundation (spec 0005, Phase 1).
   Module path `github.com/anjeleno/rivolution/rivapi`, binary name `rivapi`.
   Implements: `POST /api/v1/auth/login` (rdxport ticket acquisition + JWT
