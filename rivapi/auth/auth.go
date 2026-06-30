@@ -142,7 +142,7 @@ func DashboardLoginHandler(cfg *config.Config, tickets *TicketCache) http.Handle
 			return
 		}
 
-		signed, expires, err := createTicket(cfg, tickets, username, password)
+		signed, _, err := createTicket(cfg, tickets, username, password)
 		if err != nil {
 			http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
 			return
@@ -153,10 +153,11 @@ func DashboardLoginHandler(cfg *config.Config, tickets *TicketCache) http.Handle
 			secure = r.Header.Get("X-Forwarded-Proto") == "https"
 		}
 
+		// No Expires/MaxAge — session cookie only; browser discards on close.
+		// The JWT inside still enforces its own expiry within a session.
 		http.SetCookie(w, &http.Cookie{
 			Name:     SessionCookieName,
 			Value:    signed,
-			Expires:  expires,
 			Path:     "/",
 			HttpOnly: true,
 			Secure:   secure,
