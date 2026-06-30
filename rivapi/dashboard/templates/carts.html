@@ -1,4 +1,4 @@
-{{define "content"}}
+{{define "page"}}
 <h2>Carts{{if .GroupFilter}} — {{.GroupFilter}}{{end}}</h2>
 <div id="carts-list"
      hx-get="/carts?partial=1{{if .GroupFilter}}&group={{.GroupFilter}}{{end}}"

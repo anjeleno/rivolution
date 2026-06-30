@@ -27,6 +27,25 @@ func Assets() fs.FS {
 	return sub
 }
 
+// pageTmpl parses base.html + a single page template together. Each call
+// returns an independent template.Template so that each page's {{define "page"}}
+// is the only definition of that name in its set, avoiding the Go template
+// pitfall where parsing multiple {{define "page"}} blocks in one set silently
+// drops all but the last one parsed.
+func pageTmpl(page string) *template.Template {
+	return template.Must(template.ParseFS(assets, "templates/base.html", "templates/"+page))
+}
+
+// Pre-parsed template sets — one per page so {{define "page"}} never conflicts.
+var (
+	tmplLogin      = template.Must(template.ParseFS(assets, "templates/login.html"))
+	tmplGroups     = pageTmpl("groups.html")
+	tmplCarts      = pageTmpl("carts.html")
+	tmplCartDetail = pageTmpl("cart_detail.html")
+	tmplGroupsList = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
+	tmplCartsList  = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
+)
+
 // Branding holds per-station display values passed to every template.
 type Branding struct {
 	StationName string
@@ -47,11 +66,9 @@ type Handler struct {
 	carts   store.CartStore
 	tickets *auth.TicketCache
 	brand   Branding
-	tmpl    *template.Template
 }
 
 func New(cfg *config.Config, groups store.GroupStore, carts store.CartStore, tickets *auth.TicketCache) *Handler {
-	tmpl := template.Must(template.ParseFS(assets, "templates/*.html"))
 	return &Handler{
 		cfg:     cfg,
 		groups:  groups,
@@ -62,7 +79,6 @@ func New(cfg *config.Config, groups store.GroupStore, carts store.CartStore, tic
 			LogoURL:     cfg.LogoURL,
 			AccentColor: cfg.AccentColor,
 		},
-		tmpl: tmpl,
 	}
 }
 
@@ -85,7 +101,7 @@ func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("error") != "" {
 		data.Error = "Invalid username or password."
 	}
-	if err := h.tmpl.ExecuteTemplate(w, "login.html", data); err != nil {
+	if err := tmplLogin.ExecuteTemplate(w, "login.html", data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }
@@ -104,13 +120,10 @@ func (h *Handler) Groups(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "error loading groups", http.StatusInternalServerError)
 			return
 		}
-		h.tmpl.ExecuteTemplate(w, "groups_list.html", struct{ Groups []store.Group }{groups})
+		tmplGroupsList.ExecuteTemplate(w, "groups_list.html", struct{ Groups []store.Group }{groups})
 		return
 	}
-	h.tmpl.ExecuteTemplate(w, "base", struct {
-		baseData
-		// groups_list loads via htmx on page load
-	}{h.base("Groups", "groups")})
+	tmplGroups.ExecuteTemplate(w, "base", h.base("Groups", "groups"))
 }
 
 // Carts handles GET /carts[?group=NAME] (full page and htmx fragment).
@@ -129,10 +142,10 @@ func (h *Handler) Carts(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "error loading carts", http.StatusInternalServerError)
 			return
 		}
-		h.tmpl.ExecuteTemplate(w, "carts_list.html", struct{ Carts []store.Cart }{carts})
+		tmplCartsList.ExecuteTemplate(w, "carts_list.html", struct{ Carts []store.Cart }{carts})
 		return
 	}
-	h.tmpl.ExecuteTemplate(w, "base", struct {
+	tmplCarts.ExecuteTemplate(w, "base", struct {
 		baseData
 		GroupFilter string
 	}{h.base("Carts", "carts"), group})
@@ -163,7 +176,7 @@ func (h *Handler) CartDetail(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	h.tmpl.ExecuteTemplate(w, "base", struct {
+	tmplCartDetail.ExecuteTemplate(w, "base", struct {
 		baseData
 		Cart *store.Cart
 	}{h.base(fmt.Sprintf("Cart %d", number), "carts"), cart})
