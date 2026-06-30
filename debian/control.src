@@ -1,71 +1,71 @@
-Source: rivendell
+Source: rivolution
 Section: audio
 Priority: optional
-Maintainer: Fred Gleason <fredg@paravelsystems.com>
+Maintainer: Anjeleno <la90046@gmail.com>
 Build-Depends: debhelper-compat (= 12), autotools-dev @HPKLINUX_DEP@
 Standards-Version: 4.4.1
 
-Package: rivendell
+Package: rivolution
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, mariadb-client, libqt5sql5-mysql, qttranslations5-l10n, apache2, curl, rsyslog, python3, python3-pycurl, python3-mysqldb, python3-serial, python3-requests, icedax, qt5-style-plugins, xsltproc
-Replaces: rivendell-pypad
+Depends: ${shlibs:Depends}, ${misc:Depends}, mariadb-client, libqt6sql6-mysql, apache2, curl, rsyslog, python3, python3-pycurl, python3-pymysql, python3-serial, python3-requests, icedax, xsltproc
+Replaces: rivolution-pypad
 Description: Radio Broadcast Automation System
- Rivendell is a complete radio broadcast automation solution, with
+ Rivolution is a complete radio broadcast automation solution, with
  facilities for the acquisition, management, scheduling and playout of
  audio content.  Modules for the production and management of podcast
  audio are also included.
 
-Package: rivendell-importers
+Package: rivolution-importers
 Architecture: any
-Depends: ${misc:Depends}, rivendell (= @VERSION@-1)
-Description: Library importers for the Rivendell Broadcast Automation System
+Depends: ${misc:Depends}, rivolution (= @VERSION@-1)
+Description: Library importers for the Rivolution Broadcast Automation System
  This package contains various importer scripts, which can be used to
- import audio from existing legacy automation systems into Rivendell.
+ import audio from existing legacy automation systems into Rivolution.
  Currently, scripts exist for the AirForce Wings, Prophet NexGen and Sierra
- Automated Systems SASAuto systems, as well as from another Rivendell system
+ Automated Systems SASAuto systems, as well as from another Rivolution system
  (useful for 'merging' multiple databases).  Additionally, scripts for
  initializing switcher matrices for the Christian Radio Consortium
  (CRC) Unity4000 network and copying RDCatch event lists between hosts
  are included.
 
-Package: rivendell-opsguide
+Package: rivolution-opsguide
 Architecture: all
 Depends: ${misc:Depends}
-Description: Rivendell Operations and Administration Guide
- This package contains the Rivendell Operations and Administration Guide,
+Description: Rivolution Operations and Administration Guide
+ This package contains the Rivolution Operations and Administration Guide,
  in both HTML and PDF formats.
 
-Package: rivendell-webapi
+Package: rivolution-webapi
 Architecture: any
 Depends:  ${shlibs:Depends}, ${misc:Depends}
-Description: Client libraries for interfacing with Rivendell's C Web API.
- This package contains client libraries for interfacing with Rivendell's
+Description: Client libraries for interfacing with Rivolution's C Web API.
+ This package contains client libraries for interfacing with Rivolution's
  C Web API subsystem.
 
-Package: rivendell-dev
+Package: rivolution-dev
 Architecture: any
-Depends: ${misc:Depends}, rivendell-webapi (= @VERSION@-1)
-Description: Header files and example code for development with Rivendell C API
+Depends: ${misc:Depends}, rivolution-webapi (= @VERSION@-1)
+Description: Header files and example code for development with Rivolution C API
  This package contains header files and example code for development using
- Rivendell's Web C API.
+ Rivolution's Web C API.
 
-Package: rivendell-select
+Package: rivolution-select
 Architecture: any
-Depends: ${misc:Depends}, rivendell (= @VERSION@-1)
-Description: The RDSelect system selector tool for Rivendell.
- This package contains the RDMonitor/RDSelect tool for Rivendell, which can
- be used to select which amoung multiple Rivendell instances a host should be
+Depends: ${misc:Depends}, rivolution (= @VERSION@-1)
+Description: The RDSelect system selector tool for Rivolution.
+ This package contains the RDMonitor/RDSelect tool for Rivolution, which can
+ be used to select which amoung multiple Rivolution instances a host should be
  associated with.
 
-Package: rivendell-webget
+Package: rivolution-webget
 Architecture: any
-Depends: ${misc:Depends}, rivendell (= @VERSION@-1)
-Description: The WebGet audio fetcher service for Rivendell
- This package contains the WebGet audio fetching tool for Rivendell.
+Depends: ${misc:Depends}, rivolution (= @VERSION@-1)
+Description: The WebGet audio fetcher service for Rivolution
+ This package contains the WebGet audio fetching tool for Rivolution.
 
-#Package: rivendell-pypad
+#Package: rivolution-pypad
 #Architecture: all
-#Depends: python3, python3-pycurl, python3-mysqldb, python3-serial, python3-requests 
-#Description: PyPAD Program Associated Data script system for Rivendell
-# This package contains Rivendell's PyPAD scripting system for transmitting
+#Depends: python3, python3-pycurl, python3-pymysql, python3-serial, python3-requests
+#Description: PyPAD Program Associated Data script system for Rivolution
+# This package contains Rivolution's PyPAD scripting system for transmitting
 # Program Associated Data (PAD) using Python scripts.

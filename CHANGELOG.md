@@ -7,6 +7,16 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-30
+
+- Renamed `debian/control`, `debian/control.src`, and `debian/control.src2`:
+  source package and all binary packages renamed from `rivendell`/`rivendell-*`
+  to `rivolution`/`rivolution-*`; Maintainer updated to Anjeleno
+  `<la90046@gmail.com>`; Qt5 runtime dependencies replaced with Qt6
+  equivalents (`libqt5sql5-mysql` → `libqt6sql6-mysql`; `qttranslations5-l10n`
+  removed — bundled with Qt6; `qt5-style-plugins` removed — no Qt6 equivalent
+  needed); `python3-mysqldb` → `python3-pymysql` (Ubuntu 26.04).
+
 ## 2026-06-28
 
 - Parameterized `scripts/rivolution-first-run.sh`: `RIVENDELL_USER`
