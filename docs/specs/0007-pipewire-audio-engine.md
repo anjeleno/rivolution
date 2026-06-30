@@ -125,40 +125,48 @@ not against that vendor's full proprietary feature set:
   intrinsic to how Dante itself implements AES67 mode, confirmed
   against Audinate's own documentation.
 
-### Known risk: privilege/session model mismatch
+### Privilege model: resolved decision
 
-PipeWire normally runs per-user, started by that user's own systemd
-session, reachable only via that session's own socket — not as a
-system-wide service. `caed` and Rivendell's other daemons traditionally
-run as root. A real report of exactly this mismatch already exists for
-Rivendell against JACK (`ElvishArtisan/rivendell` issue #823: a root
-`caed` failing to reach a per-user PipeWire/JACK instance at all).
-PipeWire does support running system-wide instead, but that's a
-non-default configuration with its own tradeoffs, not something to
-assume works the same way as the per-user default. This needs to be
-resolved (either run PipeWire system-wide, or run `caed`/the new driver
-under whatever user owns the PipeWire session, or some other bridging
-mechanism) before the new `cae/driver_pipewire.cpp` can connect to
-anything — it is a precondition for this spec's implementation, not an
-optional side investigation.
+The privilege mismatch between `caed` (historically root) and PipeWire
+(normally per-user) is a closed architectural decision.
 
-A real-world data point bearing on which way this resolves: the
-reference `pipewire-aes67` deployment (per the January 2025 talk cited
-above) runs AES67 as its own dedicated config/session
-(`~/.config/pipewire/pipewire-aes67.conf`, run as its own
-`pipewire-aes67` process) rather than a module flipped on inside
-whatever PipeWire instance happens to already be running. That's
-suggestive evidence for resolving the question above toward `caed`
-running its own dedicated, system-wide PipeWire instance — hosting the
-AES67 modules *and* the absorbed ALSA/HPI streams together — rather
-than reaching out to a desktop user's per-session instance. Not a
-closed decision yet; needs more research once implementation starts.
+**Decision: `caed` runs as the `rd` user, not root.** Running as root
+was legacy practice — everything root provided for `caed` is available
+to a non-root user with the right systemd unit configuration and group
+memberships, with no loss of functionality:
 
-Separately, the PTP hardware clock device node (`/dev/ptpN`) is
-root-owned by default and needs an explicit udev rule for `caed` (or
-whatever user PipeWire/`ptp4l` end up running as) to read it — a
-second, smaller permissions precondition alongside the PipeWire socket
-question above, easy to miss until it's hit in practice.
+- **Real-time scheduling** — `LimitRTPRIO=99`, `LimitRTTIME=infinity`,
+  `IOSchedulingClass=realtime`, and `IOSchedulingPriority=0` in `caed`'s
+  systemd unit provide the same scheduling priority root's `RLIMIT_RTPRIO`
+  did, without elevated privilege.
+- **Audio hardware access** — `rd` is a member of the `audio` group;
+  ALSA and the PipeWire-native paths both respect this.
+- **PTP clock device** — `/dev/ptpN` is root-owned by default. A udev
+  rule assigns it to a dedicated `ptp` group with `rd` as a member,
+  giving `ptp4l` and `caed` direct access without root.
+
+**PipeWire runs system-wide**, not per-user. A `pipewire-system.service`
+unit (available alongside the default per-user unit in the `pipewire`
+package) starts PipeWire as a system-level service accessible to any
+`audio`-group member, including `caed`. WirePlumber also runs
+system-wide (`wireplumber-system.service`) — routing policy must survive
+across logins and reboots, not be owned by whoever happens to be logged
+into the desktop. The previously-documented issue in
+`ElvishArtisan/rivendell` issue #823 (root `caed` failing to reach a
+per-user JACK/PipeWire instance) is resolved by this decision: `caed`
+runs as the same user class that the system-wide PipeWire instance
+serves.
+
+The `pipewire-aes67.conf` dedicated-process deployment pattern (noted
+in the Background section's reference data) is superseded — a single
+system-wide PipeWire instance managing all four backends together is
+exactly what this spec's cross-driver routing requirement demands. A
+separate AES67-only process would reintroduce the inter-process routing
+gap this design eliminates.
+
+Full systemd unit design — startup ordering, readiness signaling,
+live-playout-safe reconfiguration — is covered in
+[`docs/specs/0010-systemd-stack-orchestration.md`](0010-systemd-stack-orchestration.md).
 
 ## Design
 

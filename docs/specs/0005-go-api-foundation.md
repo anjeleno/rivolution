@@ -154,9 +154,11 @@ write paths once both read paths are proven.
 
 ## Files
 
-- New: a new Go module/repository (location and module layout to be
-  decided when Phase 1 implementation actually starts — out of scope
-  for this spec).
+- New: `rivapi/` at the repository root — a top-level directory
+  parallel to `rdadmin/`, `rdairplay/`, and the other application
+  directories, following the same flat structure and the `riv` prefix
+  convention established for new v6 components. Go module path:
+  `github.com/anjeleno/rivolution/rivapi`. Binary name: `rivapi`.
 - Reference only, unmodified by this spec: `web/rdxport/rdxport.cpp`,
   `web/rdxport/groups.cpp`, `lib/rdxport_interface.h`, `lib/rduser.cpp`,
   `lib/rdformpost.cpp`, `docs/apis/web_api.xml`.
