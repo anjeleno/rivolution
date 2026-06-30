@@ -7,6 +7,13 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-30 (continued, 4)
+
+- `rivapi/auth/auth.go`: dashboard session cookie is now a browser
+  session cookie (no `Expires`/`MaxAge`). Browser discards it on close,
+  forcing re-login on next open. JWT expiry still enforces token
+  lifetime within a session.
+
 ## 2026-06-30 (continued, 3)
 
 - `rivapi/store/carts_db.go` (new): `CartDB` — native MariaDB cart reader
