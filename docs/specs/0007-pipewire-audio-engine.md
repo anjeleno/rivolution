@@ -81,7 +81,12 @@ changes. This spec does not rely on that shim for the new AES67
 driver — native support is wanted specifically — but it remains a
 relevant fact for any future evaluation of running existing JACK-based
 tooling (e.g. `qjackctl`-adjacent workflows) against a PipeWire server
-during a transition period.
+during a transition period. Note: the `pipewire-jack` path is gated on
+`caed` first migrating off root to the `rd` user (see
+[`0010-systemd-stack-orchestration.md`](0010-systemd-stack-orchestration.md),
+"caed permissions: prerequisite for PipeWire integration") — a
+root-owned process cannot reach the `rd`-user PipeWire session socket
+regardless of whether `pipewire-jack` is installed.
 
 ### Vendor interoperability
 

@@ -28,6 +28,21 @@ every installed service starts independently, with no inter-service
 dependency knowledge. The result is a working set of parts that don't
 reliably communicate at startup or after a reboot.
 
+### `caed` permissions: prerequisite for PipeWire integration
+
+`caed` currently runs as root — a legacy practice from early Rivendell
+that is incompatible with PipeWire, whose session daemon runs under the
+`rd` user account. A root-owned process cannot reach a user-session
+PipeWire socket by default (`PIPEWIRE_RUNTIME_DIR` is not visible to
+root). The decision to run `caed` as the `rd` user is already locked in
+`0007-pipewire-audio-engine.md`; implementing it is a prerequisite for
+the PipeWire portions of this spec and must land in the same PR that
+adds the `caed.service` drop-in override. The required changes are
+already listed in the [Files](#files) section below. Services that depend
+on the JACK/PipeWire path (Liquidsoap, persistent patch connections)
+also benefit from this change since they currently work by coincidence
+when JACK runs under the same root environment as `caed`.
+
 ### The race condition, precisely
 
 systemd's `After=` / `Requires=` chains guarantee that unit B's start
@@ -55,7 +70,22 @@ or API endpoint responds.
 
 A custom systemd target, `rivolution-stack.target`, groups the full
 broadcast stack and is the unit the dashboard starts, stops, and
-monitors. Service dependencies within it:
+monitors.
+
+**The target file is stable infrastructure — it is never regenerated
+or rebuilt when operator configuration changes.** It declares `Wants=`
+for every service the stack may run (Icecast, Liquidsoap, Stereo Tool,
+PipeWire, WirePlumber, `caed`). Whether a given service actually runs
+is controlled entirely by `systemctl enable` / `systemctl disable` (or
+`systemctl mask` for hard prevention). The dashboard calls enable/
+disable + start/stop for immediate effect; it never rewrites the target
+file itself. The one exception is when a new custom unit file must be
+*created* (e.g., a new per-station AES67 bridge unit) — in that case
+the dashboard writes the new unit file and calls `systemctl daemon-reload`
+transparently. This model is safe for live stations: a misconfigured
+unit that fails to start does not bring down other units in the target.
+
+Service dependencies within the target:
 
 ```
 pipewire-system.service
