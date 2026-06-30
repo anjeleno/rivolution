@@ -220,3 +220,6 @@ xdg/rdalsaconfig-root-consolehelper
 xdg/rddbconfig-root-consolehelper
 xdg/rivendell-opsguide-html.desktop
 xdg/rivendell-opsguide-pdf.desktop
+
+# Go build artifacts
+rivapi/rivapi
