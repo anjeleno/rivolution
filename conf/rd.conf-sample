@@ -241,6 +241,27 @@ TranscodingDelay=0
 ; PadSegueOverlaps=0;
 
 
+[dashboard]
+; Configuration for the rivapi web dashboard service.
+
+; A secret string used to sign browser session tokens. Must be set to a
+; long, random value — generate one with:
+;   tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 64
+; This value is generated automatically by the first-run setup script and
+; should never be shared or committed to version control.
+JwtSecret=
+
+; Optional display name shown in the dashboard navigation header.
+; Defaults to "Rivolution" if not set.
+;StationName=My Station
+
+; Optional URL to a logo image displayed in the dashboard nav header.
+;LogoURL=
+
+; Optional CSS colour value for the dashboard accent colour (e.g. #1971c2).
+; Defaults to the Pico.css primary colour if not set.
+;AccentColor=
+
 [Caed]
 ; When set to 'Yes', log all CAE mixer operations to syslog.
 ;EnableMixerLogging=No

@@ -53,6 +53,12 @@ if [ -z "$RIVENDELL_SKIP_DB_SETUP" ]; then
   mysql_pass=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
   sed -i "/^\[mySQL\]/,/^\[/{s/^Password=.*/Password=$mysql_pass/}" /etc/rd.conf
 
+  # Generate a JWT signing secret for the rivapi dashboard service and write
+  # it into rd.conf's [dashboard] section. rivapi reads it from there at
+  # startup so no environment variable needs to be set manually.
+  jwt_secret=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 64)
+  sed -i "/^\[dashboard\]/,/^\[/{s/^JwtSecret=.*/JwtSecret=$jwt_secret/}" /etc/rd.conf
+
   # Read the remaining MySQL connection parameters straight from rd.conf's
   # [mySQL] section -- the same values RDConfig itself uses -- rather than
   # hardcoding them here.
