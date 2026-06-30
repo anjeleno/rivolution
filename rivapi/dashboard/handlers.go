@@ -64,15 +64,17 @@ type Handler struct {
 	cfg     *config.Config
 	groups  store.GroupStore
 	carts   store.CartStore
+	cartDB  *store.CartDB
 	tickets *auth.TicketCache
 	brand   Branding
 }
 
-func New(cfg *config.Config, groups store.GroupStore, carts store.CartStore, tickets *auth.TicketCache) *Handler {
+func New(cfg *config.Config, groups store.GroupStore, carts store.CartStore, cartDB *store.CartDB, tickets *auth.TicketCache) *Handler {
 	return &Handler{
 		cfg:     cfg,
 		groups:  groups,
 		carts:   carts,
+		cartDB:  cartDB,
 		tickets: tickets,
 		brand: Branding{
 			StationName: cfg.StationName,
@@ -120,10 +122,14 @@ func (h *Handler) Groups(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "error loading groups", http.StatusInternalServerError)
 			return
 		}
-		tmplGroupsList.ExecuteTemplate(w, "groups_list.html", struct{ Groups []store.Group }{groups})
+		if err := tmplGroupsList.ExecuteTemplate(w, "groups_list.html", struct{ Groups []store.Group }{groups}); err != nil {
+			http.Error(w, "template error", http.StatusInternalServerError)
+		}
 		return
 	}
-	tmplGroups.ExecuteTemplate(w, "base", h.base("Groups", "groups"))
+	if err := tmplGroups.ExecuteTemplate(w, "base", h.base("Groups", "groups")); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
 }
 
 // Carts handles GET /carts[?group=NAME] (full page and htmx fragment).
@@ -132,33 +138,40 @@ func (h *Handler) Carts(w http.ResponseWriter, r *http.Request) {
 	username := auth.UsernameFromContext(r.Context())
 
 	if r.URL.Query().Get("partial") == "1" || isHTMX(r) {
-		ticket, ok := h.tickets.Get(username)
-		if !ok {
-			http.Error(w, "session expired, please log in again", http.StatusUnauthorized)
-			return
+		var (
+			carts []store.Cart
+			err   error
+		)
+		if h.groups.IsAdmin(r.Context(), username) {
+			carts, err = h.cartDB.ListCarts(r.Context(), group)
+		} else {
+			ticket, ok := h.tickets.Get(username)
+			if !ok {
+				http.Error(w, "session expired, please log in again", http.StatusUnauthorized)
+				return
+			}
+			carts, err = h.carts.ListCarts(r.Context(), ticket, group)
 		}
-		carts, err := h.carts.ListCarts(r.Context(), ticket, group)
 		if err != nil {
 			http.Error(w, "error loading carts", http.StatusInternalServerError)
 			return
 		}
-		tmplCartsList.ExecuteTemplate(w, "carts_list.html", struct{ Carts []store.Cart }{carts})
+		if err := tmplCartsList.ExecuteTemplate(w, "carts_list.html", struct{ Carts []store.Cart }{carts}); err != nil {
+			http.Error(w, "template error", http.StatusInternalServerError)
+		}
 		return
 	}
-	tmplCarts.ExecuteTemplate(w, "base", struct {
+	if err := tmplCarts.ExecuteTemplate(w, "base", struct {
 		baseData
 		GroupFilter string
-	}{h.base("Carts", "carts"), group})
+	}{h.base("Carts", "carts"), group}); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
 }
 
 // CartDetail handles GET /carts/{number}.
 func (h *Handler) CartDetail(w http.ResponseWriter, r *http.Request) {
 	username := auth.UsernameFromContext(r.Context())
-	ticket, ok := h.tickets.Get(username)
-	if !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
 
 	numberStr := chi.URLParam(r, "number")
 	if numberStr == "" {
@@ -171,13 +184,28 @@ func (h *Handler) CartDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cart, err := h.carts.GetCart(r.Context(), ticket, number)
+	var (
+		cart *store.Cart
+		err  error
+	)
+	if h.groups.IsAdmin(r.Context(), username) {
+		cart, err = h.cartDB.GetCart(r.Context(), number)
+	} else {
+		ticket, ok := h.tickets.Get(username)
+		if !ok {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		cart, err = h.carts.GetCart(r.Context(), ticket, number)
+	}
 	if err != nil || cart == nil {
 		http.NotFound(w, r)
 		return
 	}
-	tmplCartDetail.ExecuteTemplate(w, "base", struct {
+	if err := tmplCartDetail.ExecuteTemplate(w, "base", struct {
 		baseData
 		Cart *store.Cart
-	}{h.base(fmt.Sprintf("Cart %d", number), "carts"), cart})
+	}{h.base(fmt.Sprintf("Cart %d", number), "carts"), cart}); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
 }

@@ -43,6 +43,7 @@ type Cart struct {
 // The MariaDB-native implementation is in groups_db.go.
 type GroupStore interface {
 	ListGroups(ctx context.Context, username string) ([]Group, error)
+	IsAdmin(ctx context.Context, username string) bool
 }
 
 // CartStore is the interface for cart data access.

@@ -18,7 +18,7 @@ func NewGroupDB(db *sql.DB) *GroupDB {
 func (g *GroupDB) ListGroups(ctx context.Context, username string) ([]Group, error) {
 	// Users with ADMIN_CONFIG_PRIV='Y' see all groups — same behaviour as RDAdmin,
 	// which queries GROUPS directly rather than filtering through USER_PERMS.
-	if g.isAdmin(ctx, username) {
+	if g.IsAdmin(ctx, username) {
 		return g.listAllGroups(ctx)
 	}
 	// mirrors web/rdxport/groups.cpp:46 — permission-filtered group list
@@ -47,7 +47,7 @@ func (g *GroupDB) ListGroups(ctx context.Context, username string) ([]Group, err
 	return groups, rows.Err()
 }
 
-func (g *GroupDB) isAdmin(ctx context.Context, username string) bool {
+func (g *GroupDB) IsAdmin(ctx context.Context, username string) bool {
 	var priv string
 	err := g.db.QueryRowContext(ctx,
 		"SELECT COALESCE(`ADMIN_CONFIG_PRIV`,'N') FROM `USERS` WHERE `LOGIN_NAME` = ?",

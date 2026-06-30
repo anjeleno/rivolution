@@ -7,6 +7,27 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-06-30 (continued, 3)
+
+- `rivapi/store/carts_db.go` (new): `CartDB` — native MariaDB cart reader
+  for admin users, bypassing rdxport's USER\_PERMS filter. Queries the CART
+  table directly; converts TYPE int (1/2) to "audio"/"macro" string,
+  FORCED\_LENGTH/AVERAGE\_LENGTH milliseconds to "HH:MM:SS.T" format, and
+  nullable YEAR date column to a year string, matching rdxport XML output.
+
+- `rivapi/store/store.go`, `rivapi/store/groups_db.go`: exported `IsAdmin`
+  (was private `isAdmin`) and added it to the `GroupStore` interface so
+  dashboard handlers can route admin cart queries to `CartDB` without a
+  type assertion.
+
+- `rivapi/dashboard/handlers.go`: `Carts` and `CartDetail` handlers now
+  check `GroupStore.IsAdmin` and use `CartDB` for admin users (direct DB
+  query) and `CartProxy` for non-admin users (rdxport). Added error checks
+  to all `ExecuteTemplate` calls — previously silent failures now return
+  HTTP 500.
+
+- `rivapi/main.go`: constructs `CartDB` and passes it to `dashboard.New`.
+
 ## 2026-06-30 (continued, 2)
 
 - `rivapi/store/groups_db.go`: admin users (`ADMIN_CONFIG_PRIV='Y'` in

@@ -34,7 +34,8 @@ func main() {
 	tickets := auth.NewTicketCache()
 	groupStore := store.NewGroupDB(db)
 	cartStore := store.NewCartProxy(cfg.RdxportURL)
-	dash := dashboard.New(cfg, groupStore, cartStore, tickets)
+	cartDB := store.NewCartDB(db)
+	dash := dashboard.New(cfg, groupStore, cartStore, cartDB, tickets)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
