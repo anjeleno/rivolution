@@ -23,11 +23,6 @@ var icecastTmpl = template.Must(template.New("icecast").Parse(`<?xml version="1.
     <limits>
         <clients>{{.Icecast.MaxClients}}</clients>
         <sources>{{len .Streams}}</sources>
-        <queue-size>524288</queue-size>
-        <client-timeout>30</client-timeout>
-        <header-timeout>15</header-timeout>
-        <source-timeout>10</source-timeout>
-        <burst-on-connect>1</burst-on-connect>
         <burst-size>{{.Icecast.BurstSize}}</burst-size>
     </limits>
 

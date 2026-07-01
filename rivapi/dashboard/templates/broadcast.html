@@ -3,7 +3,14 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
     <h2 style="margin:0">Broadcast</h2>
-    <button type="submit" form="broadcast-form" class="outline">Save &amp; Deploy</button>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+        <a :href="'http://' + icecast.hostname + ':' + icecast.port + '/admin/'"
+           target="_blank" rel="noopener noreferrer"
+           role="button" class="outline secondary" style="white-space:nowrap;">
+            Icecast Admin ↗
+        </a>
+        <button type="submit" form="broadcast-form" class="outline">Save &amp; Deploy</button>
+    </div>
 </div>
 
 {{if .SaveResult}}
@@ -52,8 +59,9 @@
                 <input type="text" name="station_description" x-model="station.description">
             </label>
             <label>
-                URL
+                Station website URL
                 <input type="url" name="station_url" x-model="station.url" placeholder="https://yourstation.com">
+                <small>Your public website — appears as the station homepage link in Icecast.</small>
             </label>
         </div>
     </details>
@@ -193,13 +201,20 @@
                 </div>
             </div>
 
+            <div style="margin-top:0.5rem;">
+                <small style="color:var(--pico-muted-color);">
+                    Stream URL:
+                    <code x-text="'http://' + liquidsoap.icecast_host + ':' + liquidsoap.icecast_port + s.mount"></code>
+                </small>
+            </div>
+
             <details style="margin-top:0.5rem;">
                 <summary style="font-size:0.875rem; color:var(--pico-muted-color);">
                     Metadata override <span x-show="s.name || s.genre || s.description || s.url">(active)</span>
                 </summary>
                 <div style="padding:0.75rem 0 0;">
                     <small style="display:block; margin-bottom:0.5rem; color:var(--pico-muted-color);">
-                        Leave blank to use station defaults.
+                        Leave blank to use station defaults. Station website URL falls through to all streams.
                     </small>
                     <div class="grid">
                         <label>
@@ -219,9 +234,10 @@
                                :placeholder="station.description || '(station default)'">
                     </label>
                     <label>
-                        URL
-                        <input type="url" :value="s.url" @input="s.url = $event.target.value"
-                               :placeholder="station.url">
+                        Station website URL override
+                        <input type="text" :value="s.url" @input="s.url = $event.target.value"
+                               :placeholder="station.url || 'https://yourstation.com'">
+                        <small>Overrides the station website URL for this stream only.</small>
                     </label>
                 </div>
             </details>

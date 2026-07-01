@@ -86,12 +86,17 @@ func GenerateLiquidsoapScript(cfg BroadcastConfig) error {
 	if err := os.MkdirAll(filepath.Dir(LiquidsoapScriptPath), 0755); err != nil {
 		return err
 	}
-	// Create the log directory Liquidsoap needs; Liquidsoap will fail on start
-	// if the directory doesn't exist.
+	// Create the log file (and its directory) if absent. Liquidsoap opens
+	// the log for appending on start and will fail if the path doesn't exist.
 	if cfg.Liquidsoap.LogPath != "" {
 		if err := os.MkdirAll(filepath.Dir(cfg.Liquidsoap.LogPath), 0755); err != nil {
 			return fmt.Errorf("creating log directory: %w", err)
 		}
+		f, err := os.OpenFile(cfg.Liquidsoap.LogPath, os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			return fmt.Errorf("creating log file: %w", err)
+		}
+		f.Close()
 	}
 	return os.WriteFile(LiquidsoapScriptPath, buf.Bytes(), 0644)
 }
