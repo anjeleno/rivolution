@@ -66,6 +66,7 @@ func main() {
 		r.Get("/carts/{number}", dash.CartDetail)
 		r.Get("/system", dash.System)
 		r.Post("/system/service/{unit}/{action}", dash.SystemAction)
+		r.Post("/system/stereo-tool/install", dash.StereoToolInstall)
 	})
 
 	log.Printf("rivapi listening on %s", cfg.ListenAddr)

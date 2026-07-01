@@ -1,8 +1,8 @@
 # Custom systemd unit for Stereo Tool.
 # Stereo Tool processes the audio signal downstream of Liquidsoap.
-# The binary path below assumes Stereo Tool has been copied to
-# /usr/local/bin/stereo_tool by the installer. Adjust if the binary
-# is placed elsewhere.
+# The binary path below matches the default RIVAPI_STEREO_TOOL_PATH config
+# value (/home/rd/bin/stereo_tool). If RIVAPI_STEREO_TOOL_PATH is changed,
+# update ExecStart to match.
 #
 # Stereo Tool has no native sd_notify support. A readiness probe can be
 # added via ExecStartPost once its TCP/socket interface is confirmed.
@@ -19,7 +19,7 @@ PartOf=rivolution-stack.target
 Type=simple
 User=rd
 Group=rd
-ExecStart=/usr/local/bin/stereo_tool --silent
+ExecStart=/home/rd/bin/stereo_tool --silent
 Restart=on-failure
 RestartSec=5
 

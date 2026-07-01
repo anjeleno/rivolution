@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,8 +17,16 @@ import (
 
 type systemData struct {
 	baseData
-	Services []store.ServiceStatus
-	Target   string
+	Services         []store.ServiceStatus
+	Target           string
+	StereoToolPath   string
+	StereoToolArch   string
+	StereoToolExists bool
+}
+
+type stereoToolResultData struct {
+	Success bool
+	Message string
 }
 
 //go:embed templates/* static/*
@@ -49,9 +58,10 @@ var (
 	tmplCarts        = pageTmpl("carts.html")
 	tmplCartDetail   = pageTmpl("cart_detail.html")
 	tmplSystem       = pageTmpl("system.html")
-	tmplGroupsList   = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
-	tmplCartsList    = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
-	tmplSystemStatus = template.Must(template.ParseFS(assets, "templates/system_status.html"))
+	tmplGroupsList       = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
+	tmplCartsList        = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
+	tmplSystemStatus     = template.Must(template.ParseFS(assets, "templates/system_status.html"))
+	tmplStereoToolResult = template.Must(template.ParseFS(assets, "templates/stereo_tool_result.html"))
 )
 
 // Branding holds per-station display values passed to every template.
@@ -177,15 +187,28 @@ func (h *Handler) Carts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) systemData() (systemData, error) {
+	statuses, err := store.QueryStackStatus()
+	if err != nil {
+		return systemData{}, err
+	}
+	return systemData{
+		baseData:         h.base("System", "system"),
+		Services:         statuses,
+		Target:           store.StackTarget,
+		StereoToolPath:   h.cfg.StereoToolPath,
+		StereoToolArch:   store.StereoToolArch(),
+		StereoToolExists: store.StereoToolInstalled(h.cfg.StereoToolPath),
+	}, nil
+}
+
 // System handles GET /system (full page and htmx status fragment).
 func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
-	statuses, err := store.QueryStackStatus()
+	data, err := h.systemData()
 	if err != nil {
 		http.Error(w, "error querying service status", http.StatusInternalServerError)
 		return
 	}
-	data := systemData{h.base("System", "system"), statuses, store.StackTarget}
-
 	if isHTMX(r) || r.URL.Query().Get("partial") == "1" {
 		if err := tmplSystemStatus.ExecuteTemplate(w, "system_status.html", data); err != nil {
 			http.Error(w, "template error", http.StatusInternalServerError)
@@ -208,9 +231,36 @@ func (h *Handler) SystemAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statuses, _ := store.QueryStackStatus()
-	data := systemData{h.base("System", "system"), statuses, store.StackTarget}
+	data, _ := h.systemData()
 	if err := tmplSystemStatus.ExecuteTemplate(w, "system_status.html", data); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
+}
+
+// StereoToolInstall handles POST /system/stereo-tool/install.
+// Downloads and installs the Stereo Tool binary, then returns an install
+// result fragment that replaces the stereo-tool-result div.
+func (h *Handler) StereoToolInstall(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	version := strings.TrimSpace(r.FormValue("version"))
+
+	result := stereoToolResultData{Success: true}
+	if err := store.InstallStereoTool(h.cfg.StereoToolPath, version); err != nil {
+		result.Success = false
+		result.Message = err.Error()
+	} else {
+		url := store.StereoToolDownloadURL(version)
+		if version == "" {
+			result.Message = "Latest build installed from " + url
+		} else {
+			result.Message = "Version " + version + " installed from " + url
+		}
+	}
+
+	if err := tmplStereoToolResult.ExecuteTemplate(w, "stereo_tool_result.html", result); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }

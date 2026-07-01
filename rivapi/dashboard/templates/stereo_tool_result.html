@@ -1,0 +1,9 @@
+{{define "stereo_tool_result.html"}}
+<div id="stereo-tool-result">
+{{if .Success}}
+<ins>{{.Message}}</ins>
+{{else}}
+<mark>Install failed: {{.Message}}</mark>
+{{end}}
+</div>
+{{end}}

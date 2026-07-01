@@ -26,4 +26,47 @@
      hx-indicator="#status-spinner">
     <span id="status-spinner" class="htmx-indicator">Loading…</span>
 </div>
+
+<hr>
+
+<section>
+    <h3>Stereo Tool Binary</h3>
+    <p style="color: var(--pico-muted-color); margin-bottom:1rem;">
+        Architecture: <strong>{{.StereoToolArch}}</strong> &nbsp;·&nbsp;
+        Install path: <code>{{.StereoToolPath}}</code> &nbsp;·&nbsp;
+        {{if .StereoToolExists}}
+        <ins>Installed</ins>
+        {{else}}
+        <mark>Not installed</mark>
+        {{end}}
+    </p>
+
+    <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-end;">
+        <div>
+            <button hx-post="/system/stereo-tool/install"
+                    hx-target="#stereo-tool-result"
+                    hx-swap="outerHTML"
+                    hx-indicator="#st-spinner"
+                    hx-confirm="Download and install the latest Stereo Tool build? This will replace any existing binary."
+                    class="outline">
+                Install Latest
+            </button>
+        </div>
+        <form hx-post="/system/stereo-tool/install"
+              hx-target="#stereo-tool-result"
+              hx-swap="outerHTML"
+              hx-indicator="#st-spinner"
+              style="display:flex; gap:0.5rem; align-items:flex-end; margin:0;">
+            <label style="margin:0;">
+                Version
+                <input type="text" name="version" placeholder="e.g. 1030"
+                       style="width:10rem; margin:0;" required>
+            </label>
+            <button type="submit" class="outline">Install Version</button>
+        </form>
+    </div>
+
+    <span id="st-spinner" class="htmx-indicator" style="margin-top:0.5rem; display:block;">Downloading…</span>
+    <div id="stereo-tool-result"></div>
+</section>
 {{end}}

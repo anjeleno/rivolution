@@ -7,6 +7,39 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued)
+
+- `rivapi/store/stereo_tool_install.go` (new): `StereoToolArch` (detects
+  server architecture via `runtime.GOARCH`), `StereoToolDownloadURL`
+  (constructs the correct Thimeo URL for the arch and optional pinned
+  version — `jack_64` for amd64, `jack_pi2_64` for arm64),
+  `StereoToolInstalled` (checks path exists), `InstallStereoTool`
+  (downloads binary, atomic temp-file+rename install, 5-minute timeout).
+
+- `rivapi/config/config.go`: added `StereoToolPath` / `RIVAPI_STEREO_TOOL_PATH`
+  (default `/home/rd/bin/stereo_tool`; `rd`-owned path avoids privilege
+  escalation for dashboard-driven installs).
+
+- `rivapi/dashboard/handlers.go`: extracted `systemData()` helper (shared
+  by `System`, `SystemAction`, and populated Stereo Tool fields).
+  Added `StereoToolInstall` handler (`POST /system/stereo-tool/install`):
+  reads optional `version` form param, calls `store.InstallStereoTool`,
+  returns `stereo_tool_result.html` fragment.
+
+- `rivapi/dashboard/templates/system.html`: added Stereo Tool binary section
+  below the service status table — shows arch, install path, install status,
+  "Install Latest" button, and "Install Version" form (version input +
+  submit). htmx posts to `/system/stereo-tool/install` and swaps result
+  into `#stereo-tool-result`.
+
+- `rivapi/dashboard/templates/stereo_tool_result.html` (new): install
+  outcome fragment (success message or error).
+
+- `rivapi/main.go`: wired `POST /system/stereo-tool/install`.
+
+- `conf/systemd/stereo-tool.service`: updated `ExecStart` path to
+  `/home/rd/bin/stereo_tool` to match default `StereoToolPath`.
+
 ## 2026-07-01
 
 - `rivapi/store/service_status.go` (new): `QueryStackStatus` polls

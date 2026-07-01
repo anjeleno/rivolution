@@ -37,6 +37,11 @@ type Config struct {
 	StationName string
 	LogoURL     string
 	AccentColor string
+
+	// StereoToolPath is the filesystem path where the dashboard installs
+	// and expects to find the Stereo Tool binary. Defaults to /home/rd/bin/stereo_tool,
+	// which rd owns and can write to without privilege escalation.
+	StereoToolPath string
 }
 
 func Load() *Config {
@@ -62,6 +67,8 @@ func Load() *Config {
 		StationName: getenv("RIVAPI_STATION_NAME", rdConf.get("dashboard", "StationName", "Rivolution")),
 		LogoURL:     getenv("RIVAPI_LOGO_URL", rdConf.get("dashboard", "LogoURL", "")),
 		AccentColor: getenv("RIVAPI_ACCENT_COLOR", rdConf.get("dashboard", "AccentColor", "")),
+
+		StereoToolPath: getenv("RIVAPI_STEREO_TOOL_PATH", "/home/rd/bin/stereo_tool"),
 	}
 }
 
