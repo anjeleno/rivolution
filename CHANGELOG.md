@@ -7,6 +7,20 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 13)
+
+- `rivapi/store/service_status.go`: switched from `systemctl is-active`
+  to `systemctl show --property=ActiveState,SubState` for richer state
+  reporting; added `Detail` field to `ServiceStatus` surfacing informative
+  sub-states (e.g. "activating (auto-restart)", "activating (start-post)");
+  added `Warn` field and `liquidsoapWarn()` health check that reads the last
+  8 KB of the Liquidsoap log for a JACK device failure within the last 10
+  minutes — clears automatically once PipeWire bridge is running.
+- `rivapi/dashboard/templates/system_status.html`: render Detail in muted
+  text and Warn as a warning line (⚠) below the state chip.
+- `rivapi/dashboard/templates/broadcast.html`: moved "+ Add stream" and
+  "Save & Deploy" to separate rows so they don't overlap on narrow viewports.
+
 ## 2026-07-01 (continued, 12)
 
 - `rivapi/dashboard/templates/broadcast.html`: moved "+ Add stream"
