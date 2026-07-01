@@ -7,6 +7,13 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 12)
+
+- `rivapi/dashboard/templates/broadcast.html`: moved "+ Add stream"
+  button from the streams section header to below the last stream card,
+  paired with "Save & Deploy" in a bottom action row. New stream fields
+  now appear immediately above the button when clicked.
+
 ## 2026-07-01 (continued, 11)
 
 - `docs/specs/0010-systemd-stack-orchestration.md`: added implementation
