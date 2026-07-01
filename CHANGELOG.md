@@ -7,6 +7,42 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 7)
+
+- `rivapi/store/broadcast_config.go` (new): `BroadcastConfig` type
+  (station defaults, per-stream overrides, Icecast and Liquidsoap
+  config structs), `LoadBroadcastConfig` (reads JSON, returns defaults
+  when file absent), `SaveBroadcastConfig` (atomic write).
+- `rivapi/store/icecast_generator.go` (new): generates `icecast.xml`
+  from `BroadcastConfig`; `<sources>` auto-calculated from stream
+  count; installs to `/etc/icecast2/icecast.xml` via scoped
+  `sudo install`.
+- `rivapi/store/liquidsoap_generator.go` (new): generates `radio.liq`
+  from `BroadcastConfig`; MP3 uses `%mp3`, HE-AAC v1/v2 use
+  `%external` + `fdkaac` CLI with `content_type="audio/aacp"`, OGG
+  uses `%ogg(%vorbis)`.
+- `rivapi/config/config.go`: added `BroadcastConfigPath` /
+  `RIVAPI_BROADCAST_CONFIG` (default
+  `/home/rd/etc/rivolution/broadcast.json`).
+- `rivapi/dashboard/handlers_broadcast.go` (new): `Broadcast` (GET
+  `/broadcast`) and `BroadcastSave` (POST `/broadcast/save`). Save
+  flow: write JSON → generate icecast.xml → install → generate
+  radio.liq → restart icecast2 → restart liquidsoap (exit code 5
+  treated as warning, not error). Result banner embedded in page.
+- `rivapi/dashboard/templates/broadcast.html` (new): three
+  collapsible sections — Station, Icecast, Liquidsoap — plus a
+  dynamic stream list managed by Alpine.js. Add/remove streams; codec
+  dropdown (MP3/HE-AAC v1/HE-AAC v2/OGG Vorbis); per-stream metadata
+  override expander. Streams serialized as JSON into a hidden field
+  before submit.
+- `rivapi/dashboard/templates/base.html`: added Broadcast nav link.
+- `rivapi/main.go`: wired `GET /broadcast`, `POST /broadcast/save`.
+- `conf/sudoers.d/rivapi`: added `RIVAPI_INSTALL` alias for the
+  scoped `sudo install` command that writes `icecast.xml`.
+- `conf/systemd/liquidsoap.service.d/rivolution.conf`: added
+  `[Service]` section with `ExecStart` override pointing to
+  `/home/rd/etc/liquidsoap/radio.liq`.
+
 ## 2026-07-01 (continued, 6)
 
 - `docs/specs/0008-broadcast-tool-suite-integration.md`: added Phase 1
