@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -248,24 +249,61 @@ func (h *Handler) SystemAction(w http.ResponseWriter, r *http.Request) {
 }
 
 // StereoToolLaunch handles POST /system/stereo-tool/launch.
-// Starts the Stereo Tool GUI on the local display in the background.
+// Starts the Stereo Tool GUI on the local X display in the background.
 func (h *Handler) StereoToolLaunch(w http.ResponseWriter, r *http.Request) {
 	result := stereoToolResultData{Success: true, Message: "Stereo Tool launched."}
 	if !store.StereoToolInstalled(h.cfg.StereoToolPath) {
 		result.Success = false
 		result.Message = "Binary not found at " + h.cfg.StereoToolPath + " — install it first."
 	} else {
-		cmd := exec.Command(h.cfg.StereoToolPath)
-		cmd.Env = append(cmd.Environ(), "DISPLAY=:0")
-		if err := cmd.Start(); err != nil {
+		env := launchEnv()
+		if env == nil {
 			result.Success = false
-			result.Message = "Launch failed: " + err.Error()
+			result.Message = "No X11 display found — cannot launch GUI."
+		} else {
+			cmd := exec.Command(h.cfg.StereoToolPath)
+			cmd.Env = env
+			if err := cmd.Start(); err != nil {
+				result.Success = false
+				result.Message = "Launch failed: " + err.Error()
+			}
+			// Detach: we don't wait for the GUI process.
 		}
-		// Detach: we don't wait for the process.
 	}
 	if err := tmplStereoToolResult.ExecuteTemplate(w, "stereo_tool_result.html", result); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
+}
+
+// launchEnv builds an environment suitable for starting a GUI process.
+// It inherits the current process environment, then ensures DISPLAY is set:
+// using the process's own DISPLAY if present, otherwise auto-detecting the
+// first available X11 socket in /tmp/.X11-unix. Returns nil if no display
+// can be found.
+func launchEnv() []string {
+	env := os.Environ()
+
+	// Check if DISPLAY is already present in the inherited environment.
+	for _, e := range env {
+		if strings.HasPrefix(e, "DISPLAY=") && len(e) > 8 {
+			return env // already set, use as-is
+		}
+	}
+
+	// Auto-detect: scan /tmp/.X11-unix for the first available socket.
+	// Files are named X0, X10, etc.; the display is ":N".
+	entries, err := os.ReadDir("/tmp/.X11-unix")
+	if err != nil || len(entries) == 0 {
+		return nil
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if len(name) > 1 && name[0] == 'X' {
+			display := ":" + name[1:]
+			return append(env, "DISPLAY="+display)
+		}
+	}
+	return nil
 }
 
 // StereoToolInstall handles POST /system/stereo-tool/install.

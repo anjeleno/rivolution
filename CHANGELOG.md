@@ -7,6 +7,15 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 3)
+
+- `rivapi/dashboard/handlers.go`: fixed Stereo Tool GUI launch — was
+  hardcoding `DISPLAY=:0` which misses xRDP sessions on `:10` or other
+  display numbers. `launchEnv()` now uses the process's inherited DISPLAY
+  if set, otherwise auto-detects from `/tmp/.X11-unix/` (picks the first
+  available socket). Returns nil (no-op with error message) if no display
+  is found. Added `"os"` import.
+
 ## 2026-07-01 (continued, 2)
 
 - `rivapi/store/service_status.go`: renamed display label for
