@@ -6,6 +6,23 @@ This is **not** a feature roadmap or pipeline of planned work; see
 [`docs/specs/`](https://github.com/anjeleno/rivolution/tree/main/docs/specs) for that. Entries here get promoted to a real spec and
 branch once they're picked up.
 
+## `rivapi` has no systemd unit — started manually during development
+
+`rivapi` (the Go dashboard process) has no `rivapi.service` unit file yet.
+During development it is started by hand:
+
+```
+cd ~/dev/rivolution/rivapi && go build -o rivapi . && ./rivapi
+```
+
+The unit file is scoped to [spec 0010](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0010-systemd-stack-orchestration.md),
+which is where it belongs: rivapi is the process that controls the broadcast
+stack, so its own service unit is part of the same orchestration work.
+Until that unit exists, the process must be started manually after every
+reboot or restart.
+
+---
+
 ## Intermittent FOP/JIT crash during DocBook PDF builds — worked around, not eliminated
 
 **Symptom:** building any DocBook PDF target (`docs/rivwebcapi`,

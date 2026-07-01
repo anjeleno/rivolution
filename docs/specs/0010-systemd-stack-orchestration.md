@@ -204,6 +204,13 @@ units Rivolution manages.
 
 ## Files
 
+- New: `/etc/systemd/system/rivapi.service` — systemd unit for the Go
+  dashboard process itself. Runs as `rd`, starts after `network.target`
+  and `mariadb.service`, reads credentials from an `EnvironmentFile=`
+  (path TBD at installation time). `WantedBy=multi-user.target`. The
+  binary path is wherever `make install` places it (TBD; likely
+  `/usr/local/bin/rivapi` or `/usr/bin/rivapi`). During development,
+  started manually: `cd ~/dev/rivolution/rivapi && go build -o rivapi . && ./rivapi`.
 - New: `/etc/systemd/system/rivolution-stack.target`
 - New: `/etc/udev/rules.d/99-ptp.rules` (assigns `/dev/ptpN` to
   `ptp` group)
