@@ -7,6 +7,15 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 18)
+
+- `rivapi/store/liquidsoap_generator.go`: AAC stream's `output.icecast()`
+  also needs `send_icy_metadata=true` explicitly — Liquidsoap can infer
+  this for `%mp3`/`%ogg` but not for the `%external` encoder AAC streams
+  use, and errors at load time ("Could not guess send_icy_metadata for
+  this format") if left unset. Found immediately after fixing the
+  `format=` argument name above, during the same verification pass.
+
 ## 2026-07-01 (continued, 17)
 
 - `rivapi/store/liquidsoap_generator.go`: AAC stream output was passing

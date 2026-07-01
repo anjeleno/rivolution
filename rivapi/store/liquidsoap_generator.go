@@ -14,7 +14,7 @@ const LiquidsoapScriptPath = "/home/rd/etc/liquidsoap/radio.liq"
 
 var liquidsoapTmpl = template.Must(template.New("liquidsoap").Funcs(template.FuncMap{
 	"liqEncoder":    liqEncoder,
-	"contentType":   liqContentType,
+	"aacExtras":     liqAACExtras,
 	"liqStreamURL":  liqStreamURL,
 }).Parse(`#!/usr/bin/liquidsoap
 
@@ -35,7 +35,7 @@ output.icecast(
   name="{{.EffectiveName $.Station}}",
   genre="{{.EffectiveGenre $.Station}}",
   description="{{.EffectiveDescription $.Station}}",
-  url="{{liqStreamURL . $.Liquidsoap.IcecastHost $.Liquidsoap.IcecastPort}}",{{contentType .}}
+  url="{{liqStreamURL . $.Liquidsoap.IcecastHost $.Liquidsoap.IcecastPort}}",{{aacExtras .}}
   radio
 )
 {{end}}
@@ -78,14 +78,16 @@ func liqStreamURL(s StreamConfig, host string, port int) string {
 	return fmt.Sprintf("http://%s:%d%s", host, port, s.Mount)
 }
 
-// liqContentType returns the format= line for AAC streams, empty for others.
-// output.icecast's MIME-type argument is named "format" (Liquidsoap 2.4.x),
-// not "content_type" (an older API name) — passing content_type raises
-// "has no argument labeled content_type" at script load.
-func liqContentType(s StreamConfig) string {
+// liqAACExtras returns extra output.icecast() arguments needed for AAC
+// streams (which use the %external encoder), empty for others:
+//   - format: output.icecast's MIME-type argument is named "format"
+//     (Liquidsoap 2.4.x), not "content_type" (an older API name).
+//   - send_icy_metadata: Liquidsoap can infer this for known formats like
+//     %mp3, but not for %external, and errors at load time if left unset.
+func liqAACExtras(s StreamConfig) string {
 	switch s.Codec {
 	case "he-aac-v1", "he-aac-v2":
-		return "\n  format=\"audio/aacp\","
+		return "\n  format=\"audio/aacp\",\n  send_icy_metadata=true,"
 	}
 	return ""
 }
