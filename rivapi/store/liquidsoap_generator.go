@@ -78,11 +78,14 @@ func liqStreamURL(s StreamConfig, host string, port int) string {
 	return fmt.Sprintf("http://%s:%d%s", host, port, s.Mount)
 }
 
-// liqContentType returns the content_type line for AAC streams, empty for others.
+// liqContentType returns the format= line for AAC streams, empty for others.
+// output.icecast's MIME-type argument is named "format" (Liquidsoap 2.4.x),
+// not "content_type" (an older API name) — passing content_type raises
+// "has no argument labeled content_type" at script load.
 func liqContentType(s StreamConfig) string {
 	switch s.Codec {
 	case "he-aac-v1", "he-aac-v2":
-		return "\n  content_type=\"audio/aacp\","
+		return "\n  format=\"audio/aacp\","
 	}
 	return ""
 }

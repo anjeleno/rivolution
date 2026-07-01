@@ -7,6 +7,24 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 17)
+
+- `rivapi/store/liquidsoap_generator.go`: AAC stream output was passing
+  `content_type="audio/aacp"` to `output.icecast()`, an argument name
+  from an older Liquidsoap API. Liquidsoap 2.4.x's `output.icecast()`
+  has no `content_type` argument at all — the equivalent is `format`.
+  Fixed the generated field name; caught when the AAC stream's
+  `radio.liq` failed to parse and Liquidsoap auto-restart-looped.
+
+## 2026-07-01 (continued, 16)
+
+- `lib/dbversion.h`: bumped `RD_VERSION_DATABASE` 378 -> 379.
+  `utils/rddbmgr/updateschema.cpp` and `revertschema.cpp`: widen
+  `STATIONS.JACK_VERSION` from `char(16)`/`varchar(16)` to `varchar(64)`.
+  The column was sized for a real jackd's short version string; the
+  PipeWire JACK shim's `jack_get_version_string()` returns a longer
+  descriptive string that was silently failing to save.
+
 ## 2026-07-01 (continued, 15)
 
 - `rdservice/rdservice.cpp`: removed `geteuid()!=0` root check (lines
