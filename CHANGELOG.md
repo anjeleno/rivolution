@@ -7,6 +7,18 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 10)
+
+- `rivapi/store/liquidsoap_generator.go`: `liqStreamURL()` — auto-
+  generates the `url=` parameter in each `output.icecast()` call as
+  `http://icecast_host:icecast_port/mount` (the direct playback URL
+  Icecast renders as a "Listen Live" link). A per-stream URL override
+  is still accepted for reverse-proxy deployments. `station.url` no
+  longer falls through to this field — it is the station website only.
+- `rivapi/dashboard/templates/broadcast.html`: per-stream "Stream URL
+  override" field placeholder now shows the auto-computed value so the
+  operator can see what will be generated without filling it in.
+
 ## 2026-07-01 (continued, 9)
 
 - `rivapi/store/icecast_generator.go`: removed `<burst-on-connect>`,
