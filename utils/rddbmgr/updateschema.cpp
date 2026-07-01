@@ -11916,6 +11916,17 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
   }
 
 
+  if((cur_schema<379)&&(set_schema>cur_schema)) {
+    sql=QString("alter table `STATIONS` ")+
+      "modify column `JACK_VERSION` varchar(64)";
+    if(!RDSqlQuery::apply(sql,err_msg)) {
+      return false;
+    }
+
+    WriteSchemaVersion(++cur_schema);
+  }
+
+
   // NEW SCHEMA UPDATES GO HERE...
 
   //

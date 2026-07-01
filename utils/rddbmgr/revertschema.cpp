@@ -41,6 +41,20 @@ bool MainObject::RevertSchema(int cur_schema,int set_schema,QString *err_msg)
   // NEW SCHEMA REVERSIONS GO HERE...
 
   //
+  // Revert 379
+  //
+  if((cur_schema == 379) && (set_schema < cur_schema))
+  {
+    sql=QString("alter table `STATIONS` ")+
+      "modify column `JACK_VERSION` char(16)";
+    if(!RDSqlQuery::apply(sql,err_msg)) {
+      return false;
+    }
+
+    WriteSchemaVersion(--cur_schema);
+  }
+
+  //
   // Revert 378
   //
   if((cur_schema == 378) && (set_schema < cur_schema))
