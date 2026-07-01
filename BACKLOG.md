@@ -449,3 +449,23 @@ Disruptive on a live on-air machine.
 `loginctl terminate-session`, killing the stale per-user bus) suitable
 for a machine that can't just be rebooted on demand. Low priority since
 the reboot workaround, while disruptive, reliably works.
+
+## Broadcast dashboard's HE-AAC stream option can't actually encode SBR
+
+Ubuntu's packaged `libfdk-aac2` (2.0.2-3~ubuntu5) has SBR (spectral band
+replication) *encoding* disabled — the AAC-LC encoder and SBR decoder are
+patent-unencumbered and shipped, but the SBR encoder specifically carries
+a separate patent restriction some distros build out. `fdkaac --profile 5`
+(HE-AAC) and `--profile 29` (HE-AAC v2) both fail with "unsupported
+profile" on this build; only AAC-LC (`--profile 2`), AAC-LD (`23`), and
+AAC-ELD (`39`) work.
+
+**Current mitigation:** the dashboard's he-aac-v1/he-aac-v2 codec options
+both generate a plain AAC-LC stream (`liqEncoder` in
+`rivapi/store/liquidsoap_generator.go`) instead of true HE-AAC. Decent
+quality, but loses the low-bitrate efficiency SBR is chosen for.
+
+**Deferred** — real fix needs either a non-distro `fdk-aac`/`fdkaac`
+build compiled with SBR encoding enabled, or switching the
+low-bitrate-efficient stream option to a different codec (e.g. Opus,
+which isn't patent-restricted and is already linked into Liquidsoap).

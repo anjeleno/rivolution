@@ -44,20 +44,22 @@ output.icecast(
 // liqEncoder returns the Liquidsoap encoder format string for a stream.
 // AAC streams use %external piped through fdkaac (package: fdkaac, Ubuntu
 // universe). MP3 uses %mp3 (lame), OGG uses %ogg(%vorbis).
+//
+// he-aac-v1/v2 currently fall back to plain AAC-LC (fdkaac --profile 2):
+// Ubuntu's libfdk-aac2 package ships with SBR encoding disabled (patent
+// restriction on the SBR encoder specifically, separate from the
+// unencumbered AAC-LC encoder and SBR decoder) — profiles 5 (HE-AAC) and
+// 29 (HE-AAC v2) both fail with "unsupported profile" on this build.
+// Revisit if a non-distro fdk-aac build with SBR encoding becomes
+// available.
 func liqEncoder(s StreamConfig, sampleRate int) string {
 	switch s.Codec {
 	case "mp3":
 		return fmt.Sprintf("%%mp3(bitrate=%d)", s.Bitrate)
-	case "he-aac-v1":
+	case "he-aac-v1", "he-aac-v2":
 		return fmt.Sprintf(
 			"%%external(channels=2, samplerate=%d, header=false, restart_on_crash=true,\n"+
-				`    process="fdkaac --bitrate %d000 --profile 5 --raw --raw-channels 2 --raw-rate %d -i - -o -")`,
-			sampleRate, s.Bitrate, sampleRate,
-		)
-	case "he-aac-v2":
-		return fmt.Sprintf(
-			"%%external(channels=2, samplerate=%d, header=false, restart_on_crash=true,\n"+
-				`    process="fdkaac --bitrate %d000 --profile 29 --raw --raw-channels 2 --raw-rate %d -i - -o -")`,
+				`    process="fdkaac --bitrate %d000 --profile 2 --raw --raw-channels 2 --raw-rate %d -o - -")`,
 			sampleRate, s.Bitrate, sampleRate,
 		)
 	case "ogg":

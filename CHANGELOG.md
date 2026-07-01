@@ -7,6 +7,17 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 19)
+
+- `rivapi/store/liquidsoap_generator.go`: fixed the `fdkaac` command line
+  for AAC streams — Ubuntu's `fdkaac` 1.0.0 has no `-i` flag (input is a
+  positional argument, not `-i <file>`); the old `-i - -o -` failed with
+  "invalid option -- 'i'". Also switched `--profile` from 5/29 (HE-AAC)
+  to 2 (AAC-LC): Ubuntu's `libfdk-aac2` ships with SBR encoding disabled
+  (patent-restricted), so the HE-AAC profiles error "unsupported
+  profile". he-aac-v1/v2 now produce plain AAC-LC; see `BACKLOG.md` for
+  the real fix.
+
 ## 2026-07-01 (continued, 18)
 
 - `rivapi/store/liquidsoap_generator.go`: AAC stream's `output.icecast()`
