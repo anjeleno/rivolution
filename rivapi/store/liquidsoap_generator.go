@@ -13,8 +13,9 @@ import (
 const LiquidsoapScriptPath = "/home/rd/etc/liquidsoap/radio.liq"
 
 var liquidsoapTmpl = template.Must(template.New("liquidsoap").Funcs(template.FuncMap{
-	"liqEncoder":   liqEncoder,
-	"contentType":  liqContentType,
+	"liqEncoder":    liqEncoder,
+	"contentType":   liqContentType,
+	"liqStreamURL":  liqStreamURL,
 }).Parse(`#!/usr/bin/liquidsoap
 
 set("log.file.path", "{{.Liquidsoap.LogPath}}")
@@ -34,7 +35,7 @@ output.icecast(
   name="{{.EffectiveName $.Station}}",
   genre="{{.EffectiveGenre $.Station}}",
   description="{{.EffectiveDescription $.Station}}",
-  url="{{.EffectiveURL $.Station}}",{{contentType .}}
+  url="{{liqStreamURL . $.Liquidsoap.IcecastHost $.Liquidsoap.IcecastPort}}",{{contentType .}}
   radio
 )
 {{end}}
@@ -64,6 +65,17 @@ func liqEncoder(s StreamConfig, sampleRate int) string {
 	default:
 		return fmt.Sprintf("%%mp3(bitrate=%d)", s.Bitrate)
 	}
+}
+
+// liqStreamURL returns the direct playback URL for a stream. When the stream
+// has an explicit URL override it is used as-is; otherwise the URL is
+// constructed from the Icecast host, port, and mount so that Icecast renders
+// a correct "Listen Live" link for the mount.
+func liqStreamURL(s StreamConfig, host string, port int) string {
+	if s.URL != "" {
+		return s.URL
+	}
+	return fmt.Sprintf("http://%s:%d%s", host, port, s.Mount)
 }
 
 // liqContentType returns the content_type line for AAC streams, empty for others.

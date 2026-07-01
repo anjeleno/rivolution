@@ -234,10 +234,10 @@
                                :placeholder="station.description || '(station default)'">
                     </label>
                     <label>
-                        Station website URL override
+                        Stream URL override
                         <input type="text" :value="s.url" @input="s.url = $event.target.value"
-                               :placeholder="station.url || 'https://yourstation.com'">
-                        <small>Overrides the station website URL for this stream only.</small>
+                               :placeholder="'http://' + liquidsoap.icecast_host + ':' + liquidsoap.icecast_port + s.mount">
+                        <small>Icecast "Listen Live" link for this stream. Auto-generated from host:port/mount — only set this if the public URL differs (e.g. behind a reverse proxy).</small>
                     </label>
                 </div>
             </details>
