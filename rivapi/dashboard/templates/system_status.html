@@ -1,5 +1,8 @@
 {{define "system_status.html"}}
 <div id="service-status">
+{{if .ActionError}}
+<mark style="display:block; margin-bottom:1rem;">{{.ActionError}}</mark>
+{{end}}
     <table>
         <thead>
             <tr>

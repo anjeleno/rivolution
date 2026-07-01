@@ -7,6 +7,27 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 2)
+
+- `rivapi/store/service_status.go`: renamed display label for
+  `rivendell.service` from "Rivendell" to "Rivolution".
+
+- `rivapi/dashboard/handlers.go`: `SystemAction` now always returns HTTP
+  200 — control errors are embedded in the returned status fragment via
+  `ActionError` rather than returning a 4xx that htmx silently ignores.
+  Added 400ms settle delay after a successful action so systemd state is
+  current before querying. Added `StereoToolLaunch` handler (`POST
+  /system/stereo-tool/launch`): starts the binary with `DISPLAY=:0` in
+  the background; returns a result fragment.
+
+- `rivapi/dashboard/templates/system_status.html`: renders `ActionError`
+  as a visible banner when set.
+
+- `rivapi/dashboard/templates/system.html`: added "Launch GUI" button for
+  Stereo Tool (`POST /system/stereo-tool/launch`).
+
+- `rivapi/main.go`: wired `POST /system/stereo-tool/launch`.
+
 ## 2026-07-01 (continued)
 
 - `rivapi/store/stereo_tool_install.go` (new): `StereoToolArch` (detects

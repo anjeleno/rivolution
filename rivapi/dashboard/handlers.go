@@ -6,7 +6,9 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -22,6 +24,7 @@ type systemData struct {
 	StereoToolPath   string
 	StereoToolArch   string
 	StereoToolExists bool
+	ActionError      string // non-empty when the last control action failed
 }
 
 type stereoToolResultData struct {
@@ -221,18 +224,46 @@ func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
 }
 
 // SystemAction handles POST /system/service/{unit}/{action}.
-// Runs the requested systemctl action then returns the updated status fragment.
+// Always returns 200 with the updated status fragment. Errors from the
+// control action are embedded in the fragment (ActionError field) so the
+// user sees the problem instead of a silent no-op. A brief settle delay
+// gives systemd time to reflect the new state before we query it.
 func (h *Handler) SystemAction(w http.ResponseWriter, r *http.Request) {
 	unit := chi.URLParam(r, "unit")
 	action := chi.URLParam(r, "action")
 
+	var actionErr string
 	if err := store.ControlUnit(unit, action); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		actionErr = err.Error()
+	} else {
+		// Give systemd ~400ms to settle before querying the new state.
+		time.Sleep(400 * time.Millisecond)
 	}
 
 	data, _ := h.systemData()
+	data.ActionError = actionErr
 	if err := tmplSystemStatus.ExecuteTemplate(w, "system_status.html", data); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
+}
+
+// StereoToolLaunch handles POST /system/stereo-tool/launch.
+// Starts the Stereo Tool GUI on the local display in the background.
+func (h *Handler) StereoToolLaunch(w http.ResponseWriter, r *http.Request) {
+	result := stereoToolResultData{Success: true, Message: "Stereo Tool launched."}
+	if !store.StereoToolInstalled(h.cfg.StereoToolPath) {
+		result.Success = false
+		result.Message = "Binary not found at " + h.cfg.StereoToolPath + " — install it first."
+	} else {
+		cmd := exec.Command(h.cfg.StereoToolPath)
+		cmd.Env = append(cmd.Environ(), "DISPLAY=:0")
+		if err := cmd.Start(); err != nil {
+			result.Success = false
+			result.Message = "Launch failed: " + err.Error()
+		}
+		// Detach: we don't wait for the process.
+	}
+	if err := tmplStereoToolResult.ExecuteTemplate(w, "stereo_tool_result.html", result); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }

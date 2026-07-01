@@ -43,6 +43,14 @@
 
     <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-end;">
         <div>
+            <button hx-post="/system/stereo-tool/launch"
+                    hx-target="#stereo-tool-result"
+                    hx-swap="outerHTML"
+                    class="outline secondary">
+                Launch GUI
+            </button>
+        </div>
+        <div>
             <button hx-post="/system/stereo-tool/install"
                     hx-target="#stereo-tool-result"
                     hx-swap="outerHTML"
