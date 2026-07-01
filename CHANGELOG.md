@@ -7,6 +7,18 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 6)
+
+- `docs/specs/0008-broadcast-tool-suite-integration.md`: added Phase 1
+  implementation plan — `BroadcastConfig` data model (station defaults,
+  per-stream overrides, Icecast and Liquidsoap config structs), Icecast
+  XML and Liquidsoap `.liq` generators, Save & Deploy flow, `/broadcast`
+  dashboard UI design (stream list with add/remove/codec/bitrate,
+  per-stream metadata overrides), `fdkaac` bundled dependency decision,
+  deployment topology note (source-server vs public streaming), and
+  Verification section. Critical note updated to reference the spec 0010
+  stack start-order solution.
+
 ## 2026-07-01 (continued, 5)
 
 - `conf/systemd/rivendell.service.d/rivolution.conf`,
