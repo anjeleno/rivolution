@@ -68,7 +68,7 @@ func liqEncoder(s StreamConfig, sampleRate int) string {
 			sampleRate, s.Bitrate, sampleRate,
 		)
 	case "ogg":
-		return fmt.Sprintf("%%ogg(%%vorbis(bitrate=%d))", s.Bitrate)
+		return fmt.Sprintf("%%ogg(%%vorbis(quality=%.1f))", s.Quality)
 	default:
 		return fmt.Sprintf("%%mp3(bitrate=%d)", s.Bitrate)
 	}

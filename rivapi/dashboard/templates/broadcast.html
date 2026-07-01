@@ -183,16 +183,20 @@
                 </label>
                 <label>
                     Codec
-                    <select @change="s.codec = $event.target.value">
+                    <select @change="setCodec(s, $event.target.value)">
                         <option value="mp3"      :selected="s.codec === 'mp3'">MP3</option>
-                        <option value="he-aac-v1" :selected="s.codec === 'he-aac-v1'">HE-AAC v1 (AAC+)</option>
-                        <option value="he-aac-v2" :selected="s.codec === 'he-aac-v2'">HE-AAC v2 (AAC+ PS)</option>
+                        <option value="he-aac-v1" :selected="s.codec === 'he-aac-v1'">HE-AAC v1 (AAC+, currently AAC-LC — see BACKLOG.md)</option>
+                        <option value="he-aac-v2" :selected="s.codec === 'he-aac-v2'">HE-AAC v2 (AAC+ PS, currently AAC-LC — see BACKLOG.md)</option>
                         <option value="ogg"      :selected="s.codec === 'ogg'">OGG Vorbis</option>
                     </select>
                 </label>
-                <label>
+                <label x-show="s.codec !== 'ogg'">
                     Bitrate (kbps)
                     <input type="number" :value="s.bitrate" @input="s.bitrate = +$event.target.value" min="8" max="320">
+                </label>
+                <label x-show="s.codec === 'ogg'">
+                    Quality (<span x-text="s.quality"></span> — -0.2 lowest, 1.0 highest, 0.3 is a reasonable default)
+                    <input type="range" :value="s.quality" @input="s.quality = +$event.target.value" min="-0.2" max="1.0" step="0.1">
                 </label>
                 <div style="padding-top:1.5rem;">
                     <button type="button" @click="streams.splice(i, 1)"
@@ -271,8 +275,18 @@ function broadcastConfig(initial) {
                 mount: '/stream' + (this.streams.length + 1),
                 codec: 'mp3',
                 bitrate: 128,
+                quality: 0.3,
                 name: '', genre: '', description: '', url: ''
             });
+        },
+        // Vorbis has no bitrate= parameter (it's VBR quality-based), so
+        // switching to/from "ogg" needs to seed a sane default for
+        // whichever field the codec actually uses.
+        setCodec(s, codec) {
+            s.codec = codec;
+            if (codec === 'ogg' && !s.quality) {
+                s.quality = 0.3;
+            }
         }
     }
 }

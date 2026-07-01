@@ -7,6 +7,20 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 21)
+
+- `rivapi/store/broadcast_config.go`: added `StreamConfig.Quality`
+  (float64) for Vorbis VBR quality, separate from `Bitrate`.
+  `rivapi/store/liquidsoap_generator.go`: ogg streams now generate
+  `%vorbis(quality=...)` instead of `%vorbis(bitrate=...)` — Liquidsoap's
+  Vorbis encoder has no `bitrate` parameter at all ("unknown parameter
+  name (bitrate)"), it's quality/VBR-based, same class of API-version
+  mismatch as the AAC argument-name fixes above.
+  `rivapi/dashboard/templates/broadcast.html`: the stream form now shows
+  a Quality slider (-0.2 to 1.0) instead of the Bitrate field when codec
+  is "ogg", so the dashboard only ever presents fields the encoder
+  actually accepts.
+
 ## 2026-07-01 (continued, 20)
 
 - `rivapi/store/liquidsoap_generator.go`: added the missing `-f 2`
