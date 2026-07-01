@@ -7,6 +7,17 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 11)
+
+- `docs/specs/0010-systemd-stack-orchestration.md`: added implementation
+  deviation note and deployment prerequisite warning for the
+  `rivendell.service.d/rivolution.conf` drop-in. `rdservice/rdservice.cpp`
+  lines 89–92 contain a hardcoded `geteuid()!=0` check that exits with
+  `ExitNoPerms` when the service runs as `rd`; combined with
+  `Restart=always` and a 30-second `ExecStartPost` probe this creates a
+  ~32-second infinite restart cycle. The drop-in must not be deployed
+  until the check is removed and `rdservice` rebuilt.
+
 ## 2026-07-01 (continued, 10)
 
 - `rivapi/store/liquidsoap_generator.go`: `liqStreamURL()` — auto-

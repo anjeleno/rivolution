@@ -335,6 +335,16 @@ sudo cp conf/systemd/rivolution-stack.target /etc/systemd/system/
 sudo cp conf/systemd/rivendell.service.d/rivolution.conf /etc/systemd/system/rivendell.service.d/
 ```
 
+> **Prerequisite:** the `rivendell.service.d/rivolution.conf` drop-in
+> sets `User=rd`. This will not work until `rdservice` is rebuilt with
+> the `geteuid()!=0` check removed from
+> `rdservice/rdservice.cpp:89–92`. Installing the drop-in against an
+> unmodified binary causes `rdservice` to exit immediately with
+> "this service requires root" and enter an infinite restart loop
+> (`Restart=always` + a 30-second `ExecStartPost` probe = ~32s per
+> cycle). Do not install this drop-in until the rebuilt binary is
+> confirmed deployed.
+
 ```
 sudo cp conf/systemd/icecast2.service.d/rivolution.conf /etc/systemd/system/icecast2.service.d/
 ```
@@ -425,3 +435,18 @@ packaging effort not yet started.
   Stereo Tool requires a custom unit file (`stereo-tool.service`);
   Tailscale's upstream unit (`tailscaled.service`) needs only a `Wants=`
   entry in the target.
+- **2026-07-01:** Phase 1 `User=rd` drop-in **requires a C++ change
+  before deployment.** `rdservice/rdservice.cpp:89–92` contains a hard
+  `geteuid()!=0` check that logs "this service requires root" and exits
+  with `ExitNoPerms` (status 11) immediately, before any initialization.
+  With the drop-in installed and `Restart=always` + `RestartSec=2` in
+  the base unit, the 30-second `ExecStartPost=` caed probe creates a
+  ~32-second restart cycle (service exits → probe runs its 30s timeout
+  → restart fires → repeat). The fix is to remove lines 89–92 from
+  `rdservice/rdservice.cpp` and rebuild `rdservice` before deploying the
+  drop-in. The drop-in source at
+  `conf/systemd/rivendell.service.d/rivolution.conf` is the correct
+  target state; it must not be copied to `/etc/systemd/system/` until
+  the rebuilt binary is in place. Tailscale intentionally excluded from
+  `PartOf=rivolution-stack.target` — stopping the broadcast stack must
+  not kill the VPN.
