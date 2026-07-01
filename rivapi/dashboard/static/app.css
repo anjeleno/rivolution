@@ -1,0 +1,84 @@
+/* Site-level overrides — keep minimal; Pico.css handles the rest */
+
+:root {
+    --rivolution-accent: #1971c2; /* default; overridden via inline style on <html> when station accent color is set */
+}
+
+nav.rivolution-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+nav.rivolution-nav .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: inherit;
+}
+
+nav.rivolution-nav .brand img {
+    height: 2rem;
+    width: auto;
+}
+
+nav.rivolution-nav .nav-links {
+    display: flex;
+    gap: 1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+}
+
+nav.rivolution-nav .nav-links a {
+    text-decoration: none;
+    color: var(--pico-secondary);
+}
+
+nav.rivolution-nav .nav-links a:hover,
+nav.rivolution-nav .nav-links a.active {
+    color: var(--pico-primary);
+}
+
+nav.rivolution-nav .nav-end {
+    margin-left: auto;
+}
+
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline;
+}
+
+main.dashboard-content {
+    padding: 1.5rem;
+}
+
+table th {
+    white-space: nowrap;
+}
+
+.tag-audio    { color: var(--pico-primary); }
+.tag-macro    { color: var(--pico-secondary); }
+
+.flash-error {
+    color: var(--pico-del-color);
+    margin-bottom: 1rem;
+}
+
+/* Theme toggle — small icon button, no background fill */
+button.theme-toggle {
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    line-height: 1;
+    min-width: unset;
+    width: auto;
+    border-radius: var(--pico-border-radius);
+}

@@ -16,10 +16,48 @@ func NewGroupDB(db *sql.DB) *GroupDB {
 }
 
 func (g *GroupDB) ListGroups(ctx context.Context, username string) ([]Group, error) {
+	// Users with ADMIN_CONFIG_PRIV='Y' see all groups — same behaviour as RDAdmin,
+	// which queries GROUPS directly rather than filtering through USER_PERMS.
+	if g.IsAdmin(ctx, username) {
+		return g.listAllGroups(ctx)
+	}
 	// mirrors web/rdxport/groups.cpp:46 — permission-filtered group list
 	rows, err := g.db.QueryContext(ctx,
 		"SELECT `GROUP_NAME` FROM `USER_PERMS` WHERE `USER_NAME` = ? ORDER BY `GROUP_NAME`",
 		username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var groups []Group
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		grp, err := g.fetchGroup(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+		if grp != nil {
+			groups = append(groups, *grp)
+		}
+	}
+	return groups, rows.Err()
+}
+
+func (g *GroupDB) IsAdmin(ctx context.Context, username string) bool {
+	var priv string
+	err := g.db.QueryRowContext(ctx,
+		"SELECT COALESCE(`ADMIN_CONFIG_PRIV`,'N') FROM `USERS` WHERE `LOGIN_NAME` = ?",
+		username,
+	).Scan(&priv)
+	return err == nil && priv == "Y"
+}
+
+func (g *GroupDB) listAllGroups(ctx context.Context) ([]Group, error) {
+	rows, err := g.db.QueryContext(ctx, "SELECT `NAME` FROM `GROUPS` ORDER BY `NAME`")
 	if err != nil {
 		return nil, err
 	}

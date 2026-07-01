@@ -1,0 +1,30 @@
+{{define "page"}}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/carts">Carts</a></li>
+        <li>{{.Cart.Number}} — {{.Cart.Title}}</li>
+    </ul>
+</nav>
+
+<article>
+    <header>
+        <h3>Cart {{.Cart.Number}} <small class="tag-{{.Cart.Type}}">{{.Cart.Type}}</small></h3>
+    </header>
+    <dl>
+        <dt>Title</dt>      <dd>{{.Cart.Title}}</dd>
+        <dt>Artist</dt>     <dd>{{.Cart.Artist}}</dd>
+        <dt>Album</dt>      <dd>{{.Cart.Album}}</dd>
+        {{if .Cart.Year}}<dt>Year</dt><dd>{{.Cart.Year}}</dd>{{end}}
+        <dt>Group</dt>      <dd><a href="/carts?group={{.Cart.GroupName}}">{{.Cart.GroupName}}</a></dd>
+        <dt>Label</dt>      <dd>{{.Cart.Label}}</dd>
+        <dt>Client</dt>     <dd>{{.Cart.Client}}</dd>
+        <dt>Agency</dt>     <dd>{{.Cart.Agency}}</dd>
+        <dt>Publisher</dt>  <dd>{{.Cart.Publisher}}</dd>
+        <dt>Composer</dt>   <dd>{{.Cart.Composer}}</dd>
+        <dt>User-defined</dt><dd>{{.Cart.UserDefined}}</dd>
+        <dt>Avg length</dt> <dd>{{.Cart.AverageLength}}</dd>
+        <dt>Forced length</dt><dd>{{.Cart.ForcedLength}}</dd>
+        <dt>Cuts</dt>       <dd>{{.Cart.CutQuantity}}</dd>
+    </dl>
+</article>
+{{end}}

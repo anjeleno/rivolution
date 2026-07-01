@@ -1,0 +1,28 @@
+{{if .Groups}}
+<figure>
+<table role="grid">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Cart type</th>
+            <th>Cart range</th>
+            <th>Enforce range</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .Groups}}
+    <tr>
+        <td><a href="/carts?group={{.Name}}">{{.Name}}</a></td>
+        <td>{{.Description}}</td>
+        <td>{{if .DefaultCartType}}{{.DefaultCartType}}{{else}}any{{end}}</td>
+        <td>{{.DefaultLowCart}}–{{.DefaultHighCart}}</td>
+        <td>{{if .EnforceCartRange}}yes{{else}}no{{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+</figure>
+{{else}}
+<p>No groups found for this user.</p>
+{{end}}

@@ -1,0 +1,32 @@
+{{if .Carts}}
+<figure>
+<table role="grid">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Type</th>
+            <th>Group</th>
+            <th>Title</th>
+            <th>Artist</th>
+            <th>Length</th>
+            <th>Cuts</th>
+        </tr>
+    </thead>
+    <tbody>
+    {{range .Carts}}
+    <tr>
+        <td><a href="/carts/{{.Number}}">{{.Number}}</a></td>
+        <td><span class="tag-{{.Type}}">{{.Type}}</span></td>
+        <td>{{.GroupName}}</td>
+        <td>{{.Title}}</td>
+        <td>{{.Artist}}</td>
+        <td>{{.AverageLength}}</td>
+        <td>{{.CutQuantity}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+</figure>
+{{else}}
+<p>No carts found.</p>
+{{end}}
