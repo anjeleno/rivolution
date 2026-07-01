@@ -31,6 +31,8 @@ const StackTarget = "rivolution-stack.target"
 // ManagedUnits is the ordered list of individual services the dashboard controls.
 // Units not yet installed return state "unknown" and are displayed accordingly.
 var ManagedUnits = []StackUnit{
+	{"pipewire-system.service", "PipeWire", false},
+	{"wireplumber-system.service", "WirePlumber", false},
 	{"rivendell.service", "Rivolution", true},
 	{"icecast2.service", "Icecast", false},
 	{"liquidsoap.service", "Liquidsoap", false},
