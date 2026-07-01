@@ -42,6 +42,10 @@ type Config struct {
 	// and expects to find the Stereo Tool binary. Defaults to /home/rd/bin/stereo_tool,
 	// which rd owns and can write to without privilege escalation.
 	StereoToolPath string
+
+	// BroadcastConfigPath is where the broadcast dashboard persists its
+	// JSON config (station, Icecast, Liquidsoap, stream list).
+	BroadcastConfigPath string
 }
 
 func Load() *Config {
@@ -68,7 +72,8 @@ func Load() *Config {
 		LogoURL:     getenv("RIVAPI_LOGO_URL", rdConf.get("dashboard", "LogoURL", "")),
 		AccentColor: getenv("RIVAPI_ACCENT_COLOR", rdConf.get("dashboard", "AccentColor", "")),
 
-		StereoToolPath: getenv("RIVAPI_STEREO_TOOL_PATH", "/home/rd/bin/stereo_tool"),
+		StereoToolPath:      getenv("RIVAPI_STEREO_TOOL_PATH", "/home/rd/bin/stereo_tool"),
+		BroadcastConfigPath: getenv("RIVAPI_BROADCAST_CONFIG", "/home/rd/etc/rivolution/broadcast.json"),
 	}
 }
 

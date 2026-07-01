@@ -23,4 +23,7 @@ Cmnd_Alias RIVAPI_SYSTEMCTL = \
     /usr/bin/systemctl stop tailscaled.service, \
     /usr/bin/systemctl restart tailscaled.service
 
-rd ALL=(root) NOPASSWD: RIVAPI_SYSTEMCTL
+Cmnd_Alias RIVAPI_INSTALL = \
+    /usr/bin/install -o root -g icecast -m 640 /home/rd/etc/icecast/icecast.xml /etc/icecast2/icecast.xml
+
+rd ALL=(root) NOPASSWD: RIVAPI_SYSTEMCTL, RIVAPI_INSTALL
