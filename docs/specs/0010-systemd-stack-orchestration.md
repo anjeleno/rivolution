@@ -1,26 +1,29 @@
 # 0010 — Systemd stack orchestration
 
 **Date:** 2026-06-30
+**Revised:** 2026-07-01
 
 ## Goal
 
-Define how the full Rivolution broadcast stack — PipeWire, WirePlumber,
-`caed`, Icecast, Liquidsoap — is orchestrated as a reliable, correctly
-ordered set of systemd units with guaranteed startup sequencing and
-live-playout-safe reconfiguration, managed exclusively through the Go
-dashboard (`0005-go-api-foundation.md`). No operator should ever need
-to touch a systemd unit file or restart a service from a terminal.
+Define how the full Rivolution broadcast stack — Rivendell (including
+`caed`), Icecast, Liquidsoap, Stereo Tool, and Tailscale — is
+orchestrated as a reliable, correctly ordered set of systemd units with
+guaranteed startup sequencing and live-playout-safe reconfiguration,
+managed exclusively through the Go dashboard
+(`0005-go-api-foundation.md`). No operator should ever need to touch a
+systemd unit file or restart a service from a terminal.
 
 ## Background
 
 ### Current state
 
-External tools (Icecast, Liquidsoap, JACK patches) are launched via
-desktop shortcuts and scripts in a specific, manually maintained order.
-Race conditions occur when services start before their dependencies are
-ready to accept connections — a timing failure, not an ordering failure,
-and not fixable by boot-time scripts. No mechanism exists to apply
-configuration changes without potentially interrupting live audio.
+External tools (Icecast, Liquidsoap, JACK patches, Stereo Tool) are
+launched via desktop shortcuts and scripts in a specific, manually
+maintained order. Race conditions occur when services start before their
+dependencies are ready to accept connections — a timing failure, not an
+ordering failure, and not fixable by boot-time scripts. No mechanism
+exists to apply configuration changes without potentially interrupting
+live audio.
 
 The unified installer (`anjeleno/rivolution-unified-installer`) lays
 down all packages and configuration files but provides no orchestration:
@@ -28,20 +31,45 @@ every installed service starts independently, with no inter-service
 dependency knowledge. The result is a working set of parts that don't
 reliably communicate at startup or after a reboot.
 
-### `caed` permissions: prerequisite for PipeWire integration
+### `caed` permissions: two-phase migration
 
 `caed` currently runs as root — a legacy practice from early Rivendell
-that is incompatible with PipeWire, whose session daemon runs under the
-`rd` user account. A root-owned process cannot reach a user-session
-PipeWire socket by default (`PIPEWIRE_RUNTIME_DIR` is not visible to
-root). The decision to run `caed` as the `rd` user is already locked in
-`0007-pipewire-audio-engine.md`; implementing it is a prerequisite for
-the PipeWire portions of this spec and must land in the same PR that
-adds the `caed.service` drop-in override. The required changes are
-already listed in the [Files](#files) section below. Services that depend
-on the JACK/PipeWire path (Liquidsoap, persistent patch connections)
-also benefit from this change since they currently work by coincidence
-when JACK runs under the same root environment as `caed`.
+that is incompatible with PipeWire, whose system-wide daemon runs under
+the `rd` user account. A root-owned process cannot reach a system-scope
+PipeWire socket set up under a different identity.
+
+`caed` is not a standalone systemd unit. The upstream `rivendell.service`
+unit runs `rdservice`, which spawns `caed`, `ripcd`, `rdcatchd`, and
+other daemons as child processes. All inherit root. The migration to
+non-root happens in two phases:
+
+**Phase 1 (this spec's implementation):** Write a drop-in override for
+`rivendell.service` that sets `User=rd`, `Group=rd`. All subprocesses
+inherit the change. This is safe — the `rd` account is the standard
+Rivendell service account, and Rivendell's own permission model is
+designed around it. `LimitRTPRIO=99` is added at this level so that
+`caed`'s real-time scheduling needs are met without requiring root.
+
+**Phase 1.5 (immediately after Phase 1 is verified, not deferred):**
+Split `caed` out as its own standalone `caed.service` unit with its own
+`User=`, `Group=`, and resource limits. Requires modifying `rdservice`
+to skip spawning `caed` when the standalone unit is active. This is the
+target state: `caed` gets per-process isolation; other rdservice children
+retain their existing resource profile.
+
+The `rd` user account is the standard service account on all properly
+installed Rivendell systems; the installer creates it unconditionally.
+Unit files in this spec hardcode `rd`. A configurable service account
+name is a future installer concern, not a Phase 1 requirement.
+
+### VLC audio routing: not a systemd stack concern
+
+VLC is used ad-hoc to capture live audio and route it into Rivendell.
+It is not a background service and has no place in the systemd stack.
+Its audio path — VLC output → Rivendell input — is established by
+WirePlumber persistent routing policy (spec 0007/0008 territory).
+When VLC is launched, WirePlumber automatically reconnects its audio
+port to the correct Rivendell input. No unit file required.
 
 ### The race condition, precisely
 
@@ -55,14 +83,11 @@ immediately on its own start will fail intermittently depending on
 actual process initialization time, producing exactly the race condition
 this spec must eliminate.
 
-The correct fix is **readiness signaling**: `caed` and PipeWire must
-signal systemd explicitly when they are fully initialized and accepting
-clients, so that no dependent service is started until that signal
-arrives. This requires `Type=notify` in the service unit (the service
-calls `sd_notify(0, "READY=1")` at the point it is actually ready) or,
-where modifying the daemon for `sd_notify` isn't yet practical, a
-`ExecStartPost=` health-probe loop that polls until the service's socket
-or API endpoint responds.
+The correct fix is **readiness signaling**: services with downstream
+dependents must signal systemd explicitly when they are fully
+initialized and accepting clients, via `Type=notify` (the service calls
+`sd_notify(0, "READY=1")`) or an `ExecStartPost=` health-probe loop that
+polls until the service's socket or API endpoint responds.
 
 ## Design
 
@@ -74,10 +99,9 @@ monitors.
 
 **The target file is stable infrastructure — it is never regenerated
 or rebuilt when operator configuration changes.** It declares `Wants=`
-for every service the stack may run (Icecast, Liquidsoap, Stereo Tool,
-PipeWire, WirePlumber, `caed`). Whether a given service actually runs
-is controlled entirely by `systemctl enable` / `systemctl disable` (or
-`systemctl mask` for hard prevention). The dashboard calls enable/
+for every service the stack may run. Whether a given service actually
+runs is controlled entirely by `systemctl enable` / `systemctl disable`
+(or `systemctl mask` for hard prevention). The dashboard calls enable/
 disable + start/stop for immediate effect; it never rewrites the target
 file itself. The one exception is when a new custom unit file must be
 *created* (e.g., a new per-station AES67 bridge unit) — in that case
@@ -85,57 +109,81 @@ the dashboard writes the new unit file and calls `systemctl daemon-reload`
 transparently. This model is safe for live stations: a misconfigured
 unit that fails to start does not bring down other units in the target.
 
-Service dependencies within the target:
+#### Phase 1 dependency chain
+
+```
+rivendell.service  (caed + ripcd + rdcatchd + others, User=rd via drop-in)
+  ├── icecast2.service         (After=rivendell.service)
+  │     └── liquidsoap.service (After=icecast2.service)
+  │           └── stereo-tool.service (After=liquidsoap.service)
+  └── [RDAirPlay managed as a child of rdservice, not a separate unit]
+
+tailscaled.service  (independent — no audio-path dependency)
+```
+
+Icecast must be running before Liquidsoap because Liquidsoap pushes the
+encoded stream to Icecast's source port. `rivendell.service` must be
+active before Icecast and Liquidsoap because Liquidsoap reads audio from
+Rivendell's audio ports. Stereo Tool processes the signal downstream of
+Liquidsoap.
+
+Tailscale has no dependency on the audio path and is managed
+independently within the target. Its ordering relative to the audio
+chain is irrelevant.
+
+#### Phase 1.5 dependency chain (after caed split)
+
+Once `caed` is extracted into its own unit:
 
 ```
 pipewire-system.service
   └── wireplumber-system.service (After=, Requires=)
-        └── caed.service (After=, Requires=)
-              ├── icecast2.service (After=)
-              └── rivendell-airplay.service (After=, if managed)
-                    └── liquidsoap.service (After=)
-```
+        └── caed.service         (After=, Requires=; User=rd, LimitRTPRIO=99)
+              ├── icecast2.service
+              │     └── liquidsoap.service
+              │           └── stereo-tool.service
+              └── [rivendell.service minus caed: ripcd, rdcatchd, etc.]
 
-Icecast must be running before Liquidsoap because Liquidsoap pushes the
-encoded stream to Icecast's source port — Liquidsoap's own startup fails
-or produces connection errors if Icecast isn't already accepting
-connections. `caed` must be ready (not just started) before Liquidsoap
-because Liquidsoap reads audio from Rivendell's PipeWire ports.
+tailscaled.service  (independent)
+```
 
 ### Readiness signaling
 
-Every service in the chain that has a downstream dependent must use
-`Type=notify` or an equivalent readiness mechanism:
+Every service in the chain that has a downstream dependent must signal
+readiness before those dependents start:
 
-- **`pipewire-system.service`** — the upstream PipeWire package already
-  ships this unit; verify it uses `Type=notify` on Ubuntu 26.04. If not,
-  a `ExecStartPost` probe polling the PipeWire socket until it accepts
-  a connection is the fallback.
-- **`wireplumber-system.service`** — same: verify or add a health probe.
-- **`caed.service`** — `caed` does not currently implement `sd_notify`.
-  Until it does, `ExecStartPost` with a loop that polls `rdcae` or the
-  `caed` TCP port until it responds is the required approach. Adding
-  native `sd_notify` support to `caed` is the correct long-term fix and
-  should happen as part of this spec's implementation, not deferred.
-- **`icecast2.service`** — Icecast's own unit should be verified;
-  a simple `ExecStartPost` HTTP probe against the status endpoint
-  (`http://localhost:8000/status.xsl`) is sufficient if native notify
-  isn't available.
+- **`rivendell.service` (Phase 1):** `rdservice` does not implement
+  `sd_notify`. Add an `ExecStartPost=` health probe that polls `caed`'s
+  TCP port (5005) until it accepts a connection. Once that succeeds,
+  `rivendell.service` is considered fully ready. This is the proxy for
+  caed readiness while caed lives inside rdservice.
+- **`icecast2.service`:** Verify the upstream unit's readiness mechanism.
+  If absent, add an `ExecStartPost=` HTTP probe against
+  `http://localhost:8000/status.xsl`.
+- **`liquidsoap.service`:** Verify or add a readiness probe.
+- **`stereo-tool.service`:** Custom unit; include a probe appropriate to
+  Stereo Tool's API or port.
+- **`caed.service` (Phase 1.5):** Add native `sd_notify(0, "READY=1")`
+  support to `cae/cae.cpp` at the point caed has connected to PipeWire
+  and is accepting protocol connections. The `ExecStartPost` probe is
+  the interim fallback until that lands.
+- **`pipewire-system.service` / `wireplumber-system.service` (Phase 1.5):**
+  Verify upstream units use `Type=notify` on Ubuntu 26.04; add probes if
+  not.
 
 ### Live-playout protection
 
-**The dashboard never restarts `caed`, PipeWire, or RDAirPlay as an
-implicit side effect of writing configuration.** This is a first-class
-design principle, not a preference. Every config change the dashboard
-makes falls into exactly one of three categories:
+**The dashboard never restarts `rivendell.service`, or any audio-path
+service, as an implicit side effect of writing configuration.** Every
+config change the dashboard makes falls into exactly one of three
+categories:
 
 **1. Zero-disruption — applies immediately, no restart of any audio
 service:**
 - WirePlumber routing policy changes: `wpctl` command plus a policy
   file update. Applies live to the running graph.
 - Icecast mount/metadata/password changes: restart `icecast2.service`
-  only. The audio path (caed → PipeWire → Liquidsoap → Icecast) is
-  unaffected; Liquidsoap reconnects automatically after Icecast restarts.
+  only. Liquidsoap reconnects automatically after Icecast restarts.
 - Liquidsoap script-only changes that don't alter source or sink
   definitions: restart `liquidsoap.service` only.
 
@@ -148,7 +196,7 @@ service:**
 
 **3. Explicit user action only — requires warning and confirmation:**
 - Full stack restart (`rivolution-stack.target` stop/start).
-- `caed` restart in isolation (interrupts all audio).
+- `rivendell.service` restart in isolation (interrupts all audio).
 - Any restart that touches the live playout path.
 
 The dashboard's confirmation dialog for category 3 must state plainly
@@ -156,18 +204,22 @@ that live audio will be interrupted and must offer the option to cancel.
 
 ### RDAirPlay restart behavior
 
-Restarting `caed` does not implicitly restart `rivendell-airplay.service`
-or any other Rivendell GUI application. If a full stack restart is
-requested, the dashboard offers an explicit toggle: "also restart
-RDAirPlay" (default: off). When RDAirPlay is excluded, a `caed` restart
-will leave RDAirPlay in a degraded state (lost daemon connection) until
-RDAirPlay itself is restarted separately — the dashboard must surface
-this state visibly rather than silently.
+Restarting `rivendell.service` also restarts RDAirPlay (it is a child of
+rdservice). If a full stack restart is requested, the dashboard makes
+this consequence explicit in the confirmation dialog. When individual
+external services (Icecast, Liquidsoap) are restarted in isolation,
+RDAirPlay is unaffected.
 
-### WirePlumber as a system service
+After Phase 1.5 (caed split), restarting `caed.service` in isolation
+will leave RDAirPlay in a degraded state (lost daemon connection) —
+the dashboard must surface this visibly. The "also restart RDAirPlay"
+toggle (default: off) applies to that phase.
+
+### WirePlumber as a system service (Phase 1.5 prerequisite)
 
 WirePlumber normally starts as part of a desktop user's session
-(`systemctl --user`). For this design it must run at system scope:
+(`systemctl --user`). For the Phase 1.5 dependency chain it must run
+at system scope:
 
 - Unit: `wireplumber-system.service` (available in the `wireplumber`
   package alongside the per-user unit).
@@ -181,72 +233,123 @@ WirePlumber normally starts as part of a desktop user's session
 
 The Go API (`rivapi/`) manages systemd state through:
 
-- **Reading:** `systemctl is-active <unit>` / `systemctl status <unit>`
-  polled at a reasonable interval, surfaced as service health indicators
-  in the dashboard.
+- **Reading:** `systemctl is-active <unit>` polled on-demand, surfaced
+  as service health indicators in the dashboard. Units that are not yet
+  installed return `unknown` and are displayed as such — the dashboard
+  handles this gracefully.
 - **Writing configuration:** generates or updates the appropriate config
-  file for each service (WirePlumber policy, Icecast XML, Liquidsoap
-  `.liq`), then applies the minimal restart the change category requires.
+  file for each service, then applies the minimal restart the change
+  category requires.
 - **Applying systemd changes:** writes drop-in overrides to
   `/etc/systemd/system/<unit>.d/override.conf` for unit-level changes,
-  then calls `systemctl daemon-reload` followed by the appropriate restart.
-  Never edits package-owned base unit files directly.
+  then calls `systemctl daemon-reload` followed by the appropriate
+  restart. Never edits package-owned base unit files directly.
 - **Never:** exposes a raw "restart service" button for audio-path
   services without the warning and confirmation described above.
 
 The dashboard requires the `rivapi` process to run with sufficient
-privilege to call `systemctl` for the relevant units — either via a
-targeted sudoers rule (`rivapi` user can restart specific units without
-password) or via systemd's own D-Bus policy granting the `rivapi`
-service unit control over named units. Raw `sudo` with unrestricted
-access is not acceptable; the privilege must be scoped to exactly the
-units Rivolution manages.
+privilege to call `systemctl` for the relevant units via a targeted
+sudoers rule (`rd` user can start/stop/restart specific units without
+password). Raw `sudo` with unrestricted access is not acceptable; the
+privilege must be scoped to exactly the units Rivolution manages.
+`systemctl is-active` and `systemctl status` do not require privilege
+and are called directly.
 
 ## Files
 
+### Phase 1 (this implementation)
+
 - New: `/etc/systemd/system/rivapi.service` — systemd unit for the Go
   dashboard process itself. Runs as `rd`, starts after `network.target`
-  and `mariadb.service`, reads credentials from an `EnvironmentFile=`
-  (path TBD at installation time). `WantedBy=multi-user.target`. The
-  binary path is wherever `make install` places it (TBD; likely
-  `/usr/local/bin/rivapi` or `/usr/bin/rivapi`). During development,
-  started manually: `cd ~/dev/rivolution/rivapi && go build -o rivapi . && ./rivapi`.
-- New: `/etc/systemd/system/rivolution-stack.target`
-- New: `/etc/udev/rules.d/99-ptp.rules` (assigns `/dev/ptpN` to
-  `ptp` group)
-- New or modified: `caed.service` drop-in override — changes `User=`,
-  `Group=`, `LimitRTPRIO=`, `LimitRTTIME=`, `IOSchedulingClass=`,
-  `IOSchedulingPriority=`, adds `After=wireplumber-system.service`,
-  `Requires=wireplumber-system.service`, and an `ExecStartPost` health
-  probe until native `sd_notify` support is added to `caed`.
-- New: `icecast2.service` drop-in adding `After=caed.service`.
-- New: `liquidsoap.service` drop-in adding `After=icecast2.service`
-  and `After=caed.service`.
-- Modified: `rivapi/` — systemd/WirePlumber management code, service
-  health polling, config file generation per tool, dashboard API
-  endpoints for service state and config.
+  and `mariadb.service`, reads credentials from an `EnvironmentFile=`.
+  `WantedBy=multi-user.target`. Binary path TBD at install time (likely
+  `/usr/local/bin/rivapi`). During development, started manually:
+  `cd ~/dev/rivolution/rivapi && go build -o rivapi . && ./rivapi`.
+- New: `/etc/systemd/system/rivolution-stack.target` — groups the full
+  broadcast stack; `Wants=` for `rivendell.service`, `icecast2.service`,
+  `liquidsoap.service`, `stereo-tool.service`, `tailscaled.service`.
+- New: `/etc/systemd/system/rivendell.service.d/rivolution.conf` —
+  drop-in setting `User=rd`, `Group=rd`, `LimitRTPRIO=99`,
+  `LimitRTTIME=infinity`, `IOSchedulingClass=realtime`,
+  `IOSchedulingPriority=0`, plus an `ExecStartPost=` health probe
+  polling `caed`'s TCP port (5005) for readiness.
+- New: `/etc/systemd/system/icecast2.service.d/rivolution.conf` —
+  drop-in adding `After=rivendell.service`.
+- New: `/etc/systemd/system/liquidsoap.service.d/rivolution.conf` —
+  drop-in adding `After=icecast2.service` and `After=rivendell.service`.
+- New: `/etc/systemd/system/stereo-tool.service` — custom unit for
+  Stereo Tool; `After=liquidsoap.service`; `User=rd`.
+- New: `/etc/sudoers.d/rivapi` — targeted rule: `rd` may run
+  `systemctl start/stop/restart` for `rivolution-stack.target`,
+  `rivendell.service`, `icecast2.service`, `liquidsoap.service`,
+  `stereo-tool.service`, `tailscaled.service` with `NOPASSWD`.
+- New: `/etc/udev/rules.d/99-ptp.rules` — assigns `/dev/ptpN` to `ptp`
+  group (prerequisite for Phase 1.5 PTP clock access as `rd`).
+- Modified: `rivapi/` — `store/service_status.go` (unit state polling,
+  controlled action execution); `dashboard/handlers.go` + templates
+  (`/system` route: per-service status indicators, start/stop/restart
+  buttons, category-3 confirmation dialogs).
+
+### Phase 1.5 (caed split — immediately after Phase 1 verified)
+
+- New: `/etc/systemd/system/caed.service` — standalone unit: `User=rd`,
+  `Group=rd`, `LimitRTPRIO=99`, `LimitRTTIME=infinity`,
+  `IOSchedulingClass=realtime`, `IOSchedulingPriority=0`,
+  `After=wireplumber-system.service`, `Requires=wireplumber-system.service`.
+  Includes `ExecStartPost=` health probe on port 5005 until native
+  `sd_notify` lands.
+- Modified: `rdservice` (`rdservice/startup.cpp`) — skip spawning `caed`
+  when `caed.service` is present and enabled; detect this at runtime or
+  via a compile-time option.
+- Modified: `rivendell.service.d/rivolution.conf` — remove the caed
+  readiness probe (now handled by `caed.service` itself); update
+  `After=` to reflect the new chain.
 - Modified: `cae/cae.cpp` — add `sd_notify(0, "READY=1")` at the point
-  `caed` has successfully connected to PipeWire and is accepting `caed`
-  protocol connections from clients. Required to retire the `ExecStartPost`
-  health-probe workaround.
+  `caed` has connected to PipeWire and is accepting protocol connections.
+- New: `pipewire-system.service` / `wireplumber-system.service` drop-ins
+  (if readiness probes are needed after verification).
 
 ## Verification
 
-1. Cold boot on a stock ARM64 Ubuntu 26.04 install with no manual
-   configuration: every service in `rivolution-stack.target` reaches
+### Phase 1
+
+1. After applying the `rivendell.service` drop-in and running
+   `systemctl daemon-reload && systemctl restart rivendell.service`:
+   confirm `rivendell.service` shows `active (running)` and `ps aux`
+   shows `caed`, `ripcd`, `rdcatchd` running as `rd`, not root.
+2. Dashboard `/system` page: all managed units display their current
+   state; start/stop/restart buttons work; category-3 actions show a
+   confirmation dialog before proceeding.
+3. `systemctl start rivolution-stack.target` brings up all installed
+   stack services in order without manual intervention.
+4. Icecast-only config change restarts only `icecast2.service` — audio
+   path unaffected.
+
+### Phase 1.5
+
+1. Cold boot: every service in `rivolution-stack.target` reaches
    `active` in correct order with no manual intervention.
-2. Timing confirmation: use `systemd-analyze critical-chain
-   rivolution-stack.target` to confirm each service's activation time
-   follows its predecessor's ready signal, not just its start time.
-3. Live audio playing through RDAirPlay: confirm an Icecast-only config
-   change (mount rename, password change) restarts only `icecast2.service`
-   and does not interrupt audio.
-4. Reboot: confirm WirePlumber routing policy written via the dashboard
-   is present and applied after a cold reboot with no operator action.
-5. RDAirPlay restart isolation: confirm a `caed` restart does not
-   automatically restart RDAirPlay, and the dashboard correctly surfaces
-   RDAirPlay's degraded state.
+2. `systemd-analyze critical-chain rivolution-stack.target` confirms
+   each service's activation time follows its predecessor's ready
+   signal, not just its start time.
+3. Reboot: WirePlumber routing policy written via the dashboard is
+   present and applied after a cold reboot with no operator action.
+4. `caed` restart isolation: restarting `caed.service` does not
+   automatically restart RDAirPlay; dashboard surfaces RDAirPlay's
+   degraded state.
 
 ## Implementation deviations
 
-None yet — implementation has not started.
+- **2026-07-01:** Spec originally described `caed.service` as a
+  standalone unit from the start. Revised to a two-phase approach after
+  confirming `caed` is managed as a child process of `rdservice`
+  inside `rivendell.service`. Phase 1 uses a `rivendell.service` drop-in
+  to prove the `User=rd` permission model; Phase 1.5 does the caed split
+  immediately after.
+- **2026-07-01:** VLC removed from the systemd stack. Its audio routing
+  (VLC output → Rivendell input) is handled by WirePlumber persistent
+  policy, not a service unit.
+- **2026-07-01:** Stereo Tool and Tailscale added to the stack unit list.
+  Stereo Tool requires a custom unit file (`stereo-tool.service`);
+  Tailscale's upstream unit (`tailscaled.service`) needs only a `Wants=`
+  entry in the target.
