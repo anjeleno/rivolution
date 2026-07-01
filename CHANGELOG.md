@@ -7,6 +7,30 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 15)
+
+- `rdservice/rdservice.cpp`: removed `geteuid()!=0` root check (lines
+  89–92). rdservice can now run as the `rd` user; the `User=rd` drop-in
+  in `conf/systemd/rivendell.service.d/rivolution.conf` is now safe to
+  deploy once the rebuilt binary is installed.
+- `conf/systemd/pipewire-system.service` (new): system-scope PipeWire
+  running as `rd`, socket at `/run/pipewire-system/pipewire-0`. Ubuntu
+  26.04 ships only user-scope PipeWire units; this fills the gap.
+- `conf/systemd/wireplumber-system.service` (new): system-scope
+  WirePlumber bound to `pipewire-system.service`.
+- `conf/systemd/rivolution-stack.target`: added `Wants=` for both new
+  PipeWire services.
+- `conf/systemd/rivendell.service.d/rivolution.conf` and
+  `conf/systemd/liquidsoap.service`: added
+  `Environment=XDG_RUNTIME_DIR=/run/pipewire-system` so caed's JACK
+  calls and Liquidsoap's `input.jack()` route to the system PipeWire
+  socket via `pipewire-jack`.
+- `rivapi/store/service_status.go`: added PipeWire and WirePlumber to
+  the managed unit list (System page).
+- `docs/specs/0007-pipewire-audio-engine.md`: added Phase 1
+  implementation section documenting the system-scope setup, runtime
+  prerequisites, and known gap vs. Phase 2.
+
 ## 2026-07-01 (continued, 14)
 
 - `rivapi/dashboard/templates/home.html`: new home page — four nav buttons
