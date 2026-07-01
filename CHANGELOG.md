@@ -7,6 +7,23 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 8)
+
+- `rivapi/store/icecast_generator.go`: added `<mount type="normal">`
+  sections to the generated icecast.xml, one per configured stream, so
+  mount points are visible in the config file (previously absent).
+- `rivapi/store/broadcast_config.go`: fixed default Liquidsoap log path
+  from `/home/rd/logs/liquidsoap.log` (wrong) to `/home/rd/Log/liquidsoap.log`
+  (correct path on the host); Liquidsoap fails on start if the path is wrong.
+- `rivapi/store/liquidsoap_generator.go`: added `os.MkdirAll` for the
+  configured log directory at deploy time so Liquidsoap can open its log
+  immediately on first start.
+- `conf/systemd/liquidsoap.service` (new): full standalone unit — the
+  Ubuntu `liquidsoap` package ships no service unit, so the drop-in
+  ExecStart override had nothing to apply to.
+- `conf/systemd/liquidsoap.service.d/rivolution.conf`: removed `[Service]`
+  ExecStart lines (now in the main unit above); kept `[Unit]` After/PartOf.
+
 ## 2026-07-01 (continued, 7)
 
 - `rivapi/store/broadcast_config.go` (new): `BroadcastConfig` type
