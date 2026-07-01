@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -69,6 +70,13 @@ func ControlUnit(unit, action string) error {
 	}
 	out, err := exec.Command("sudo", "systemctl", action, unit).CombinedOutput()
 	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 5 {
+			return fmt.Errorf(
+				"%s is not loaded — install conf/systemd/%s to /etc/systemd/system/ then run: sudo systemctl daemon-reload",
+				unit, unit,
+			)
+		}
 		return fmt.Errorf("systemctl %s %s: %w: %s", action, unit, err, strings.TrimSpace(string(out)))
 	}
 	return nil

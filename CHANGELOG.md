@@ -7,6 +7,28 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 4)
+
+- `rivapi/store/service_status.go`: `ControlUnit` now detects `systemctl`
+  exit code 5 ("unit not loaded") and returns a friendly error naming the
+  file to copy and the `daemon-reload` command needed, rather than a raw
+  process error.
+
+- `docs/specs/0010-systemd-stack-orchestration.md`: added Deployment
+  section covering manual install steps for all `conf/` files (sudoers,
+  systemd units, drop-ins, udev rule), a unified-installer placeholder,
+  and a deb-package placeholder. Implementation deviations section
+  updated.
+
+- `BACKLOG.md`: added entry documenting that `conf/` deployment files
+  have no automated install path — lists all files needing coverage and
+  what both the Ansible role and the `postinst` deb hook need to do.
+
+- `docs/handoff/2026-07-01.md` (gitignored): session handoff — full
+  account of architecture decisions, what was built, what's working,
+  what needs manual deployment, the installer gap, and open items for
+  the next session.
+
 ## 2026-07-01 (continued, 3)
 
 - `rivapi/dashboard/handlers.go`: fixed Stereo Tool GUI launch — was

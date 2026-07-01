@@ -309,6 +309,78 @@ and are called directly.
 - New: `pipewire-system.service` / `wireplumber-system.service` drop-ins
   (if readiness probes are needed after verification).
 
+## Deployment
+
+The conf files in this spec (`conf/sudoers.d/`, `conf/systemd/`,
+`conf/udev/`) are the source of truth in this repository. They are not
+auto-deployed; they must be installed by one of the following paths.
+
+### Manual installation (development)
+
+Copy each file to its system destination and apply post-install steps:
+
+```
+sudo cp conf/sudoers.d/rivapi /etc/sudoers.d/rivapi
+```
+
+```
+sudo chmod 440 /etc/sudoers.d/rivapi
+```
+
+```
+sudo cp conf/systemd/rivolution-stack.target /etc/systemd/system/
+```
+
+```
+sudo cp conf/systemd/rivendell.service.d/rivolution.conf /etc/systemd/system/rivendell.service.d/
+```
+
+```
+sudo cp conf/systemd/icecast2.service.d/rivolution.conf /etc/systemd/system/icecast2.service.d/
+```
+
+```
+sudo cp conf/systemd/liquidsoap.service.d/rivolution.conf /etc/systemd/system/liquidsoap.service.d/
+```
+
+```
+sudo cp conf/systemd/stereo-tool.service /etc/systemd/system/
+```
+
+```
+sudo cp conf/udev/99-ptp.rules /etc/udev/rules.d/
+```
+
+```
+sudo systemctl daemon-reload
+```
+
+```
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+```
+sudo systemctl enable rivolution-stack.target
+```
+
+### Unified installer (`anjeleno/rivolution-unified-installer`)
+
+A new Ansible role (or tasks in an existing role) must copy all files
+above, set correct permissions, run `daemon-reload` and `udevadm trigger`,
+and enable the target and services. This role must also build and install
+the `rivapi` binary and install `rivapi.service`. See
+[BACKLOG.md](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
+for the full task list.
+
+### Debian package
+
+The long-term deployment path is a `rivolution` deb package that installs
+all conf files via standard package `postinst` hooks. The package must
+handle: sudoers rule install + `chmod 440`, systemd unit copies +
+`daemon-reload` + `systemctl enable`, udev rule + `udevadm trigger`, and
+the `rivapi` binary at a standard system path. This is a separate
+packaging effort not yet started.
+
 ## Verification
 
 ### Phase 1
