@@ -7,6 +7,62 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01
+
+- `rivapi/store/service_status.go` (new): `QueryStackStatus` polls
+  `systemctl is-active` for each managed stack unit and returns current
+  state; `ControlUnit` runs `sudo systemctl start/stop/restart` for
+  allowed units only (allowlist-validated to prevent injection). Units
+  not yet installed surface as `"unknown"` rather than erroring.
+
+- `rivapi/dashboard/handlers.go`: `System` handler (`GET /system`) and
+  `SystemAction` handler (`POST /system/service/{unit}/{action}`) added.
+  Full page renders via `system.html`; htmx requests return
+  `system_status.html` fragment. Action buttons use `hx-confirm` for
+  category-3 (audio-path) services per spec 0010 live-playout protection.
+
+- `rivapi/dashboard/templates/system.html` (new): System page — full-stack
+  Start/Stop/Restart buttons at top; status table loaded via htmx on page
+  load.
+
+- `rivapi/dashboard/templates/system_status.html` (new): htmx-swappable
+  service status table with per-unit Start/Stop/Restart buttons and
+  state badges.
+
+- `rivapi/dashboard/templates/base.html`: added System nav link.
+
+- `rivapi/dashboard/static/app.css`: added `.service-state` badge styles
+  for `active`, `inactive`, `failed`, `activating`, `unknown` states.
+
+- `rivapi/main.go`: wired `/system` GET and `/system/service/{unit}/{action}`
+  POST routes under `DashboardMiddleware`.
+
+- `conf/sudoers.d/rivapi` (new): targeted NOPASSWD rule for `rd` to run
+  `systemctl start/stop/restart` for the five stack units and the target.
+
+- `conf/systemd/rivolution-stack.target` (new): stack target; `Wants=`
+  `rivendell.service`, `icecast2.service`, `liquidsoap.service`,
+  `stereo-tool.service`, `tailscaled.service`.
+
+- `conf/systemd/rivendell.service.d/rivolution.conf` (new): drop-in setting
+  `User=rd`, `Group=rd`, `LimitRTPRIO=99`, `LimitRTTIME=infinity`,
+  `IOSchedulingClass=realtime`, `IOSchedulingPriority=0`, plus an
+  `ExecStartPost` health probe on caed's TCP port (5005). Resolves the
+  root→rd permission prerequisite for PipeWire integration (Phase 1 of
+  two-phase caed migration; see spec 0010).
+
+- `conf/systemd/icecast2.service.d/rivolution.conf` (new): adds
+  `After=rivendell.service`.
+
+- `conf/systemd/liquidsoap.service.d/rivolution.conf` (new): adds
+  `After=rivendell.service` and `After=icecast2.service`.
+
+- `conf/systemd/stereo-tool.service` (new): custom unit for Stereo Tool;
+  `After=liquidsoap.service`; `User=rd`; `PartOf=rivolution-stack.target`.
+
+- `conf/udev/99-ptp.rules` (new): assigns `/dev/ptpN` to `ptp` group
+  (Phase 1.5 prerequisite for non-root PTP clock access).
+
 ## 2026-06-30 (continued, 4)
 
 - `rivapi/auth/auth.go`: dashboard session cookie is now a browser

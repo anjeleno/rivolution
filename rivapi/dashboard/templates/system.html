@@ -1,0 +1,29 @@
+{{define "page"}}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <h2 style="margin:0">System</h2>
+    <div role="group">
+        <button hx-post="/system/service/rivolution-stack.target/start"
+                hx-target="#service-status"
+                hx-swap="outerHTML"
+                hx-confirm="Start the full broadcast stack?"
+                class="outline">Start Stack</button>
+        <button hx-post="/system/service/rivolution-stack.target/stop"
+                hx-target="#service-status"
+                hx-swap="outerHTML"
+                hx-confirm="Stop the full broadcast stack? This will interrupt live audio."
+                class="outline secondary">Stop Stack</button>
+        <button hx-post="/system/service/rivolution-stack.target/restart"
+                hx-target="#service-status"
+                hx-swap="outerHTML"
+                hx-confirm="Restart the full broadcast stack? Live audio will be interrupted."
+                class="outline contrast">Restart Stack</button>
+    </div>
+</div>
+
+<div id="service-status"
+     hx-get="/system?partial=1"
+     hx-trigger="load"
+     hx-indicator="#status-spinner">
+    <span id="status-spinner" class="htmx-indicator">Loading…</span>
+</div>
+{{end}}

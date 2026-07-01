@@ -64,6 +64,8 @@ func main() {
 		r.Get("/groups", dash.Groups)
 		r.Get("/carts", dash.Carts)
 		r.Get("/carts/{number}", dash.CartDetail)
+		r.Get("/system", dash.System)
+		r.Post("/system/service/{unit}/{action}", dash.SystemAction)
 	})
 
 	log.Printf("rivapi listening on %s", cfg.ListenAddr)

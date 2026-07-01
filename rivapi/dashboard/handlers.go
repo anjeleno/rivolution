@@ -14,6 +14,12 @@ import (
 	"github.com/anjeleno/rivolution/rivapi/store"
 )
 
+type systemData struct {
+	baseData
+	Services []store.ServiceStatus
+	Target   string
+}
+
 //go:embed templates/* static/*
 var assets embed.FS
 
@@ -38,12 +44,14 @@ func pageTmpl(page string) *template.Template {
 
 // Pre-parsed template sets — one per page so {{define "page"}} never conflicts.
 var (
-	tmplLogin      = template.Must(template.ParseFS(assets, "templates/login.html"))
-	tmplGroups     = pageTmpl("groups.html")
-	tmplCarts      = pageTmpl("carts.html")
-	tmplCartDetail = pageTmpl("cart_detail.html")
-	tmplGroupsList = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
-	tmplCartsList  = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
+	tmplLogin        = template.Must(template.ParseFS(assets, "templates/login.html"))
+	tmplGroups       = pageTmpl("groups.html")
+	tmplCarts        = pageTmpl("carts.html")
+	tmplCartDetail   = pageTmpl("cart_detail.html")
+	tmplSystem       = pageTmpl("system.html")
+	tmplGroupsList   = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
+	tmplCartsList    = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
+	tmplSystemStatus = template.Must(template.ParseFS(assets, "templates/system_status.html"))
 )
 
 // Branding holds per-station display values passed to every template.
@@ -165,6 +173,44 @@ func (h *Handler) Carts(w http.ResponseWriter, r *http.Request) {
 		baseData
 		GroupFilter string
 	}{h.base("Carts", "carts"), group}); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
+}
+
+// System handles GET /system (full page and htmx status fragment).
+func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
+	statuses, err := store.QueryStackStatus()
+	if err != nil {
+		http.Error(w, "error querying service status", http.StatusInternalServerError)
+		return
+	}
+	data := systemData{h.base("System", "system"), statuses, store.StackTarget}
+
+	if isHTMX(r) || r.URL.Query().Get("partial") == "1" {
+		if err := tmplSystemStatus.ExecuteTemplate(w, "system_status.html", data); err != nil {
+			http.Error(w, "template error", http.StatusInternalServerError)
+		}
+		return
+	}
+	if err := tmplSystem.ExecuteTemplate(w, "base", data); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
+}
+
+// SystemAction handles POST /system/service/{unit}/{action}.
+// Runs the requested systemctl action then returns the updated status fragment.
+func (h *Handler) SystemAction(w http.ResponseWriter, r *http.Request) {
+	unit := chi.URLParam(r, "unit")
+	action := chi.URLParam(r, "action")
+
+	if err := store.ControlUnit(unit, action); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	statuses, _ := store.QueryStackStatus()
+	data := systemData{h.base("System", "system"), statuses, store.StackTarget}
+	if err := tmplSystemStatus.ExecuteTemplate(w, "system_status.html", data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }
