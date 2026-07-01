@@ -52,6 +52,11 @@ output.icecast(
 // 29 (HE-AAC v2) both fail with "unsupported profile" on this build.
 // Revisit if a non-distro fdk-aac build with SBR encoding becomes
 // available.
+//
+// -f 2 (ADTS) is required for stdout streaming: fdkaac's default
+// transport format is muxed into an M4A container, which needs to seek
+// back and write its moov box — "stdout streaming is not available on
+// M4A output". ADTS is a continuous streamable bitstream instead.
 func liqEncoder(s StreamConfig, sampleRate int) string {
 	switch s.Codec {
 	case "mp3":
@@ -59,7 +64,7 @@ func liqEncoder(s StreamConfig, sampleRate int) string {
 	case "he-aac-v1", "he-aac-v2":
 		return fmt.Sprintf(
 			"%%external(channels=2, samplerate=%d, header=false, restart_on_crash=true,\n"+
-				`    process="fdkaac --bitrate %d000 --profile 2 --raw --raw-channels 2 --raw-rate %d -o - -")`,
+				`    process="fdkaac --bitrate %d000 --profile 2 --raw --raw-channels 2 --raw-rate %d -f 2 -o - -")`,
 			sampleRate, s.Bitrate, sampleRate,
 		)
 	case "ogg":

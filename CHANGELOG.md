@@ -7,6 +7,17 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 20)
+
+- `rivapi/store/liquidsoap_generator.go`: added the missing `-f 2`
+  (ADTS transport format) flag to the `fdkaac` command line. Without
+  it, fdkaac defaults to muxing into an M4A container, which needs to
+  seek back and write its moov box and so refuses to stream to stdout
+  ("stdout streaming is not available on M4A output") — Liquidsoap saw
+  this as the encoder process dying immediately, surfacing as a
+  "Broken pipe in write()" crash loop. ADTS is a continuous streamable
+  bitstream instead.
+
 ## 2026-07-01 (continued, 19)
 
 - `rivapi/store/liquidsoap_generator.go`: fixed the `fdkaac` command line
