@@ -7,6 +7,17 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 5)
+
+- `conf/systemd/rivendell.service.d/rivolution.conf`,
+  `conf/systemd/icecast2.service.d/rivolution.conf`,
+  `conf/systemd/liquidsoap.service.d/rivolution.conf`: added
+  `PartOf=rivolution-stack.target` to each. `Wants=` in the target
+  propagates start only; without `PartOf=` on the services, stopping
+  or restarting the target had no effect on the running units.
+  `stereo-tool.service` already had this; `tailscaled` intentionally
+  excluded (stopping the broadcast stack should not drop VPN).
+
 ## 2026-07-01 (continued, 4)
 
 - `rivapi/store/service_status.go`: `ControlUnit` now detects `systemctl`
