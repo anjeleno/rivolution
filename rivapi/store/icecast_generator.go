@@ -47,7 +47,11 @@ var icecastTmpl = template.Must(template.New("icecast").Parse(`<?xml version="1.
     <http-headers>
         <header name="Access-Control-Allow-Origin" value="*" />
     </http-headers>
-
+{{range .Streams}}
+    <mount type="normal">
+        <mount-name>{{.Mount}}</mount-name>
+    </mount>
+{{end}}
     <fileserve>1</fileserve>
 
     <paths>

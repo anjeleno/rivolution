@@ -77,6 +77,7 @@ func liqContentType(s StreamConfig) string {
 
 // GenerateLiquidsoapScript renders radio.liq from cfg and writes it to
 // LiquidsoapScriptPath. No privilege needed — the path is rd-owned.
+// Also creates the log directory so Liquidsoap can open its log file on start.
 func GenerateLiquidsoapScript(cfg BroadcastConfig) error {
 	var buf bytes.Buffer
 	if err := liquidsoapTmpl.Execute(&buf, cfg); err != nil {
@@ -84,6 +85,13 @@ func GenerateLiquidsoapScript(cfg BroadcastConfig) error {
 	}
 	if err := os.MkdirAll(filepath.Dir(LiquidsoapScriptPath), 0755); err != nil {
 		return err
+	}
+	// Create the log directory Liquidsoap needs; Liquidsoap will fail on start
+	// if the directory doesn't exist.
+	if cfg.Liquidsoap.LogPath != "" {
+		if err := os.MkdirAll(filepath.Dir(cfg.Liquidsoap.LogPath), 0755); err != nil {
+			return fmt.Errorf("creating log directory: %w", err)
+		}
 	}
 	return os.WriteFile(LiquidsoapScriptPath, buf.Bytes(), 0644)
 }
