@@ -7,6 +7,23 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 9)
+
+- `rivapi/store/icecast_generator.go`: removed `<burst-on-connect>`,
+  `<queue-size>`, `<client-timeout>`, `<header-timeout>`,
+  `<source-timeout>` from the `<limits>` block — all were removed from
+  the Icecast 2.5.0 XML schema, causing config validation failure and
+  the "obsolete tags" + "did not validate" errors in the admin dashboard.
+- `rivapi/store/liquidsoap_generator.go`: touch the log file
+  (`O_CREATE|O_APPEND`) after creating the log directory — Liquidsoap
+  opens the path on start and fails if the file doesn't exist.
+- `rivapi/dashboard/templates/broadcast.html`: Icecast Admin ↗ button
+  (computed URL from hostname:port, opens `/admin/` in new tab); per-
+  stream computed stream URL display (`http://host:port/mount`);
+  station URL field re-labeled "Station website URL" with explanatory
+  note; per-stream website URL override changed from `type="url"` to
+  `type="text"` (field accepts paths like `/192`, not only full URLs).
+
 ## 2026-07-01 (continued, 8)
 
 - `rivapi/store/icecast_generator.go`: added `<mount type="normal">`
