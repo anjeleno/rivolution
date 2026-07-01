@@ -7,6 +7,14 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 14)
+
+- `rivapi/dashboard/templates/home.html`: new home page — four nav buttons
+  (System, Broadcast, Groups, Carts). Placeholder for future system status.
+- `rivapi/dashboard/handlers.go`: `Root` now renders the home page instead
+  of redirecting to `/groups`. Login already redirected to `/`; landing page
+  is now home rather than groups.
+
 ## 2026-07-01 (continued, 13)
 
 - `rivapi/store/service_status.go`: switched from `systemctl is-active`
