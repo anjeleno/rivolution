@@ -134,3 +134,15 @@ upstream's own counter even if both projects are active.
 ## Implementation deviations
 
 None yet — implementation has not started.
+
+**Note (2026-07-01):** schema migration 379 (`STATIONS.JACK_VERSION`
+widened for the PipeWire JACK shim's version string, spec 0007) was
+added to `utils/rddbmgr/updateschema.cpp` on the existing shared
+`DB_VERSION` counter, the same convention every migration in that file
+already uses — this spec's `RIVOLUTION_DB_VERSION` mechanism does not
+exist in the codebase yet. Deliberately deferred: it doesn't affect the
+v4→v6 upgrade path today (that still works on the shared counter, same
+as upstream), and this spec's own Verification section already expects
+the AES67 columns from spec 0007 to be v6 migration #1 — implement this
+spec when that work actually lands, rather than retrofitting a
+different migration as #1 first.
