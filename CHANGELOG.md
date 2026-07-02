@@ -7,6 +7,19 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 27)
+
+- `rivapi/dashboard/handlers_patchbay.go`, `templates/patchbay.html`:
+  replaced the output x input matrix table with a connections list
+  (Output -> Input rows, Remove button) plus an "Add connection" form
+  (two dropdowns). The matrix didn't fit on screen at a readable zoom
+  level with more than a handful of ports — this scales with the
+  number of connections instead of outputs x inputs. `/patchbay/toggle`
+  split into `/patchbay/connect` and `/patchbay/disconnect` to match.
+  Reconciler-based persistence (added in the previous entry) verified
+  working live — survived a real Liquidsoap restart with the saved
+  patch silently reconnecting, no manual action needed.
+
 ## 2026-07-01 (continued, 26)
 
 - `rivapi/store/patchbay.go`: added `SaveDesiredLinks`/`LoadDesiredLinks`/

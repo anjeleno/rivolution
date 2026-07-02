@@ -12,21 +12,12 @@
     </div>
 </div>
 
-<p style="color: var(--pico-muted-color); margin-bottom:0.5rem;">
-    Every PipeWire output (row) and input (column) port. Click a cell to
-    connect or disconnect that pair. <strong>●</strong> connected and saved
-    (persistent) &nbsp;·&nbsp; <strong style="color:var(--pico-contrast-background,inherit)">●</strong>
-    connected but not saved — won't survive a restart until you click
-    "Save current patch" &nbsp;·&nbsp; <strong>◐</strong> saved but not
-    currently connected (waiting for the other end to appear) &nbsp;·&nbsp;
-    <strong>○</strong> not connected.
-</p>
 <p style="color: var(--pico-muted-color); margin-bottom:1rem;">
-    Saved pairs are automatically re-applied in the background (checked
-    every 5s) whenever both ports exist again — no need to manually
-    reconnect after a client restart. This talks directly to
+    Saved connections are automatically re-applied in the background
+    (checked every 5s) whenever both ports exist again — no need to
+    manually reconnect after a client restart. This talks directly to
     <code>pw-link</code>, not WirePlumber's own policy system, which does
-    not apply to JACK-bridged ports (verified 2026-07-01).
+    not apply to JACK-bridged ports (verified 2026-07-01, see spec 0007).
 </p>
 
 {{if .Error}}
@@ -36,54 +27,58 @@
 <p><ins>Current patch saved — will be re-applied automatically after any restart.</ins></p>
 {{end}}
 
-{{if or (not .Outputs) (not .Inputs)}}
-<p>No ports found — is PipeWire running?</p>
+<h3>Current connections</h3>
+{{if not .Links}}
+<p style="color: var(--pico-muted-color);">Nothing connected.</p>
 {{else}}
-<div style="overflow-x:auto;">
-<table style="white-space:nowrap;">
+<table>
     <thead>
-        <tr>
-            <th>Output \ Input</th>
-            {{range .Inputs}}
-            <th style="writing-mode:vertical-rl; text-orientation:mixed;">{{.}}</th>
-            {{end}}
-        </tr>
+        <tr><th>Output</th><th></th><th>Input</th><th>Saved</th><th></th></tr>
     </thead>
     <tbody>
-        {{$linked := .Linked}}
-        {{$saved := .Saved}}
-        {{range $out := .Outputs}}
+        {{range .Links}}
         <tr>
-            <th style="text-align:left;">{{$out}}</th>
-            {{range $in := $.Inputs}}
-            {{$key := printf "%s|%s" $out $in}}
-            {{$isLinked := index $linked $key}}
-            {{$isSaved := index $saved $key}}
-            <td style="text-align:center; padding:0.25rem;">
-                <form method="post" action="/patchbay/toggle" style="margin:0;">
-                    <input type="hidden" name="output" value="{{$out}}">
-                    <input type="hidden" name="input" value="{{$in}}">
-                    {{if and $isLinked $isSaved}}
-                    <button type="submit" title="Connected to {{$in}}, saved — click to disconnect"
-                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">●</button>
-                    {{else if $isLinked}}
-                    <button type="submit" class="contrast" title="Connected to {{$in}}, not saved — click to disconnect"
-                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">●</button>
-                    {{else if $isSaved}}
-                    <button type="submit" class="outline contrast" title="Saved, waiting to reconnect to {{$in}} — click to connect now"
-                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">◐</button>
-                    {{else}}
-                    <button type="submit" class="outline secondary"
-                            title="Not connected to {{$in}} — click to connect"
-                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">○</button>
-                    {{end}}
+            <td><code>{{.Output}}</code></td>
+            <td>&rarr;</td>
+            <td><code>{{.Input}}</code></td>
+            <td>{{if .Saved}}<ins>yes</ins>{{else}}<span style="color:var(--pico-muted-color);">no</span>{{end}}</td>
+            <td>
+                <form method="post" action="/patchbay/disconnect" style="margin:0;">
+                    <input type="hidden" name="output" value="{{.Output}}">
+                    <input type="hidden" name="input" value="{{.Input}}">
+                    <button type="submit" class="outline secondary" style="padding:0.25rem 0.75rem; margin:0;">Remove</button>
                 </form>
             </td>
-            {{end}}
         </tr>
         {{end}}
     </tbody>
 </table>
-</div>
+{{end}}
+
+<h3>Add connection</h3>
+{{if or (not .Outputs) (not .Inputs)}}
+<p>No ports found — is PipeWire running?</p>
+{{else}}
+<form method="post" action="/patchbay/connect" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+    <label style="min-width:16rem; margin:0;">
+        Output
+        <select name="output" required>
+            <option value="" disabled selected>Choose an output…</option>
+            {{range .Outputs}}
+            <option value="{{.}}">{{.}}</option>
+            {{end}}
+        </select>
+    </label>
+    <label style="min-width:16rem; margin:0;">
+        Input
+        <select name="input" required>
+            <option value="" disabled selected>Choose an input…</option>
+            {{range .Inputs}}
+            <option value="{{.}}">{{.}}</option>
+            {{end}}
+        </select>
+    </label>
+    <button type="submit" style="margin:0;">Connect</button>
+</form>
 {{end}}
 {{end}}

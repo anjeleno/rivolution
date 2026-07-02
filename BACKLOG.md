@@ -478,22 +478,34 @@ routing — no way to reassign which caed stream feeds Stereo Tool, or add
 additional processing/monitoring taps, without hand-editing this file.
 
 **Update 2026-07-01:** an MVP patchbay page now exists (`/patchbay`,
-`rivapi/store/patchbay.go`, `handlers_patchbay.go`) — a live matrix of
-every PipeWire output x input port, click-to-connect/disconnect, backed
-directly by `pw-link`. This replaces needing to hand-edit
-`conf/alsa/rd.asoundrc` or SSH in to run `pw-link` manually, but it's
-intentionally minimal, not the full design this entry originally
-described:
-- No grouping by client — a flat table, can get wide with many ports.
-- No live/auto-refresh — full page reload to see changes made outside
-  the dashboard (e.g. a client restart dropping links).
-- No persistence — like manual `pw-link`, connections still vanish
-  when a client restarts. Does not (yet) replace `rd.asoundrc` for
-  Stereo Tool, which needs a link to exist *before* it starts probing.
-- Talks to `pw-link` directly, not WirePlumber — no saved "policy"
-  concept, just the current live graph.
+`rivapi/store/patchbay.go`, `handlers_patchbay.go`), and has been used
+to replace `conf/alsa/rd.asoundrc`'s hardcoded routing for real —
+connections are made and saved from the dashboard, no hand-editing or
+SSH required. Two iterations so far:
 
-**Still deferred:** persistent/policy-backed auto-relinking (a real
-WirePlumber integration), and a nicer client-grouped visual graph (vs.
-a flat table) — both are the "real" version of this feature and
-deserve their own design pass when there's time for it.
+1. First pass: an output x input matrix table, no persistence.
+2. Same day, after real use: the matrix didn't fit on screen at a
+   readable zoom level once there were more than a handful of ports —
+   replaced with a connections list (Output → Input rows, each with a
+   Remove button) plus an "Add connection" form (two dropdowns). Scales
+   with the number of *connections* (usually small) instead of
+   outputs x inputs (grows fast). Also added real persistence: a
+   "Save current patch" button snapshots the live graph to
+   `/home/rd/etc/rivolution/patchbay.json`, and a background poll in
+   `rivapi` (every 5s) re-applies anything missing — **verified working
+   live**, survived a real Liquidsoap restart with no manual
+   reconnection needed.
+
+**This is still deliberately Phase 1, not the final design** — see
+`docs/specs/0007-pipewire-audio-engine.md`'s Implementation deviations
+for the full writeup, but in short: WirePlumber's own declarative
+link-policy mechanism was investigated and empirically confirmed **not
+to apply** to JACK-bridged ports (the current architecture) — not
+merely deferred for lack of time. The `rivapi`-side poll-and-reapply
+reconciler is what actually works today; it's expected to be retired
+in favor of real WirePlumber policy once Phase 2 lands (`caed`/
+Liquidsoap/Stereo Tool as native PipeWire clients, no JACK bridge).
+Also still open: no live/auto-refresh (reload the page to see changes
+made outside the dashboard), and no client-grouped visual graph (still
+plain text rows, not virtual patch cables) — a nicer visual pass is
+wanted eventually but not scoped yet.

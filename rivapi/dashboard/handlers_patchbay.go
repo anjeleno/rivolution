@@ -7,20 +7,33 @@ import (
 	"github.com/anjeleno/rivolution/rivapi/store"
 )
 
-// patchbayData holds everything the patchbay page needs to render the
-// current PipeWire graph as a connect/disconnect matrix.
+// patchLinkView is one row in the "current connections" list — a live link,
+// annotated with whether it's also part of the saved (persistent) set.
+type patchLinkView struct {
+	Output string
+	Input  string
+	Saved  bool
+}
+
+// patchbayData holds everything the patchbay page needs: the current
+// connection list (for the "current connections" section) and the full
+// port lists (for the "add connection" dropdowns).
+//
+// Layout note: this used to be an output x input matrix table. Replaced
+// 2026-07-01 — with more than a handful of ports the matrix didn't fit on
+// screen at a readable zoom level. A connections-list + add-connection-
+// dropdowns layout scales with the number of *connections* (usually small)
+// rather than outputs x inputs (which grows fast), and reads as plain text
+// instead of a wide grid.
 type patchbayData struct {
 	baseData
 	Outputs   []string
 	Inputs    []string
-	Linked    map[string]bool // keyed by linkKey(output, input) — currently live
-	Saved     map[string]bool // keyed by linkKey(output, input) — persisted, reconciled on a timer
+	Links     []patchLinkView
 	Error     string
 	JustSaved bool // true right after a successful Save, for a confirmation message
 }
 
-// linkKey is the composite map key used to look up link state from the
-// template (Go templates can't build map keys from two values directly).
 func linkKey(output, input string) string {
 	return output + "|" + input
 }
@@ -40,29 +53,30 @@ func (h *Handler) patchbayData() (patchbayData, error) {
 	if err != nil {
 		return data, err
 	}
-
 	saved, err := store.LoadDesiredLinks(store.DesiredLinksPath)
 	if err != nil {
 		return data, err
 	}
 
+	savedSet := make(map[string]bool, len(saved))
+	for _, l := range saved {
+		savedSet[linkKey(l.Output, l.Input)] = true
+	}
+
 	data.Outputs = outputs
 	data.Inputs = inputs
-	data.Linked = make(map[string]bool, len(links))
-	for _, l := range links {
-		data.Linked[linkKey(l.Output, l.Input)] = true
-	}
-	data.Saved = make(map[string]bool, len(saved))
-	for _, l := range saved {
-		data.Saved[linkKey(l.Output, l.Input)] = true
+	data.Links = make([]patchLinkView, len(links))
+	for i, l := range links {
+		data.Links[i] = patchLinkView{
+			Output: l.Output,
+			Input:  l.Input,
+			Saved:  savedSet[linkKey(l.Output, l.Input)],
+		}
 	}
 	return data, nil
 }
 
-// Patchbay handles GET /patchbay: a live view of every PipeWire output and
-// input port and their current links, with a button per pair to connect or
-// disconnect it. MVP — no live/auto-refresh yet, reload the page to see
-// changes made outside the dashboard (e.g. a client restart dropping links).
+// Patchbay handles GET /patchbay.
 func (h *Handler) Patchbay(w http.ResponseWriter, r *http.Request) {
 	data, err := h.patchbayData()
 	if err != nil {
@@ -95,25 +109,28 @@ func (h *Handler) PatchbaySave(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirect, http.StatusSeeOther)
 }
 
-// PatchbayToggle handles POST /patchbay/toggle: links the given output/input
-// pair if not already linked, unlinks it otherwise, then redirects back to
-// the page. A plain form POST + redirect, not htmx — kept deliberately
-// simple for this first pass; a live/partial-refresh UI is a follow-up.
-func (h *Handler) PatchbayToggle(w http.ResponseWriter, r *http.Request) {
+// PatchbayConnect handles POST /patchbay/connect — the "Add connection" form.
+func (h *Handler) PatchbayConnect(w http.ResponseWriter, r *http.Request) {
 	output := r.FormValue("output")
 	input := r.FormValue("input")
 
-	data, err := h.patchbayData()
-	if err == nil {
-		if data.Linked[linkKey(output, input)] {
-			err = store.Unlink(output, input)
-		} else {
-			err = store.Link(output, input)
-		}
+	redirect := "/patchbay"
+	if output == "" || input == "" {
+		redirect += "?error=" + url.QueryEscape("choose both an output and an input")
+	} else if err := store.Link(output, input); err != nil {
+		redirect += "?error=" + url.QueryEscape(err.Error())
 	}
+	http.Redirect(w, r, redirect, http.StatusSeeOther)
+}
+
+// PatchbayDisconnect handles POST /patchbay/disconnect — a "Remove" button
+// on one row of the current-connections list.
+func (h *Handler) PatchbayDisconnect(w http.ResponseWriter, r *http.Request) {
+	output := r.FormValue("output")
+	input := r.FormValue("input")
 
 	redirect := "/patchbay"
-	if err != nil {
+	if err := store.Unlink(output, input); err != nil {
 		redirect += "?error=" + url.QueryEscape(err.Error())
 	}
 	http.Redirect(w, r, redirect, http.StatusSeeOther)

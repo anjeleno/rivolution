@@ -72,7 +72,8 @@ func main() {
 		r.Get("/broadcast", dash.Broadcast)
 		r.Post("/broadcast/save", dash.BroadcastSave)
 		r.Get("/patchbay", dash.Patchbay)
-		r.Post("/patchbay/toggle", dash.PatchbayToggle)
+		r.Post("/patchbay/connect", dash.PatchbayConnect)
+		r.Post("/patchbay/disconnect", dash.PatchbayDisconnect)
 		r.Post("/patchbay/save", dash.PatchbaySave)
 	})
 
