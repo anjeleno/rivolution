@@ -395,3 +395,125 @@ sudo make install
 ```bash
 sudo ldconfig
 ```
+
+---
+
+### 4. Broadcast stack and PipeWire/JACK bridge (Ubuntu 26.04 LTS)
+
+This section covers what `rivapi` (the Go dashboard/API, see
+[`docs/specs/0005-go-api-foundation.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0005-go-api-foundation.md))
+and the broadcast pipeline (Icecast, Liquidsoap, Stereo Tool, PipeWire —
+see [`docs/specs/0007-pipewire-audio-engine.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0007-pipewire-audio-engine.md)
+and [`docs/specs/0008-broadcast-tool-suite-integration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0008-broadcast-tool-suite-integration.md))
+need at runtime. None of this links into the Rivolution C++ binaries
+themselves — it's a separate layer, verified working end-to-end on a
+real Ubuntu 26.04 install.
+
+#### Go toolchain (for `rivapi`)
+
+```bash
+sudo apt install golang-go
+```
+
+`rivapi/go.mod` requires Go 1.25.0 or later. Verify with `go version`
+after installing — Ubuntu 26.04's `golang-go` package ships 1.26.0,
+comfortably past the floor.
+
+#### Broadcast stack packages
+
+```bash
+sudo apt install icecast2 liquidsoap fdkaac
+```
+
+`fdkaac` is needed for AAC stream output. Its actual command-line
+syntax and codec support on this platform differ from what's commonly
+documented elsewhere — see spec 0008's "`fdkaac`/Vorbis command-line
+reference" section for the exact, verified flags, and `BACKLOG.md` for
+why the HE-AAC/SBR codec options currently fall back to plain AAC-LC
+(Ubuntu's `libfdk-aac2` ships with SBR encoding disabled).
+
+#### PipeWire/JACK bridge
+
+```bash
+sudo apt install pipewire-jack
+```
+
+This lets `caed`, Liquidsoap, and Stereo Tool (all JACK clients) reach
+the system-scope PipeWire instance rather than real hardware/`jackd`.
+**One critical extra step, not optional:** if `libjack-jackd2-dev` is
+also installed (it's in the required build dependencies above, needed
+for `cae/driver_jack.cpp` to compile), its real runtime library
+conflicts with the `pipewire-jack` shim — `ldconfig` resolves
+`libjack.so.0` alphabetically by `/etc/ld.so.conf.d/*.conf` filename,
+and the standard `aarch64-linux-gnu.conf` (or `x86_64-linux-gnu.conf`)
+sorts before `pipewire-jack`'s own conf file, silently making every
+JACK client link against the real library instead of the shim — with
+no error, just processes that fail to reach PipeWire at all. Fix:
+
+```bash
+sudo mv /etc/ld.so.conf.d/pipewire-jack-$(uname -m)-linux-gnu.conf /etc/ld.so.conf.d/00-pipewire-jack-$(uname -m)-linux-gnu.conf
+```
+```bash
+sudo ldconfig
+```
+
+Verify the shim now wins:
+
+```bash
+ldconfig -p | grep "libjack.so.0 "
+```
+
+The `pipewire-0.3/jack/libjack.so.0` line must appear **first**.
+
+#### Stereo Tool's ALSA-JACK bridge
+
+Stereo Tool reaches JACK only through an ALSA plugin (its "jack
+(ALSA)" I/O option), not as a native JACK client, and the stock plugin
+config hardcodes real hardware port names that don't exist under
+system-scope PipeWire. Install the override:
+
+```bash
+cp conf/alsa/rd.asoundrc ~/.asoundrc
+```
+
+This is a temporary, hardcoded routing fix — see `conf/alsa/rd.asoundrc`'s
+own header comment and `BACKLOG.md` for why, and the dashboard's
+`/patchbay` page for the actual persistent routing mechanism now in
+use instead of hand-editing this file further.
+
+#### `rivapi` and `conf/` deployment
+
+Build and install `rivapi` as a systemd service, and deploy the
+`conf/` files (systemd units, sudoers rule, ALSA override above). See
+[`docs/specs/0010-systemd-stack-orchestration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0010-systemd-stack-orchestration.md)'s
+Deployment section for the full, current file-by-file list — not
+duplicated here since it changes as new units are added. In short:
+
+```bash
+cd rivapi && go build -o rivapi .
+```
+```bash
+sudo install -m 755 rivapi/rivapi /usr/local/bin/rivapi
+```
+```bash
+sudo cp conf/systemd/rivapi.service /etc/systemd/system/
+```
+```bash
+sudo cp conf/sudoers.d/rivapi /etc/sudoers.d/rivapi && sudo chmod 440 /etc/sudoers.d/rivapi
+```
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable --now rivapi.service
+```
+
+`scripts/rivapi-rebuild.sh` automates the build+install+restart
+sequence for subsequent source changes.
+
+#### VLC
+
+Used for ad-hoc live audio capture into Rivolution (see spec 0010's
+Background section) — not a systemd-managed service, launched manually
+as needed, but required to be present:
+
+```bash
+sudo apt install vlc vlc-plugin-jack
+```
