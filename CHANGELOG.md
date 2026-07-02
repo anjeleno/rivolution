@@ -7,6 +7,128 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 14)
+
+- `rivapi/dashboard/templates/home.html`: new home page — four nav buttons
+  (System, Broadcast, Groups, Carts). Placeholder for future system status.
+- `rivapi/dashboard/handlers.go`: `Root` now renders the home page instead
+  of redirecting to `/groups`. Login already redirected to `/`; landing page
+  is now home rather than groups.
+
+## 2026-07-01 (continued, 13)
+
+- `rivapi/store/service_status.go`: switched from `systemctl is-active`
+  to `systemctl show --property=ActiveState,SubState` for richer state
+  reporting; added `Detail` field to `ServiceStatus` surfacing informative
+  sub-states (e.g. "activating (auto-restart)", "activating (start-post)");
+  added `Warn` field and `liquidsoapWarn()` health check that reads the last
+  8 KB of the Liquidsoap log for a JACK device failure within the last 10
+  minutes — clears automatically once PipeWire bridge is running.
+- `rivapi/dashboard/templates/system_status.html`: render Detail in muted
+  text and Warn as a warning line (⚠) below the state chip.
+- `rivapi/dashboard/templates/broadcast.html`: moved "+ Add stream" and
+  "Save & Deploy" to separate rows so they don't overlap on narrow viewports.
+
+## 2026-07-01 (continued, 12)
+
+- `rivapi/dashboard/templates/broadcast.html`: moved "+ Add stream"
+  button from the streams section header to below the last stream card,
+  paired with "Save & Deploy" in a bottom action row. New stream fields
+  now appear immediately above the button when clicked.
+
+## 2026-07-01 (continued, 11)
+
+- `docs/specs/0010-systemd-stack-orchestration.md`: added implementation
+  deviation note and deployment prerequisite warning for the
+  `rivendell.service.d/rivolution.conf` drop-in. `rdservice/rdservice.cpp`
+  lines 89–92 contain a hardcoded `geteuid()!=0` check that exits with
+  `ExitNoPerms` when the service runs as `rd`; combined with
+  `Restart=always` and a 30-second `ExecStartPost` probe this creates a
+  ~32-second infinite restart cycle. The drop-in must not be deployed
+  until the check is removed and `rdservice` rebuilt.
+
+## 2026-07-01 (continued, 10)
+
+- `rivapi/store/liquidsoap_generator.go`: `liqStreamURL()` — auto-
+  generates the `url=` parameter in each `output.icecast()` call as
+  `http://icecast_host:icecast_port/mount` (the direct playback URL
+  Icecast renders as a "Listen Live" link). A per-stream URL override
+  is still accepted for reverse-proxy deployments. `station.url` no
+  longer falls through to this field — it is the station website only.
+- `rivapi/dashboard/templates/broadcast.html`: per-stream "Stream URL
+  override" field placeholder now shows the auto-computed value so the
+  operator can see what will be generated without filling it in.
+
+## 2026-07-01 (continued, 9)
+
+- `rivapi/store/icecast_generator.go`: removed `<burst-on-connect>`,
+  `<queue-size>`, `<client-timeout>`, `<header-timeout>`,
+  `<source-timeout>` from the `<limits>` block — all were removed from
+  the Icecast 2.5.0 XML schema, causing config validation failure and
+  the "obsolete tags" + "did not validate" errors in the admin dashboard.
+- `rivapi/store/liquidsoap_generator.go`: touch the log file
+  (`O_CREATE|O_APPEND`) after creating the log directory — Liquidsoap
+  opens the path on start and fails if the file doesn't exist.
+- `rivapi/dashboard/templates/broadcast.html`: Icecast Admin ↗ button
+  (computed URL from hostname:port, opens `/admin/` in new tab); per-
+  stream computed stream URL display (`http://host:port/mount`);
+  station URL field re-labeled "Station website URL" with explanatory
+  note; per-stream website URL override changed from `type="url"` to
+  `type="text"` (field accepts paths like `/192`, not only full URLs).
+
+## 2026-07-01 (continued, 8)
+
+- `rivapi/store/icecast_generator.go`: added `<mount type="normal">`
+  sections to the generated icecast.xml, one per configured stream, so
+  mount points are visible in the config file (previously absent).
+- `rivapi/store/broadcast_config.go`: fixed default Liquidsoap log path
+  from `/home/rd/logs/liquidsoap.log` (wrong) to `/home/rd/Log/liquidsoap.log`
+  (correct path on the host); Liquidsoap fails on start if the path is wrong.
+- `rivapi/store/liquidsoap_generator.go`: added `os.MkdirAll` for the
+  configured log directory at deploy time so Liquidsoap can open its log
+  immediately on first start.
+- `conf/systemd/liquidsoap.service` (new): full standalone unit — the
+  Ubuntu `liquidsoap` package ships no service unit, so the drop-in
+  ExecStart override had nothing to apply to.
+- `conf/systemd/liquidsoap.service.d/rivolution.conf`: removed `[Service]`
+  ExecStart lines (now in the main unit above); kept `[Unit]` After/PartOf.
+
+## 2026-07-01 (continued, 7)
+
+- `rivapi/store/broadcast_config.go` (new): `BroadcastConfig` type
+  (station defaults, per-stream overrides, Icecast and Liquidsoap
+  config structs), `LoadBroadcastConfig` (reads JSON, returns defaults
+  when file absent), `SaveBroadcastConfig` (atomic write).
+- `rivapi/store/icecast_generator.go` (new): generates `icecast.xml`
+  from `BroadcastConfig`; `<sources>` auto-calculated from stream
+  count; installs to `/etc/icecast2/icecast.xml` via scoped
+  `sudo install`.
+- `rivapi/store/liquidsoap_generator.go` (new): generates `radio.liq`
+  from `BroadcastConfig`; MP3 uses `%mp3`, HE-AAC v1/v2 use
+  `%external` + `fdkaac` CLI with `content_type="audio/aacp"`, OGG
+  uses `%ogg(%vorbis)`.
+- `rivapi/config/config.go`: added `BroadcastConfigPath` /
+  `RIVAPI_BROADCAST_CONFIG` (default
+  `/home/rd/etc/rivolution/broadcast.json`).
+- `rivapi/dashboard/handlers_broadcast.go` (new): `Broadcast` (GET
+  `/broadcast`) and `BroadcastSave` (POST `/broadcast/save`). Save
+  flow: write JSON → generate icecast.xml → install → generate
+  radio.liq → restart icecast2 → restart liquidsoap (exit code 5
+  treated as warning, not error). Result banner embedded in page.
+- `rivapi/dashboard/templates/broadcast.html` (new): three
+  collapsible sections — Station, Icecast, Liquidsoap — plus a
+  dynamic stream list managed by Alpine.js. Add/remove streams; codec
+  dropdown (MP3/HE-AAC v1/HE-AAC v2/OGG Vorbis); per-stream metadata
+  override expander. Streams serialized as JSON into a hidden field
+  before submit.
+- `rivapi/dashboard/templates/base.html`: added Broadcast nav link.
+- `rivapi/main.go`: wired `GET /broadcast`, `POST /broadcast/save`.
+- `conf/sudoers.d/rivapi`: added `RIVAPI_INSTALL` alias for the
+  scoped `sudo install` command that writes `icecast.xml`.
+- `conf/systemd/liquidsoap.service.d/rivolution.conf`: added
+  `[Service]` section with `ExecStart` override pointing to
+  `/home/rd/etc/liquidsoap/radio.liq`.
+
 ## 2026-07-01 (continued, 6)
 
 - `docs/specs/0008-broadcast-tool-suite-integration.md`: added Phase 1
