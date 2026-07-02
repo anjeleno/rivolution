@@ -7,6 +7,23 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 26)
+
+- `rivapi/store/patchbay.go`: added `SaveDesiredLinks`/`LoadDesiredLinks`/
+  `ReconcileLinks`, and a background poll loop in `main.go` (every 5s)
+  that re-applies any saved link missing from the live graph. This is
+  the persistence mechanism for `/patchbay`, not WirePlumber policy —
+  verified empirically that WirePlumber's declarative `target.node`
+  metadata mechanism does not apply to JACK-bridged ports (three
+  independent findings: no link forms, an internal WirePlumber script
+  throws a Lua exception on these nodes, and the metadata itself is
+  keyed by an ephemeral node.id that changes every restart anyway).
+  Full writeup in `docs/specs/0007-pipewire-audio-engine.md`'s
+  Implementation deviations.
+- `dashboard/handlers_patchbay.go`, `templates/patchbay.html`: added a
+  "Save current patch" button and a 4-state indicator per cell
+  (connected+saved / connected only / saved only / neither).
+
 ## 2026-07-01 (continued, 25)
 
 - `rivapi/store/patchbay.go`, `dashboard/handlers_patchbay.go`,

@@ -10,10 +10,10 @@ import (
 // Stored as JSON at BroadcastConfigPath; both the Icecast XML and the
 // Liquidsoap .liq are generated from this at save time.
 type BroadcastConfig struct {
-	Station    StationDefaults  `json:"station"`
-	Icecast    IcecastCfg       `json:"icecast"`
-	Liquidsoap LiquidsoapCfg    `json:"liquidsoap"`
-	Streams    []StreamConfig   `json:"streams"`
+	Station    StationDefaults `json:"station"`
+	Icecast    IcecastCfg      `json:"icecast"`
+	Liquidsoap LiquidsoapCfg   `json:"liquidsoap"`
+	Streams    []StreamConfig  `json:"streams"`
 }
 
 // StationDefaults are shared station identity fields. Any StreamConfig field
@@ -42,7 +42,7 @@ type StreamConfig struct {
 	Name        string  `json:"name"`
 	Genre       string  `json:"genre"`
 	Description string  `json:"description"`
-	URL         string `json:"url"`
+	URL         string  `json:"url"`
 }
 
 // IcecastCfg holds every field rendered into icecast.xml.

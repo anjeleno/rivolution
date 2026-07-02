@@ -596,3 +596,51 @@ at this stage.
   `conf/systemd/`. Spec referenced `pipewire-system.service` as
   "available alongside the default per-user unit" — that was incorrect;
   the custom units correct the gap.
+- **2026-07-01:** the Routing UI section above (`WirePlumber manages
+  link policy via its own config... this is genuine persistence`)
+  describes the *native* PipeWire architecture this spec targets
+  end-to-end (Phase 2, `caed` as a `pw_stream` client) — and for that
+  architecture, the assumption holds: native PipeWire streams go
+  through PipeWire's own "select-target" event when created, which is
+  exactly what WirePlumber's declarative `target.node`/`target.object`
+  metadata mechanism (`find-defined-target.lua`) hooks into.
+
+  **Verified empirically 2026-07-01 that this does *not* apply to
+  Phase 1's actual deployed architecture** (`caed`/Liquidsoap/Stereo
+  Tool as JACK clients bridged through `pipewire-jack`, not native
+  `pw_stream` clients). Three independent findings, from a properly
+  instrumented test (correct endpoint restarted, `PIPEWIRE_DEBUG=3` on
+  `wireplumber-system.service`, checked the actual resulting graph via
+  `pw-link`, not just log silence):
+  1. Setting `target.node` metadata (via `pw-metadata`) on `caed`'s
+     JACK-bridged node, then restarting `rivendell.service` so that
+     node is freshly created, produced no resulting link — the
+     mechanism did not fire.
+  2. WirePlumber's own `state-stream.lua` (a bundled internal script,
+     not something this fork wrote) threw a Lua exception indexing a
+     nil `media.class` field around the same time — direct evidence
+     its internal machinery expects properties JACK-bridged nodes
+     don't carry, i.e. this isn't just "untested," it's actively
+     mismatched.
+  3. Even setting aside 1 and 2: `pw-metadata`'s `target.node` entry is
+     keyed by the *subject's own ephemeral node.id*, which changed
+     across both restarts tested (each JACK client gets a fresh
+     `node.id` on every process restart) — so even a working version of
+     this mechanism would need something to re-apply the metadata after
+     every restart of the node it's attached to, undercutting the
+     "persists on its own" value proposition for this specific
+     bridged-client scenario regardless of 1/2.
+
+  **Phase 1's actual persistence mechanism** (shipped, see
+  `rivapi/store/patchbay.go`'s `ReconcileLinks`/`DesiredLinksPath`,
+  `handlers_patchbay.go`'s `/patchbay/save`): a saved link list in
+  `/home/rd/etc/rivolution/patchbay.json`, reconciled against the live
+  graph on a 5-second poll in `rivapi`'s own process (`main.go`),
+  re-applying anything missing via direct `pw-link` calls. This is
+  deliberately *not* a WirePlumber policy — it's a pragmatic
+  poll-and-reapply layer that works today, to be retired in favor of
+  real WirePlumber policy once Phase 2 lands and `caed`/Liquidsoap/
+  Stereo Tool are native PipeWire clients rather than JACK-bridged
+  ones. The Routing UI section's persistence design above remains the
+  Phase 2 target; this note exists so that gap isn't rediscovered by
+  someone trying to make Phase 1 do something it structurally can't.

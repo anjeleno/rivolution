@@ -1,18 +1,39 @@
 {{define "page"}}
 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
     <h2 style="margin:0">Patchbay</h2>
-    <a href="/patchbay" role="button" class="outline secondary">Refresh</a>
+    <div role="group" style="width:auto;">
+        <form method="post" action="/patchbay/save" style="margin:0; display:inline;">
+            <button type="submit" class="outline"
+                    title="Save the currently-connected pairs so they're automatically re-applied after a restart">
+                Save current patch
+            </button>
+        </form>
+        <a href="/patchbay" role="button" class="outline secondary">Refresh</a>
+    </div>
 </div>
 
-<p style="color: var(--pico-muted-color); margin-bottom:1rem;">
+<p style="color: var(--pico-muted-color); margin-bottom:0.5rem;">
     Every PipeWire output (row) and input (column) port. Click a cell to
-    connect or disconnect that pair. Links are not persistent across a
-    client restart (e.g. Liquidsoap) — this view always reflects the live
-    graph, reload after any service restart.
+    connect or disconnect that pair. <strong>●</strong> connected and saved
+    (persistent) &nbsp;·&nbsp; <strong style="color:var(--pico-contrast-background,inherit)">●</strong>
+    connected but not saved — won't survive a restart until you click
+    "Save current patch" &nbsp;·&nbsp; <strong>◐</strong> saved but not
+    currently connected (waiting for the other end to appear) &nbsp;·&nbsp;
+    <strong>○</strong> not connected.
+</p>
+<p style="color: var(--pico-muted-color); margin-bottom:1rem;">
+    Saved pairs are automatically re-applied in the background (checked
+    every 5s) whenever both ports exist again — no need to manually
+    reconnect after a client restart. This talks directly to
+    <code>pw-link</code>, not WirePlumber's own policy system, which does
+    not apply to JACK-bridged ports (verified 2026-07-01).
 </p>
 
 {{if .Error}}
 <p><mark>{{.Error}}</mark></p>
+{{end}}
+{{if .JustSaved}}
+<p><ins>Current patch saved — will be re-applied automatically after any restart.</ins></p>
 {{end}}
 
 {{if or (not .Outputs) (not .Inputs)}}
@@ -30,18 +51,27 @@
     </thead>
     <tbody>
         {{$linked := .Linked}}
+        {{$saved := .Saved}}
         {{range $out := .Outputs}}
         <tr>
             <th style="text-align:left;">{{$out}}</th>
             {{range $in := $.Inputs}}
             {{$key := printf "%s|%s" $out $in}}
+            {{$isLinked := index $linked $key}}
+            {{$isSaved := index $saved $key}}
             <td style="text-align:center; padding:0.25rem;">
                 <form method="post" action="/patchbay/toggle" style="margin:0;">
                     <input type="hidden" name="output" value="{{$out}}">
                     <input type="hidden" name="input" value="{{$in}}">
-                    {{if index $linked $key}}
-                    <button type="submit" title="Connected to {{$in}} — click to disconnect"
+                    {{if and $isLinked $isSaved}}
+                    <button type="submit" title="Connected to {{$in}}, saved — click to disconnect"
                             style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">●</button>
+                    {{else if $isLinked}}
+                    <button type="submit" class="contrast" title="Connected to {{$in}}, not saved — click to disconnect"
+                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">●</button>
+                    {{else if $isSaved}}
+                    <button type="submit" class="outline contrast" title="Saved, waiting to reconnect to {{$in}} — click to connect now"
+                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">◐</button>
                     {{else}}
                     <button type="submit" class="outline secondary"
                             title="Not connected to {{$in}} — click to connect"

@@ -13,9 +13,9 @@ import (
 const LiquidsoapScriptPath = "/home/rd/etc/liquidsoap/radio.liq"
 
 var liquidsoapTmpl = template.Must(template.New("liquidsoap").Funcs(template.FuncMap{
-	"liqEncoder":    liqEncoder,
-	"aacExtras":     liqAACExtras,
-	"liqStreamURL":  liqStreamURL,
+	"liqEncoder":   liqEncoder,
+	"aacExtras":    liqAACExtras,
+	"liqStreamURL": liqStreamURL,
 }).Parse(`#!/usr/bin/liquidsoap
 
 set("log.file.path", "{{.Liquidsoap.LogPath}}")

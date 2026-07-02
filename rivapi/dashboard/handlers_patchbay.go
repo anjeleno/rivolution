@@ -11,10 +11,12 @@ import (
 // current PipeWire graph as a connect/disconnect matrix.
 type patchbayData struct {
 	baseData
-	Outputs []string
-	Inputs  []string
-	Linked  map[string]bool // keyed by linkKey(output, input)
-	Error   string
+	Outputs   []string
+	Inputs    []string
+	Linked    map[string]bool // keyed by linkKey(output, input) — currently live
+	Saved     map[string]bool // keyed by linkKey(output, input) — persisted, reconciled on a timer
+	Error     string
+	JustSaved bool // true right after a successful Save, for a confirmation message
 }
 
 // linkKey is the composite map key used to look up link state from the
@@ -39,11 +41,20 @@ func (h *Handler) patchbayData() (patchbayData, error) {
 		return data, err
 	}
 
+	saved, err := store.LoadDesiredLinks(store.DesiredLinksPath)
+	if err != nil {
+		return data, err
+	}
+
 	data.Outputs = outputs
 	data.Inputs = inputs
 	data.Linked = make(map[string]bool, len(links))
 	for _, l := range links {
 		data.Linked[linkKey(l.Output, l.Input)] = true
+	}
+	data.Saved = make(map[string]bool, len(saved))
+	for _, l := range saved {
+		data.Saved[linkKey(l.Output, l.Input)] = true
 	}
 	return data, nil
 }
@@ -59,9 +70,29 @@ func (h *Handler) Patchbay(w http.ResponseWriter, r *http.Request) {
 	} else if e := r.URL.Query().Get("error"); e != "" {
 		data.Error = e
 	}
+	data.JustSaved = r.URL.Query().Get("saved") == "1"
 	if err := tmplPatchbay.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
+}
+
+// PatchbaySave handles POST /patchbay/save: persists the current live link
+// set as the desired set, so the background reconciler (main.go) re-applies
+// it after any endpoint restarts. Deliberately snapshots the *live* graph
+// rather than accepting an arbitrary posted list — what you see connected
+// right now is what gets saved, no separate "staged" state to track.
+func (h *Handler) PatchbaySave(w http.ResponseWriter, r *http.Request) {
+	links, err := store.ListPatchLinks()
+	redirect := "/patchbay"
+	if err == nil {
+		err = store.SaveDesiredLinks(links, store.DesiredLinksPath)
+	}
+	if err != nil {
+		redirect += "?error=" + url.QueryEscape(err.Error())
+	} else {
+		redirect += "?saved=1"
+	}
+	http.Redirect(w, r, redirect, http.StatusSeeOther)
 }
 
 // PatchbayToggle handles POST /patchbay/toggle: links the given output/input

@@ -1,8 +1,11 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -10,6 +13,82 @@ import (
 type PatchLink struct {
 	Output string
 	Input  string
+}
+
+// DesiredLinksPath is where the patchbay's saved (persistent) link set is
+// stored. Reconciled against the live PipeWire graph on a timer — see
+// ReconcileLinks — since links themselves don't survive either endpoint's
+// process restart (a PipeWire limitation, not something we can fix by
+// storing the list correctly; verified 2026-07-01 that WirePlumber's own
+// declarative target-metadata mechanism does not apply to JACK-bridged
+// ports, so this poll-and-reapply approach is deliberate, not a stopgap
+// for something not yet wired up — see docs/specs/0007-pipewire-audio-engine.md).
+const DesiredLinksPath = "/home/rd/etc/rivolution/patchbay.json"
+
+// LoadDesiredLinks reads the saved link set. Returns an empty slice, not an
+// error, if the file doesn't exist yet (nothing saved yet).
+func LoadDesiredLinks(path string) ([]PatchLink, error) {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var links []PatchLink
+	if err := json.Unmarshal(data, &links); err != nil {
+		return nil, err
+	}
+	return links, nil
+}
+
+// SaveDesiredLinks writes links as the persistent set, creating parent
+// directories as needed. The write is atomic (temp file + rename).
+func SaveDesiredLinks(links []PatchLink, path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(links, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+// ReconcileLinks re-applies any saved link that isn't currently present in
+// the live graph. Ports that don't exist yet (e.g. a client hasn't started)
+// fail individually via Link() and are skipped, not treated as fatal —
+// reconciliation just tries again on the next call.
+func ReconcileLinks(path string) error {
+	desired, err := LoadDesiredLinks(path)
+	if err != nil {
+		return fmt.Errorf("load desired links: %w", err)
+	}
+	if len(desired) == 0 {
+		return nil
+	}
+	current, err := ListPatchLinks()
+	if err != nil {
+		return fmt.Errorf("list current links: %w", err)
+	}
+	have := make(map[string]bool, len(current))
+	for _, l := range current {
+		have[linkPairKey(l.Output, l.Input)] = true
+	}
+	for _, l := range desired {
+		if !have[linkPairKey(l.Output, l.Input)] {
+			_ = Link(l.Output, l.Input) // best-effort; port may not exist yet
+		}
+	}
+	return nil
+}
+
+func linkPairKey(output, input string) string {
+	return output + "|" + input
 }
 
 // pwEnv sets XDG_RUNTIME_DIR for a pw-link invocation. rivapi.service also
