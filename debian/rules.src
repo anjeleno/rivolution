@@ -6,7 +6,20 @@ build:
 	 ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-available MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
 	make $(DEBUILD_MAKE_ARGS)
 
-binary:
+# dpkg (since 1.16.2, mandatory since 1.22.7) calls build-arch/binary-arch
+# rather than falling back to build/binary -- all packages here are
+# "Architecture: any" (none "all"), so build-indep/binary-indep are
+# intentionally empty; there is nothing arch-indep to build. Deliberately
+# placed with no recipe lines following before the next real target --
+# GNU Make attaches indented lines to the most recently declared target
+# even across blank lines/comments, so an empty target must be followed
+# immediately by another target line, not by unrelated recipe content.
+build-arch: build
+build-indep:
+
+binary: binary-arch
+binary-indep:
+binary-arch: build-arch
 	dh_testroot
 	dh_prep
 	dh_auto_install
