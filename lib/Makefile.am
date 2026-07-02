@@ -1,6 +1,6 @@
 ## Makefile.am
 ##
-## Makefile.am for rivendell/lib
+## Makefile.am for rivolution/lib
 ##
 ## (C) Copyright 2002-2025 Fred Gleason <fredg@paravelsystems.com>
 ##
@@ -30,13 +30,13 @@ moc_%.cpp:	%.h
 
 # I18N Stuff
 install-exec-local:	
-	../helpers/rdi18n_helper.sh --install librd $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --install librd $(DESTDIR)$(prefix)/share/rivolution
 
 uninstall-local:
-	../helpers/rdi18n_helper.sh --uninstall librd $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --uninstall librd $(DESTDIR)$(prefix)/share/rivolution
 
 all:	
-	../helpers/rdi18n_helper.sh --update librd $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --update librd $(DESTDIR)$(prefix)/share/rivolution
 
 lib_LTLIBRARIES = librd.la
 dist_librd_la_SOURCES = dbversion.h\

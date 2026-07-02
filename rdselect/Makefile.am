@@ -28,17 +28,17 @@ moc_%.cpp:	%.h
 
 # I18N Stuff
 install-exec-hook:
-	../helpers/rdi18n_helper.sh --install rdselect $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --install rdselect $(DESTDIR)$(prefix)/share/rivolution
 	mkdir -p $(DESTDIR)/etc/auto.master.d
 	cp rd.audiostore.autofs $(DESTDIR)/etc/auto.master.d/
 	touch $(DESTDIR)/etc/auto.rd.audiostore
 
 uninstall-local:	
-	../helpers/rdi18n_helper.sh --uninstall rdselect $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --uninstall rdselect $(DESTDIR)$(prefix)/share/rivolution
 	rm -f $(DESTDIR)/etc/auto.master.d/rd.audiostore.autofs
 
 all:	
-	../helpers/rdi18n_helper.sh --update rdselect $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --update rdselect $(DESTDIR)$(prefix)/share/rivolution
 
 bin_PROGRAMS = rdselect
 

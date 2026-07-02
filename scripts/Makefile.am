@@ -23,7 +23,7 @@
 install-exec-local:	
 	mkdir -p $(DESTDIR)/etc/X11/xinit/xinitrc.d
 	cp start-rdmonitor.sh $(DESTDIR)/etc/X11/xinit/xinitrc.d/
-	mkdir -p $(DESTDIR)/usr/share/rivendell
+	mkdir -p $(DESTDIR)/usr/share/rivolution
 
 uninstall-local:	
 	rm -f $(DESTDIR)/etc/X11/xinit/xinitrc.d/start-rdmonitor.sh

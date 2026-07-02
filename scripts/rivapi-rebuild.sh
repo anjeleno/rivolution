@@ -18,8 +18,8 @@ RIVAPI_DIR="$(cd "$SCRIPT_DIR/../rivapi" && pwd)"
 echo "==> Building rivapi ($RIVAPI_DIR)"
 (cd "$RIVAPI_DIR" && go build -o rivapi .)
 
-echo "==> Installing to /usr/local/bin/rivapi"
-sudo install -m 755 "$RIVAPI_DIR/rivapi" /usr/local/bin/rivapi
+echo "==> Installing to /usr/bin/rivapi"
+sudo install -m 755 "$RIVAPI_DIR/rivapi" /usr/bin/rivapi
 
 echo "==> Restarting rivapi.service"
 sudo systemctl restart rivapi.service

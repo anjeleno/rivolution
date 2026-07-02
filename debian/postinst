@@ -1,10 +1,46 @@
 #!/bin/sh
-# postinst script for Rivendell
+# postinst script for Rivolution
+set -e
 
 case "$1" in
     configure)
+      # $2 is the previously-configured version string -- empty exactly
+      # when this is a fresh install (Debian policy's own convention for
+      # postinst's "configure" argument). Used below to gate destructive
+      # database operations to first-install only.
+      OLD_VERSION="$2"
+
       ldconfig
+
+      # Load-bearing, easy to skip silently: ldconfig processes
+      # /etc/ld.so.conf.d/*.conf alphabetically, and the standard
+      # multiarch conf sorts before pipewire-jack's -- so a real
+      # libjack-jackd2-0, if present, always wins SONAME resolution and
+      # PipeWire audio silently never connects despite every service
+      # reporting active. Renaming makes the pipewire-jack entry sort
+      # first. Idempotent: only acts if the un-prefixed file still exists.
+      for f in /etc/ld.so.conf.d/pipewire-jack-*.conf; do
+	  test -e "$f" || continue
+	  target="$(dirname "$f")/00-$(basename "$f")"
+	  test -e "$target" || mv "$f" "$target"
+      done
+      ldconfig
+
       /bin/systemctl daemon-reload
+
+      # rd: the service account this fork's spec 0007/0010 model runs
+      # caed/liquidsoap/rivapi/stereo-tool as. Expected to already exist
+      # (the operator's own login on a real install) -- this package does
+      # not create human accounts, only grants the audio group needed for
+      # real-time sound device access if the account is present.
+      if getent passwd rd >/dev/null; then
+	  usermod -aG audio rd
+      fi
+
+      # Legacy rivendell/pypad system accounts -- upstream's fixed
+      # UID/GID 150/151, still referenced by file ownership below
+      # (rdselect_helper, webget.cgi, /var/log/rivendell) even though the
+      # actual broadcast services now run as rd.
       /usr/sbin/groupadd -r -g 150 rivendell
       /usr/sbin/useradd -o -u 150 -g rivendell -s /bin/false -r -c "Rivendell radio automation system" -d /var/snd rivendell
       /usr/sbin/groupadd -r -g 151 pypad
@@ -19,7 +55,7 @@ case "$1" in
 	  chmod 775 /etc/rivendell.d
       fi
       if test ! -e /etc/rd.conf ; then
-	  cp /usr/share/rivendell/rd.conf-sample /etc/rivendell.d/rd-default.conf
+	  cp /usr/share/rivolution/rd.conf-sample /etc/rivendell.d/rd-default.conf
 	  ln -s /etc/rivendell.d/rd-default.conf /etc/rd.conf
       fi
       if test ! -h /etc/rd.conf ; then
@@ -27,12 +63,99 @@ case "$1" in
 	  ln -s /etc/rivendell.d/rd-default.conf /etc/rd.conf
       fi
       if test ! -e /etc/profile.d/rivendell-env.sh ; then
-	 cp /usr/share/rivendell/rivendell-env.sh /etc/profile.d/
+	 cp /usr/share/rivolution/rivendell-env.sh /etc/profile.d/
       fi
+
       #
       # FIXME: Configure ALSA Here!
       #
-      /usr/sbin/rddbmgr --modify
+
+      # Database: a fresh install creates and seeds an empty database
+      # (mirrors scripts/rivolution-first-run.sh, folded in here so a
+      # .deb install needs no separate manual step); an upgrade only
+      # migrates the schema against the existing database. This must run
+      # -- and on upgrade, complete -- before rivendell.service is
+      # restarted below: a schema/binary version mismatch hard-blocks
+      # startup (rdcoreapplication.cpp:240).
+      if test -z "$OLD_VERSION" ; then
+	  rd_conf_real=/etc/rivendell.d/rd-default.conf
+
+	  mysql_pass=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
+	  sed -i "/^\[mySQL\]/,/^\[/{s/^Password=.*/Password=$mysql_pass/}" "$rd_conf_real"
+
+	  jwt_secret=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 64)
+	  sed -i "/^\[dashboard\]/,/^\[/{s/^JwtSecret=.*/JwtSecret=$jwt_secret/}" "$rd_conf_real"
+
+	  mysql_host=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Hostname"{print $2}' /etc/rd.conf)
+	  mysql_user=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Loginname"{print $2}' /etc/rd.conf)
+	  mysql_db=$(awk -F= '/^\[mySQL\]/{f=1;next}/^\[/{f=0}f&&$1=="Database"{print $2}' /etc/rd.conf)
+
+	  mysql -h "$mysql_host" <<SQL
+drop database if exists \`$mysql_db\`;
+create database if not exists \`$mysql_db\`;
+drop user if exists '$mysql_user'@'%';
+drop user if exists '$mysql_user'@'localhost';
+create user '$mysql_user'@'%' identified by '$mysql_pass';
+create user '$mysql_user'@'localhost' identified by '$mysql_pass';
+grant select,insert,update,delete,create,drop,index,alter,lock tables on \`$mysql_db\`.* to '$mysql_user'@'%';
+grant select,insert,update,delete,create,drop,index,alter,lock tables on \`$mysql_db\`.* to '$mysql_user'@'localhost';
+flush privileges;
+SQL
+	  /usr/sbin/rddbmgr --create --generate-audio
+      else
+	  /usr/sbin/rddbmgr --modify
+      fi
+
+      # PulseAudio disabled in favor of direct ALSA/PipeWire access --
+      # caed and the system-scope PipeWire instance need uncontended
+      # access to the sound device.
+      killall pulseaudio >/dev/null 2>&1 || true
+      if test -e /etc/pulse/client.conf ; then
+	  sed -i 's/# autospawn = yes/autospawn = no/' /etc/pulse/client.conf
+      fi
+      gpasswd -d pulse audio >/dev/null 2>&1 || true
+      usermod -aG audio rivendell
+      if ! grep -qF '@audio      hard      memlock     unlimited' /etc/security/limits.conf ; then
+	  cat >> /etc/security/limits.conf <<'LIMITS'
+@audio      hard      rtprio          90
+@audio      hard      memlock     unlimited
+LIMITS
+      fi
+
+      #
+      # Broadcast/PipeWire/rivapi runtime layer (specs 0007/0008/0010).
+      # Staged files copied from /usr/share/rivolution/ into their real
+      # /etc destinations, same pattern as rd.conf-sample above.
+      #
+      mkdir -p /etc/systemd/system/rivendell.service.d
+      mkdir -p /etc/systemd/system/icecast2.service.d
+      mkdir -p /etc/systemd/system/liquidsoap.service.d
+      cp /usr/share/rivolution/systemd/rivolution-stack.target /etc/systemd/system/
+      cp /usr/share/rivolution/systemd/pipewire-system.service /etc/systemd/system/
+      cp /usr/share/rivolution/systemd/wireplumber-system.service /etc/systemd/system/
+      cp /usr/share/rivolution/systemd/liquidsoap.service /etc/systemd/system/
+      cp /usr/share/rivolution/systemd/stereo-tool.service /etc/systemd/system/
+      cp /usr/share/rivolution/systemd/rivapi.service /etc/systemd/system/
+      cp /usr/share/rivolution/systemd/rivendell.service.d/rivolution.conf /etc/systemd/system/rivendell.service.d/
+      cp /usr/share/rivolution/systemd/icecast2.service.d/rivolution.conf /etc/systemd/system/icecast2.service.d/
+      cp /usr/share/rivolution/systemd/liquidsoap.service.d/rivolution.conf /etc/systemd/system/liquidsoap.service.d/
+
+      cp /usr/share/rivolution/sudoers.d/rivapi /etc/sudoers.d/rivapi
+      chmod 440 /etc/sudoers.d/rivapi
+
+      cp /usr/share/rivolution/udev/99-ptp.rules /etc/udev/rules.d/
+      udevadm control --reload-rules
+      udevadm trigger
+
+      systemctl daemon-reload
+
+      # PipeWire must be up before rivendell.service (caed's JACK driver
+      # needs the socket present at startup, not just eventually), so
+      # these two start ahead of the rivendell restart below.
+      systemctl enable --now pipewire-system.service wireplumber-system.service
+      systemctl enable --now rivapi.service
+      systemctl enable rivolution-stack.target
+
       /bin/systemctl restart rivendell
       /bin/systemctl enable rivendell
       ln -f -s ../conf-available/rd-bin.conf /etc/apache2/conf-enabled/rd-bin.conf
@@ -51,7 +174,7 @@ case "$1" in
       fi
       if test ! -f /var/www/rd-bin/logos/webget_logo.png ; then
 	  mkdir -p /var/www/rd-bin/logos
-	  cp -f /usr/share/rivendell/logos/webget_logo.png /var/www/rd-bin/logos/webget_logo.png
+	  cp -f /usr/share/rivolution/logos/webget_logo.png /var/www/rd-bin/logos/webget_logo.png
       fi
 
       mkdir -p /var/log/rivendell
@@ -64,7 +187,7 @@ case "$1" in
       chmod 640 /var/log/rivendell/debug
       chown syslog:adm /var/log/rivendell/debug
       if test ! -e /etc/rsyslog.d/10-rivendell.conf ; then
-	  cp /usr/share/rivendell/syslog.conf-sample /etc/rsyslog.d/10-rivendell.conf
+	  cp /usr/share/rivolution/syslog.conf-sample /etc/rsyslog.d/10-rivendell.conf
       fi
       /bin/systemctl restart rsyslog
 
@@ -77,6 +200,11 @@ case "$1" in
 	 chown root:root /var/www/rd-bin/webget.cgi
 	 chmod 6755 /var/www/rd-bin/webget.cgi
       fi
+
+      echo "Rivolution installed. One manual step remains -- it's a"
+      echo "browser action, not a terminal command: open the dashboard"
+      echo "(http://<this-host>:8080/), go to /patchbay, connect and save"
+      echo "the caed -> Stereo Tool -> Liquidsoap audio chain."
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

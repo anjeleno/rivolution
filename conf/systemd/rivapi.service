@@ -31,7 +31,7 @@ Group=rd
 # PipeWire instance (spec 0007), same pattern as rivendell/liquidsoap/
 # stereo-tool.
 Environment=XDG_RUNTIME_DIR=/run/pipewire-system
-ExecStart=/usr/local/bin/rivapi
+ExecStart=/usr/bin/rivapi
 Restart=on-failure
 RestartSec=5
 

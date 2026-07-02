@@ -4,7 +4,7 @@
 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
     <h2 style="margin:0">Broadcast</h2>
     <div style="display:flex; gap:0.5rem; align-items:center;">
-        <a :href="'http://' + icecast.hostname + ':' + icecast.port + '/admin/'"
+        <a :href="'http://{{.ServerHost}}:' + icecast.port + '/admin/'"
            target="_blank" rel="noopener noreferrer"
            role="button" class="outline secondary" style="white-space:nowrap;">
             Icecast Admin ↗

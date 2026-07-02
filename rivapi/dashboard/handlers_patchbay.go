@@ -38,8 +38,8 @@ func linkKey(output, input string) string {
 	return output + "|" + input
 }
 
-func (h *Handler) patchbayData() (patchbayData, error) {
-	data := patchbayData{baseData: h.base("Patchbay", "patchbay")}
+func (h *Handler) patchbayData(r *http.Request) (patchbayData, error) {
+	data := patchbayData{baseData: h.base(r, "Patchbay", "patchbay")}
 
 	outputs, err := store.ListOutputPorts()
 	if err != nil {
@@ -78,7 +78,7 @@ func (h *Handler) patchbayData() (patchbayData, error) {
 
 // Patchbay handles GET /patchbay.
 func (h *Handler) Patchbay(w http.ResponseWriter, r *http.Request) {
-	data, err := h.patchbayData()
+	data, err := h.patchbayData(r)
 	if err != nil {
 		data.Error = err.Error()
 	} else if e := r.URL.Query().Get("error"); e != "" {

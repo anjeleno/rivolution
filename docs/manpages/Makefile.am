@@ -35,14 +35,14 @@
 %.8:	%.xml
 	xsltproc $(top_srcdir)/helpers/docbook/manpages/docbook.xsl $<
 
-install-exec-local:	
-	mkdir -p $(DESTDIR)$(prefix)/share/rivendell/manpages
-	cp *.pdf $(DESTDIR)$(prefix)/share/rivendell/manpages/
-	mkdir -p $(DESTDIR)$(prefix)/share/rivendell/manpages/html
-	cp *.html $(DESTDIR)$(prefix)/share/rivendell/manpages/html/
+install-exec-local:
+	mkdir -p $(DESTDIR)$(prefix)/share/rivolution/manpages
+	cp *.pdf $(DESTDIR)$(prefix)/share/rivolution/manpages/
+	mkdir -p $(DESTDIR)$(prefix)/share/rivolution/manpages/html
+	cp *.html $(DESTDIR)$(prefix)/share/rivolution/manpages/html/
 
-uninstall-local:	
-	rm -rf $(DESTDIR)$(prefix)/share/rivendell/manpages
+uninstall-local:
+	rm -rf $(DESTDIR)$(prefix)/share/rivolution/manpages
 
 
 all-local:	rdadmin.1\

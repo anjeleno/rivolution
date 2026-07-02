@@ -9,6 +9,13 @@
 # rivendell.service at boot. All for a from-source Rivendell build that
 # never ran the .deb package's postinst script.
 #
+# As of 2026-07-02, debian/postinst does all of this itself on a fresh
+# .deb install (same logic, folded in there) plus the full broadcast/
+# PipeWire/rivapi runtime layer (specs 0007/0008/0010) that this script
+# still does not cover. Only needed for a manual ./configure && make &&
+# sudo make install workflow that skips dpkg-buildpackage entirely -- if
+# you installed the .deb, none of this is necessary.
+#
 # UID/GID 150/151 are upstream's own fixed values (debian/postinst),
 # not arbitrary -- kept for permission consistency across any future
 # cloned/networked Rivendell hosts.

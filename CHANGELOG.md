@@ -7,6 +7,99 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-02 (continued, 2)
+
+- `debian/postinst`: full rewrite folding in `scripts/rivolution-first-run.sh`'s
+  logic (JWT/DB-password generation, empty-DB creation + seed +
+  test-tone via `rddbmgr --create --generate-audio`, PulseAudio
+  disable, `rd`/`audio` group membership, `rtprio`/`memlock` limits)
+  gated on `$2` (Debian policy's postinst "previously configured
+  version" argument) being empty -- fresh installs create/seed the
+  database, upgrades only run `rddbmgr --modify` against the existing
+  one, preserving whatever secrets/data are already there. Also now
+  deploys the full spec 0007/0008/0010 broadcast/PipeWire/rivapi layer
+  automatically: every `conf/systemd/*` unit and drop-in, the
+  `ld.so.conf.d` ordering fix (idempotent, upgrade-safe), sudoers rule,
+  udev rule, and enables/starts `pipewire-system.service`/
+  `wireplumber-system.service` before `rivendell.service` restarts (the
+  JACK driver needs the socket present at startup). The DB migration
+  now explicitly runs before the `rivendell.service` restart it was
+  previously positioned after -- a schema/binary mismatch hard-blocks
+  startup. `scripts/rivolution-first-run.sh` left in place for from-source
+  installs that skip `dpkg-buildpackage` entirely, with a note
+  pointing at `postinst` as the primary path now.
+- `debian/control.src`: added `golang-go` to `Build-Depends`;
+  `icecast2`, `liquidsoap`, `fdkaac`, `vlc`, `vlc-plugin-jack`,
+  `pipewire`, `wireplumber` to `rivolution`'s `Depends` -- previously
+  entirely unreferenced by packaging despite being required for the
+  verified-working broadcast stack.
+- `debian/rules.src`: added a `go build` step for `rivapi` alongside
+  the existing autotools build, and staged the full broadcast/PipeWire
+  layer (`conf/systemd/*`, `conf/sudoers.d/rivapi`,
+  `conf/udev/99-ptp.rules`, the `rivapi` binary) into the `rivolution`
+  package under `/usr/share/rivolution/` for `postinst` to deploy, same
+  pattern as the existing `rd.conf-sample` staging.
+- `debian/rules.src`: `dh_dwz -Xrivapi` -- Go's linker compresses its
+  own DWARF debug info in a format `dwz` can't process; `dh_dwz`
+  doesn't skip just that file, it aborts its entire batch (every C++
+  binary's debug-info step failed too). Excluding `rivapi` from `dwz`
+  only affects the separate `-dbgsym` debug-symbol package (a `gdb`
+  crash-debugging aid, unused during normal operation); `dh_strip`
+  runs on `rivapi` immediately afterward, unaffected -- the shipped
+  binary itself is unchanged.
+- `conf/systemd/rivapi.service`, `conf/sudoers.d/rivapi`,
+  `scripts/rivapi-rebuild.sh`: standardized the installed `rivapi`
+  binary path from `/usr/local/bin/rivapi` to `/usr/bin/rivapi` --
+  `/usr/local` is reserved for locally-installed, non-package-managed
+  software; a `.deb`-shipped binary shouldn't write there. All three
+  install paths (`.deb`, `scripts/rivapi-rebuild.sh` dev workflow, and
+  the sudoers `RIVAPI_INSTALL` alias) now agree.
+- `dpkg-buildpackage -us -uc -b` verified producing all 7 packages
+  cleanly with the complete broadcast/PipeWire/rivapi automation
+  included, not just the core Rivendell build from earlier today.
+
+## 2026-07-02
+
+- `rivapi/dashboard/handlers.go`: added `serverHost()`, deriving the
+  hostname from the current request (honoring `X-Forwarded-Host` under
+  `TrustProxyHeaders`) instead of a hardcoded `localhost` or a
+  separately-configured public hostname. `baseData` now carries
+  `ServerHost`/`StereoToolWebPort`; `base()` takes `*http.Request`
+  (all call sites across `handlers.go`, `handlers_broadcast.go`,
+  `handlers_patchbay.go` updated).
+- `rivapi/config/config.go`: added `StereoToolWebPort`
+  (`RIVAPI_STEREO_TOOL_WEB_PORT`, default 8079, matching
+  `conf/systemd/stereo-tool.service`'s `-p` flag).
+- `rivapi/dashboard/templates/base.html`: added a "Processing" nav link
+  to Stereo Tool's web config UI, built from `ServerHost` so it resolves
+  correctly whether the operator is on localhost, the LAN, or connected
+  over Tailscale — no per-install configuration needed.
+- `rivapi/dashboard/templates/broadcast.html`: Icecast Admin link's
+  hostname switched from the configured public listener hostname
+  (`icecast.hostname`, meant for stream URLs, not necessarily how the
+  operator's browser reached the dashboard) to `ServerHost`, same
+  reasoning as the Processing link. Port still comes from the live
+  Icecast config.
+- `debian/rules.src`: fixed a real GNU Make pitfall blocking
+  `dpkg-buildpackage` entirely. `build-arch`/`build-indep`/`binary`/
+  `binary-indep` had no recipe of their own, so Make also matched the
+  catch-all `%: dh $@` pattern rule and silently ran a second, full
+  `dh build-arch` sequence with debhelper's own default flags right
+  after our custom `build:` recipe finished — discarding our custom
+  `--libdir`/`--libexecdir` and reconfiguring/rebuilding the whole tree
+  a second time. Fixed with explicit `@:` no-op recipes on every
+  formerly-empty target.
+- `debian/shlibs.local` (new), `debian/control.src`: `caed`/`ripcd`
+  link against `pipewire-jack`'s `libjack.so.0` shim, which ships no
+  `.shlibs`/`.symbols` file at all (confirmed via `dpkg -L
+  pipewire-jack`), so `dpkg-shlibdeps` couldn't resolve a dependency.
+  `-xpipewire-jack` looked plausible but doesn't fix this — per
+  `dpkg-shlibdeps(1)` it's for same-package self-dependency avoidance
+  only. Fixed with the documented override mechanism,
+  `debian/shlibs.local`, plus `pipewire-jack | libjack-jackd2-0` added
+  to `rivolution`'s `Depends`. `dpkg-buildpackage -us -uc -b` now
+  succeeds end-to-end, all 7 packages build.
+
 ## 2026-07-01 (continued, 28)
 
 - `rivapi/dashboard/templates/base.html`, `templates/home.html`:
