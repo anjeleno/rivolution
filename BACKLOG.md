@@ -509,3 +509,22 @@ Also still open: no live/auto-refresh (reload the page to see changes
 made outside the dashboard), and no client-grouped visual graph (still
 plain text rows, not virtual patch cables) — a nicer visual pass is
 wanted eventually but not scoped yet.
+
+## Groups and Carts nav links hidden — not yet meaningful in the new dashboard
+
+`/groups` and `/carts` (from the original `rivapi` Phase 1 work) are
+still fully implemented and reachable by direct URL, but as of
+2026-07-01 don't make sense as top-level navigation yet — they're
+early scaffolding from before this fork's actual build priority order
+(RDAdmin parity is explicitly long-tail, after service control,
+broadcast tools, Tailscale, and PipeWire — see `ROADMAP.md`) and
+don't yet connect to anything an operator would actually use them for
+day to day.
+
+**Current mitigation:** hidden from `base.html`'s nav bar and
+`home.html`'s button grid (Go template comments, not deleted code —
+trivial to re-enable). Routes/handlers untouched.
+
+**Revisit** once RDAdmin porting actually reaches group/cart
+management — at that point either restore them as-is or redesign
+them alongside whatever RDAdmin-parity work makes them coherent.

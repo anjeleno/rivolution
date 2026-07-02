@@ -7,6 +7,13 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 28)
+
+- `rivapi/dashboard/templates/base.html`, `templates/home.html`:
+  hidden the Groups and Carts nav links/buttons (template comments,
+  routes/handlers untouched) — not yet meaningful standalone; see
+  `BACKLOG.md`, revisit once RDAdmin porting reaches them.
+
 ## 2026-07-01 (continued, 27)
 
 - `rivapi/dashboard/handlers_patchbay.go`, `templates/patchbay.html`:
