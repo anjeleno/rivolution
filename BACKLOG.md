@@ -528,3 +528,28 @@ trivial to re-enable). Routes/handlers untouched.
 **Revisit** once RDAdmin porting actually reaches group/cart
 management — at that point either restore them as-is or redesign
 them alongside whatever RDAdmin-parity work makes them coherent.
+
+## Dashboard needs to replace what the removed Ansible `broadcast_advanced` role did
+
+`anjeleno/rivolution-unified-installer`'s `broadcast_advanced` role
+(and its `advanced-config/` bundle) was removed 2026-07-01 — its
+Icecast/Liquidsoap/VLC config generation and Stereo Tool download are
+now properly handled by `rivapi` (specs 0007/0008), and its seed
+database was hardcoded to a single host name (`onair`), not
+general-purpose. But the role also did several things with **no
+dashboard equivalent yet**, silently lost when it was removed:
+
+- Nightly cron jobs: database backup (`daily_db_backup.sh`) and log
+  generation (`autologgen.sh`)
+- `auto-merge.sh`, `reconcile-traffic.sh`, `stl.sh` — automation
+  scripts with no traced dashboard replacement
+- Desktop shortcuts for RDAdmin/RDAirplay/RDLibrary/RDLogEdit/
+  RDLogManager, Stereo Tool, and STL
+
+**Deferred, not forgotten** — the plan is a custom implementation of
+this functionality in the Go dashboard (`rivapi`) rather than
+reintroducing the old fixed-bundle Ansible role. Needs its own scoping
+pass: at minimum, scheduled DB backup and log generation are real
+operational gaps until this lands. The removed role's content is still
+in `rivolution-unified-installer`'s git history if needed as a
+reference for what the old scripts actually did.
