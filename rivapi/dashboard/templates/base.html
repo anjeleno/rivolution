@@ -21,8 +21,10 @@
         <span>{{.Branding.StationName}}</span>
     </a>
     <ul class="nav-links">
-        <li><a href="/groups"{{if eq .ActiveNav "groups"}} class="active"{{end}}>Groups</a></li>
-        <li><a href="/carts"{{if eq .ActiveNav "carts"}} class="active"{{end}}>Carts</a></li>
+        {{/* Groups/Carts nav links hidden 2026-07-01 -- not yet meaningful
+             standalone; revisit once RDAdmin porting reaches them. Routes
+             and handlers are untouched, still reachable directly by URL.
+             See BACKLOG.md. */}}
         <li><a href="/system"{{if eq .ActiveNav "system"}} class="active"{{end}}>System</a></li>
         <li><a href="/broadcast"{{if eq .ActiveNav "broadcast"}} class="active"{{end}}>Broadcast</a></li>
         <li><a href="/patchbay"{{if eq .ActiveNav "patchbay"}} class="active"{{end}}>Patchbay</a></li>
