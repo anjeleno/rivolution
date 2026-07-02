@@ -10,10 +10,10 @@ import (
 // Stored as JSON at BroadcastConfigPath; both the Icecast XML and the
 // Liquidsoap .liq are generated from this at save time.
 type BroadcastConfig struct {
-	Station    StationDefaults  `json:"station"`
-	Icecast    IcecastCfg       `json:"icecast"`
-	Liquidsoap LiquidsoapCfg    `json:"liquidsoap"`
-	Streams    []StreamConfig   `json:"streams"`
+	Station    StationDefaults `json:"station"`
+	Icecast    IcecastCfg      `json:"icecast"`
+	Liquidsoap LiquidsoapCfg   `json:"liquidsoap"`
+	Streams    []StreamConfig  `json:"streams"`
 }
 
 // StationDefaults are shared station identity fields. Any StreamConfig field
@@ -28,16 +28,21 @@ type StationDefaults struct {
 
 // StreamConfig describes one Liquidsoap output.icecast() call.
 // Codec values: "mp3", "he-aac-v1", "he-aac-v2", "ogg".
-// Bitrate is in kbps; no preset — fully user-controlled.
+// Bitrate is in kbps; no preset — fully user-controlled. Used by every
+// codec except "ogg", which is quality (VBR) based instead — see Quality.
 // Name/Genre/Description/URL override StationDefaults when non-empty.
 type StreamConfig struct {
-	Mount       string `json:"mount"`
-	Codec       string `json:"codec"`
-	Bitrate     int    `json:"bitrate"`
-	Name        string `json:"name"`
-	Genre       string `json:"genre"`
-	Description string `json:"description"`
-	URL         string `json:"url"`
+	Mount   string `json:"mount"`
+	Codec   string `json:"codec"`
+	Bitrate int    `json:"bitrate"`
+	// Quality is Liquidsoap's %vorbis VBR quality knob, range -0.2 (lowest)
+	// to 1.0 (highest), default 0.3. Only used when Codec is "ogg" — Vorbis
+	// has no bitrate= parameter in this Liquidsoap version.
+	Quality     float64 `json:"quality"`
+	Name        string  `json:"name"`
+	Genre       string  `json:"genre"`
+	Description string  `json:"description"`
+	URL         string  `json:"url"`
 }
 
 // IcecastCfg holds every field rendered into icecast.xml.

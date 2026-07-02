@@ -1,0 +1,29 @@
+# System-scope WirePlumber service for the Rivolution broadcast stack.
+# Manages routing policy for the system-scope PipeWire instance and
+# enforces persistent WirePlumber link policy written by the dashboard.
+#
+# Bound to pipewire-system.service — stops and restarts with it.
+# Policy config goes in /etc/wireplumber/ (system-scope), not
+# ~/.config/wireplumber/ (which is session-scoped and unavailable
+# before any user logs in).
+#
+# Install: sudo cp conf/systemd/wireplumber-system.service /etc/systemd/system/
+# then: sudo systemctl daemon-reload && sudo systemctl enable --now wireplumber-system.service
+
+[Unit]
+Description=Multimedia Service Session Manager (system)
+After=pipewire-system.service dbus.service
+BindsTo=pipewire-system.service
+PartOf=rivolution-stack.target
+
+[Service]
+User=rd
+Group=rd
+Environment=XDG_RUNTIME_DIR=/run/pipewire-system
+Environment=GIO_USE_VFS=local
+ExecStart=/usr/bin/wireplumber
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=pipewire-system.service

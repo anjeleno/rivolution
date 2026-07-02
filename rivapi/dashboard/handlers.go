@@ -57,13 +57,14 @@ func pageTmpl(page string) *template.Template {
 
 // Pre-parsed template sets — one per page so {{define "page"}} never conflicts.
 var (
-	tmplLogin        = template.Must(template.ParseFS(assets, "templates/login.html"))
-	tmplHome         = pageTmpl("home.html")
-	tmplGroups       = pageTmpl("groups.html")
-	tmplCarts        = pageTmpl("carts.html")
-	tmplCartDetail   = pageTmpl("cart_detail.html")
-	tmplSystem       = pageTmpl("system.html")
-	tmplBroadcast    = pageTmpl("broadcast.html")
+	tmplLogin            = template.Must(template.ParseFS(assets, "templates/login.html"))
+	tmplHome             = pageTmpl("home.html")
+	tmplGroups           = pageTmpl("groups.html")
+	tmplCarts            = pageTmpl("carts.html")
+	tmplCartDetail       = pageTmpl("cart_detail.html")
+	tmplSystem           = pageTmpl("system.html")
+	tmplBroadcast        = pageTmpl("broadcast.html")
+	tmplPatchbay         = pageTmpl("patchbay.html")
 	tmplGroupsList       = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
 	tmplCartsList        = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
 	tmplSystemStatus     = template.Must(template.ParseFS(assets, "templates/system_status.html"))

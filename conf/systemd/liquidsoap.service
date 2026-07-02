@@ -19,6 +19,10 @@ PartOf=rivolution-stack.target
 Type=simple
 User=rd
 Group=rd
+# Route input.jack() calls to the system-scope PipeWire instance.
+# pipewire-jack intercepts libjack.so; XDG_RUNTIME_DIR tells it where
+# the PipeWire socket lives (/run/pipewire-system/pipewire-0).
+Environment=XDG_RUNTIME_DIR=/run/pipewire-system
 ExecStart=/usr/bin/liquidsoap /home/rd/etc/liquidsoap/radio.liq
 Restart=on-failure
 RestartSec=5

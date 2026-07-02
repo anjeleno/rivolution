@@ -45,22 +45,13 @@ whose `postinst` script handles all the above. Required package components:
 Neither path has been started. Until one of them is implemented, all
 deployment steps are manual.
 
----
-
-## `rivapi` has no systemd unit — started manually during development
-
-`rivapi` (the Go dashboard process) has no `rivapi.service` unit file yet.
-During development it is started by hand:
-
-```
-cd ~/dev/rivolution/rivapi && go build -o rivapi . && ./rivapi
-```
-
-The unit file is scoped to [spec 0010](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0010-systemd-stack-orchestration.md),
-which is where it belongs: rivapi is the process that controls the broadcast
-stack, so its own service unit is part of the same orchestration work.
-Until that unit exists, the process must be started manually after every
-reboot or restart.
+**Update 2026-07-01:** `conf/systemd/rivapi.service` now exists and is
+deployed on the dev box (survives reboot, no more manual
+`go build && ./rivapi` every time — see `scripts/rivapi-rebuild.sh` for
+the one-command rebuild-and-restart workflow after a source change).
+This closes the specific "rivapi has no systemd unit" gap that used to
+be its own entry here, but not the automation this entry describes —
+a fresh install still needs every `conf/` file placed by hand.
 
 ---
 
@@ -449,3 +440,72 @@ Disruptive on a live on-air machine.
 `loginctl terminate-session`, killing the stale per-user bus) suitable
 for a machine that can't just be rebooted on demand. Low priority since
 the reboot workaround, while disruptive, reliably works.
+
+## Broadcast dashboard's HE-AAC stream option can't actually encode SBR
+
+Ubuntu's packaged `libfdk-aac2` (2.0.2-3~ubuntu5) has SBR (spectral band
+replication) *encoding* disabled — the AAC-LC encoder and SBR decoder are
+patent-unencumbered and shipped, but the SBR encoder specifically carries
+a separate patent restriction some distros build out. `fdkaac --profile 5`
+(HE-AAC) and `--profile 29` (HE-AAC v2) both fail with "unsupported
+profile" on this build; only AAC-LC (`--profile 2`), AAC-LD (`23`), and
+AAC-ELD (`39`) work.
+
+**Current mitigation:** the dashboard's he-aac-v1/he-aac-v2 codec options
+both generate a plain AAC-LC stream (`liqEncoder` in
+`rivapi/store/liquidsoap_generator.go`) instead of true HE-AAC. Decent
+quality, but loses the low-bitrate efficiency SBR is chosen for.
+
+**Deferred** — real fix needs either a non-distro `fdk-aac`/`fdkaac`
+build compiled with SBR encoding enabled, or switching the
+low-bitrate-efficient stream option to a different codec (e.g. Opus,
+which isn't patent-restricted and is already linked into Liquidsoap).
+
+## Audio processing chain routing (caed -> Stereo Tool -> Liquidsoap) is hardcoded
+
+The signal chain needs caed's JACK output routed into Stereo Tool, and
+Stereo Tool's output routed into Liquidsoap. Stereo Tool only reaches
+JACK via an ALSA-JACK bridge plugin (its "jack (ALSA)" I/O option) —
+not as a native JACK client — and that plugin's default port mapping
+(`/usr/share/alsa/alsa.conf.d/50-jack.conf`) is hardcoded to
+`system:capture_1/2`/`system:playback_1/2`, real jackd+ALSA hardware
+port names that don't exist under system-scope PipeWire.
+
+**Current mitigation:** `conf/alsa/rd.asoundrc` overrides the `pcm.jack`
+definition with a hardcoded mapping to `rivendell_0:playout_0L/R` (input)
+and `liquidsoap:in_0/1` (output). Works, but is fixed at exactly one
+routing — no way to reassign which caed stream feeds Stereo Tool, or add
+additional processing/monitoring taps, without hand-editing this file.
+
+**Update 2026-07-01:** an MVP patchbay page now exists (`/patchbay`,
+`rivapi/store/patchbay.go`, `handlers_patchbay.go`), and has been used
+to replace `conf/alsa/rd.asoundrc`'s hardcoded routing for real —
+connections are made and saved from the dashboard, no hand-editing or
+SSH required. Two iterations so far:
+
+1. First pass: an output x input matrix table, no persistence.
+2. Same day, after real use: the matrix didn't fit on screen at a
+   readable zoom level once there were more than a handful of ports —
+   replaced with a connections list (Output → Input rows, each with a
+   Remove button) plus an "Add connection" form (two dropdowns). Scales
+   with the number of *connections* (usually small) instead of
+   outputs x inputs (grows fast). Also added real persistence: a
+   "Save current patch" button snapshots the live graph to
+   `/home/rd/etc/rivolution/patchbay.json`, and a background poll in
+   `rivapi` (every 5s) re-applies anything missing — **verified working
+   live**, survived a real Liquidsoap restart with no manual
+   reconnection needed.
+
+**This is still deliberately Phase 1, not the final design** — see
+`docs/specs/0007-pipewire-audio-engine.md`'s Implementation deviations
+for the full writeup, but in short: WirePlumber's own declarative
+link-policy mechanism was investigated and empirically confirmed **not
+to apply** to JACK-bridged ports (the current architecture) — not
+merely deferred for lack of time. The `rivapi`-side poll-and-reapply
+reconciler is what actually works today; it's expected to be retired
+in favor of real WirePlumber policy once Phase 2 lands (`caed`/
+Liquidsoap/Stereo Tool as native PipeWire clients, no JACK bridge).
+Also still open: no live/auto-refresh (reload the page to see changes
+made outside the dashboard), and no client-grouped visual graph (still
+plain text rows, not virtual patch cables) — a nicer visual pass is
+wanted eventually but not scoped yet.

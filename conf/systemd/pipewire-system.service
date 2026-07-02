@@ -1,0 +1,30 @@
+# System-scope PipeWire service for the Rivolution broadcast stack.
+# Ubuntu's pipewire package ships only user-scope unit files; this is the
+# system-scope equivalent needed for broadcast services (caed, Liquidsoap)
+# to reach PipeWire without a logged-in user session.
+#
+# Runs as rd (UID 1001, audio group). Creates the runtime dir at
+# /run/pipewire-system/ and places the PipeWire socket there as
+# /run/pipewire-system/pipewire-0. Services connect by setting
+# XDG_RUNTIME_DIR=/run/pipewire-system in their own unit environment.
+#
+# Install: sudo cp conf/systemd/pipewire-system.service /etc/systemd/system/
+# then: sudo systemctl daemon-reload && sudo systemctl enable --now pipewire-system.service
+
+[Unit]
+Description=PipeWire Multimedia Service (system)
+After=dbus.service
+PartOf=rivolution-stack.target
+
+[Service]
+User=rd
+Group=rd
+RuntimeDirectory=pipewire-system
+RuntimeDirectoryMode=0755
+Environment=XDG_RUNTIME_DIR=/run/pipewire-system
+ExecStart=/usr/bin/pipewire
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

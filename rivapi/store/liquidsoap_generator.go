@@ -13,9 +13,9 @@ import (
 const LiquidsoapScriptPath = "/home/rd/etc/liquidsoap/radio.liq"
 
 var liquidsoapTmpl = template.Must(template.New("liquidsoap").Funcs(template.FuncMap{
-	"liqEncoder":    liqEncoder,
-	"contentType":   liqContentType,
-	"liqStreamURL":  liqStreamURL,
+	"liqEncoder":   liqEncoder,
+	"aacExtras":    liqAACExtras,
+	"liqStreamURL": liqStreamURL,
 }).Parse(`#!/usr/bin/liquidsoap
 
 set("log.file.path", "{{.Liquidsoap.LogPath}}")
@@ -35,7 +35,7 @@ output.icecast(
   name="{{.EffectiveName $.Station}}",
   genre="{{.EffectiveGenre $.Station}}",
   description="{{.EffectiveDescription $.Station}}",
-  url="{{liqStreamURL . $.Liquidsoap.IcecastHost $.Liquidsoap.IcecastPort}}",{{contentType .}}
+  url="{{liqStreamURL . $.Liquidsoap.IcecastHost $.Liquidsoap.IcecastPort}}",{{aacExtras .}}
   radio
 )
 {{end}}
@@ -44,24 +44,31 @@ output.icecast(
 // liqEncoder returns the Liquidsoap encoder format string for a stream.
 // AAC streams use %external piped through fdkaac (package: fdkaac, Ubuntu
 // universe). MP3 uses %mp3 (lame), OGG uses %ogg(%vorbis).
+//
+// he-aac-v1/v2 currently fall back to plain AAC-LC (fdkaac --profile 2):
+// Ubuntu's libfdk-aac2 package ships with SBR encoding disabled (patent
+// restriction on the SBR encoder specifically, separate from the
+// unencumbered AAC-LC encoder and SBR decoder) — profiles 5 (HE-AAC) and
+// 29 (HE-AAC v2) both fail with "unsupported profile" on this build.
+// Revisit if a non-distro fdk-aac build with SBR encoding becomes
+// available.
+//
+// -f 2 (ADTS) is required for stdout streaming: fdkaac's default
+// transport format is muxed into an M4A container, which needs to seek
+// back and write its moov box — "stdout streaming is not available on
+// M4A output". ADTS is a continuous streamable bitstream instead.
 func liqEncoder(s StreamConfig, sampleRate int) string {
 	switch s.Codec {
 	case "mp3":
 		return fmt.Sprintf("%%mp3(bitrate=%d)", s.Bitrate)
-	case "he-aac-v1":
+	case "he-aac-v1", "he-aac-v2":
 		return fmt.Sprintf(
 			"%%external(channels=2, samplerate=%d, header=false, restart_on_crash=true,\n"+
-				`    process="fdkaac --bitrate %d000 --profile 5 --raw --raw-channels 2 --raw-rate %d -i - -o -")`,
-			sampleRate, s.Bitrate, sampleRate,
-		)
-	case "he-aac-v2":
-		return fmt.Sprintf(
-			"%%external(channels=2, samplerate=%d, header=false, restart_on_crash=true,\n"+
-				`    process="fdkaac --bitrate %d000 --profile 29 --raw --raw-channels 2 --raw-rate %d -i - -o -")`,
+				`    process="fdkaac --bitrate %d000 --profile 2 --raw --raw-channels 2 --raw-rate %d -f 2 -o - -")`,
 			sampleRate, s.Bitrate, sampleRate,
 		)
 	case "ogg":
-		return fmt.Sprintf("%%ogg(%%vorbis(bitrate=%d))", s.Bitrate)
+		return fmt.Sprintf("%%ogg(%%vorbis(quality=%.1f))", s.Quality)
 	default:
 		return fmt.Sprintf("%%mp3(bitrate=%d)", s.Bitrate)
 	}
@@ -78,11 +85,16 @@ func liqStreamURL(s StreamConfig, host string, port int) string {
 	return fmt.Sprintf("http://%s:%d%s", host, port, s.Mount)
 }
 
-// liqContentType returns the content_type line for AAC streams, empty for others.
-func liqContentType(s StreamConfig) string {
+// liqAACExtras returns extra output.icecast() arguments needed for AAC
+// streams (which use the %external encoder), empty for others:
+//   - format: output.icecast's MIME-type argument is named "format"
+//     (Liquidsoap 2.4.x), not "content_type" (an older API name).
+//   - send_icy_metadata: Liquidsoap can infer this for known formats like
+//     %mp3, but not for %external, and errors at load time if left unset.
+func liqAACExtras(s StreamConfig) string {
 	switch s.Codec {
 	case "he-aac-v1", "he-aac-v2":
-		return "\n  content_type=\"audio/aacp\","
+		return "\n  format=\"audio/aacp\",\n  send_icy_metadata=true,"
 	}
 	return ""
 }

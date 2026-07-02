@@ -7,6 +7,181 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 27)
+
+- `rivapi/dashboard/handlers_patchbay.go`, `templates/patchbay.html`:
+  replaced the output x input matrix table with a connections list
+  (Output -> Input rows, Remove button) plus an "Add connection" form
+  (two dropdowns). The matrix didn't fit on screen at a readable zoom
+  level with more than a handful of ports — this scales with the
+  number of connections instead of outputs x inputs. `/patchbay/toggle`
+  split into `/patchbay/connect` and `/patchbay/disconnect` to match.
+  Reconciler-based persistence (added in the previous entry) verified
+  working live — survived a real Liquidsoap restart with the saved
+  patch silently reconnecting, no manual action needed.
+
+## 2026-07-01 (continued, 26)
+
+- `rivapi/store/patchbay.go`: added `SaveDesiredLinks`/`LoadDesiredLinks`/
+  `ReconcileLinks`, and a background poll loop in `main.go` (every 5s)
+  that re-applies any saved link missing from the live graph. This is
+  the persistence mechanism for `/patchbay`, not WirePlumber policy —
+  verified empirically that WirePlumber's declarative `target.node`
+  metadata mechanism does not apply to JACK-bridged ports (three
+  independent findings: no link forms, an internal WirePlumber script
+  throws a Lua exception on these nodes, and the metadata itself is
+  keyed by an ephemeral node.id that changes every restart anyway).
+  Full writeup in `docs/specs/0007-pipewire-audio-engine.md`'s
+  Implementation deviations.
+- `dashboard/handlers_patchbay.go`, `templates/patchbay.html`: added a
+  "Save current patch" button and a 4-state indicator per cell
+  (connected+saved / connected only / saved only / neither).
+
+## 2026-07-01 (continued, 25)
+
+- `rivapi/store/patchbay.go`, `dashboard/handlers_patchbay.go`,
+  `dashboard/templates/patchbay.html` (new): MVP visual patchbay —
+  `/patchbay` shows every PipeWire output x input port as a clickable
+  connect/disconnect matrix, backed directly by `pw-link`. Replaces
+  needing to hand-edit `conf/alsa/rd.asoundrc` or SSH in to run
+  `pw-link` manually. Intentionally minimal (no client grouping, no
+  live refresh, no persistence across a client restart) — see
+  `BACKLOG.md` for what's deliberately deferred to a later pass.
+- `conf/systemd/rivapi.service`: added `Environment=XDG_RUNTIME_DIR=/run/pipewire-system`
+  (needed for the patchbay's `pw-link` calls) and `After=pipewire-system.service`.
+
+## 2026-07-01 (continued, 24)
+
+- `conf/systemd/rivapi.service` (new): rivapi now runs as a real systemd
+  service — survives reboot, no more manual `go build && ./rivapi`.
+  Deliberately independent of `rivolution-stack.target` (it's the
+  process that controls the stack from the dashboard, so it can't be
+  stopped along with it). No `EnvironmentFile=` needed — reads DB
+  credentials and the dashboard JWT secret from `/etc/rd.conf`, same as
+  every other Rivendell binary.
+- `scripts/rivapi-rebuild.sh` (new): one-command build + install +
+  restart, replacing the manual `cd rivapi && go build -o rivapi . &&
+  ./rivapi` dev workflow.
+- `conf/sudoers.d/rivapi`: added `restart rivapi.service` to
+  `RIVAPI_SYSTEMCTL` and the `/usr/local/bin/rivapi` install path to
+  `RIVAPI_INSTALL`, both needed by the rebuild script.
+
+## 2026-07-01 (continued, 23)
+
+- `conf/systemd/stereo-tool.service`: added `-p 8079` to expose Stereo
+  Tool's web config UI (needed since it runs headless, no X11 display).
+- `conf/alsa/rd.asoundrc` (new): overrides the stock `pcm.jack` ALSA
+  definition (`/usr/share/alsa/alsa.conf.d/50-jack.conf`), which
+  hardcodes `system:capture_1/2`/`system:playback_1/2` — real jackd+ALSA
+  hardware port names that don't exist under system-scope PipeWire.
+  Stereo Tool's "jack (ALSA)" I/O option routes through this ALSA-JACK
+  bridge plugin, not as a native JACK client, so this was needed for it
+  to reach caed/Liquidsoap at all. Pins caed stream 0 -> Stereo Tool
+  input, Stereo Tool output -> Liquidsoap for now — temporary/hardcoded
+  until the dashboard's visual patch matrix (dynamic WirePlumber-backed
+  routing) replaces it; see BACKLOG.md.
+
+## 2026-07-01 (continued, 22)
+
+- `conf/systemd/stereo-tool.service`: added the missing
+  `Environment=XDG_RUNTIME_DIR=/run/pipewire-system` (same pattern as
+  `rivendell.service.d`/`liquidsoap.service`) and `After=pipewire-system.service`.
+  Without it, Stereo Tool had no way to find the system-scope PipeWire
+  socket and was very likely falling back to the user-session PipeWire
+  instance instead — its own log showed repeated JACK auto-connect
+  failures (`cannot connect system:capture_1 to stereo_tool...`),
+  and it never appeared in the system-scope PipeWire graph. Also fixed
+  the unit's description comment, which had the signal chain backwards
+  (said "downstream of Liquidsoap"; it's upstream — caed -> Stereo Tool
+  -> Liquidsoap).
+
+## 2026-07-01 (continued, 21)
+
+- `rivapi/store/broadcast_config.go`: added `StreamConfig.Quality`
+  (float64) for Vorbis VBR quality, separate from `Bitrate`.
+  `rivapi/store/liquidsoap_generator.go`: ogg streams now generate
+  `%vorbis(quality=...)` instead of `%vorbis(bitrate=...)` — Liquidsoap's
+  Vorbis encoder has no `bitrate` parameter at all ("unknown parameter
+  name (bitrate)"), it's quality/VBR-based, same class of API-version
+  mismatch as the AAC argument-name fixes above.
+  `rivapi/dashboard/templates/broadcast.html`: the stream form now shows
+  a Quality slider (-0.2 to 1.0) instead of the Bitrate field when codec
+  is "ogg", so the dashboard only ever presents fields the encoder
+  actually accepts.
+
+## 2026-07-01 (continued, 20)
+
+- `rivapi/store/liquidsoap_generator.go`: added the missing `-f 2`
+  (ADTS transport format) flag to the `fdkaac` command line. Without
+  it, fdkaac defaults to muxing into an M4A container, which needs to
+  seek back and write its moov box and so refuses to stream to stdout
+  ("stdout streaming is not available on M4A output") — Liquidsoap saw
+  this as the encoder process dying immediately, surfacing as a
+  "Broken pipe in write()" crash loop. ADTS is a continuous streamable
+  bitstream instead.
+
+## 2026-07-01 (continued, 19)
+
+- `rivapi/store/liquidsoap_generator.go`: fixed the `fdkaac` command line
+  for AAC streams — Ubuntu's `fdkaac` 1.0.0 has no `-i` flag (input is a
+  positional argument, not `-i <file>`); the old `-i - -o -` failed with
+  "invalid option -- 'i'". Also switched `--profile` from 5/29 (HE-AAC)
+  to 2 (AAC-LC): Ubuntu's `libfdk-aac2` ships with SBR encoding disabled
+  (patent-restricted), so the HE-AAC profiles error "unsupported
+  profile". he-aac-v1/v2 now produce plain AAC-LC; see `BACKLOG.md` for
+  the real fix.
+
+## 2026-07-01 (continued, 18)
+
+- `rivapi/store/liquidsoap_generator.go`: AAC stream's `output.icecast()`
+  also needs `send_icy_metadata=true` explicitly — Liquidsoap can infer
+  this for `%mp3`/`%ogg` but not for the `%external` encoder AAC streams
+  use, and errors at load time ("Could not guess send_icy_metadata for
+  this format") if left unset. Found immediately after fixing the
+  `format=` argument name above, during the same verification pass.
+
+## 2026-07-01 (continued, 17)
+
+- `rivapi/store/liquidsoap_generator.go`: AAC stream output was passing
+  `content_type="audio/aacp"` to `output.icecast()`, an argument name
+  from an older Liquidsoap API. Liquidsoap 2.4.x's `output.icecast()`
+  has no `content_type` argument at all — the equivalent is `format`.
+  Fixed the generated field name; caught when the AAC stream's
+  `radio.liq` failed to parse and Liquidsoap auto-restart-looped.
+
+## 2026-07-01 (continued, 16)
+
+- `lib/dbversion.h`: bumped `RD_VERSION_DATABASE` 378 -> 379.
+  `utils/rddbmgr/updateschema.cpp` and `revertschema.cpp`: widen
+  `STATIONS.JACK_VERSION` from `char(16)`/`varchar(16)` to `varchar(64)`.
+  The column was sized for a real jackd's short version string; the
+  PipeWire JACK shim's `jack_get_version_string()` returns a longer
+  descriptive string that was silently failing to save.
+
+## 2026-07-01 (continued, 15)
+
+- `rdservice/rdservice.cpp`: removed `geteuid()!=0` root check (lines
+  89–92). rdservice can now run as the `rd` user; the `User=rd` drop-in
+  in `conf/systemd/rivendell.service.d/rivolution.conf` is now safe to
+  deploy once the rebuilt binary is installed.
+- `conf/systemd/pipewire-system.service` (new): system-scope PipeWire
+  running as `rd`, socket at `/run/pipewire-system/pipewire-0`. Ubuntu
+  26.04 ships only user-scope PipeWire units; this fills the gap.
+- `conf/systemd/wireplumber-system.service` (new): system-scope
+  WirePlumber bound to `pipewire-system.service`.
+- `conf/systemd/rivolution-stack.target`: added `Wants=` for both new
+  PipeWire services.
+- `conf/systemd/rivendell.service.d/rivolution.conf` and
+  `conf/systemd/liquidsoap.service`: added
+  `Environment=XDG_RUNTIME_DIR=/run/pipewire-system` so caed's JACK
+  calls and Liquidsoap's `input.jack()` route to the system PipeWire
+  socket via `pipewire-jack`.
+- `rivapi/store/service_status.go`: added PipeWire and WirePlumber to
+  the managed unit list (System page).
+- `docs/specs/0007-pipewire-audio-engine.md`: added Phase 1
+  implementation section documenting the system-scope setup, runtime
+  prerequisites, and known gap vs. Phase 2.
+
 ## 2026-07-01 (continued, 14)
 
 - `rivapi/dashboard/templates/home.html`: new home page — four nav buttons

@@ -227,20 +227,86 @@ Two generators run server-side at save time, never client-side:
 - Written to `/home/rd/etc/liquidsoap/radio.liq` (rd-owned, no sudo)
 - Station defaults fill each `output.icecast()` call; a stream with a
   non-empty per-stream override uses that value instead
-- AAC streams use `%external`:
+- AAC streams use `%external`, piped through `fdkaac` (see
+  "`fdkaac`/Vorbis command-line reference" below for the exact,
+  verified invocation — it differs from what was originally planned
+  here in several ways, each of which cost real debugging time):
   ```
   %external(
     channels=2, samplerate=<cfg.Liquidsoap.SampleRate>,
     header=false, restart_on_crash=true,
-    "fdkaac -b <bitrate>000 -p <profile> --raw -i - -o -"
+    "fdkaac --bitrate <bitrate>000 --profile 2 --raw --raw-channels 2 \
+     --raw-rate <samplerate> -f 2 -o - -"
   )
   ```
-  where profile is `5` for HE-AAC v1 and `29` for HE-AAC v2
-- `content_type` in `output.icecast()` is set to `"audio/aacp"` for
-  AAC streams, left at default for MP3/OGG
+  `--profile 2` (AAC-LC) is used for both he-aac-v1 and he-aac-v2 codec
+  selections — Ubuntu's `libfdk-aac2` has SBR encoding disabled, so
+  profiles `5`/`29` (true HE-AAC) are not usable on this platform; see
+  the reference section below.
+- `output.icecast()`'s MIME-type override argument is `format`, set to
+  `"audio/aacp"` for AAC streams and left unset (encoder guesses) for
+  MP3/OGG.
+- OGG/Vorbis streams pass `quality`, not `bitrate` — Liquidsoap's
+  `%vorbis` encoder is VBR/quality-based and has no `bitrate` parameter
+  at all. See the reference section below.
 - The Liquidsoap systemd unit's `ExecStart` must point to this path;
   update `conf/systemd/liquidsoap.service` (new custom unit, replacing
   the upstream package unit's default invocation) accordingly
+
+### `fdkaac`/Vorbis command-line reference
+
+Verified against the actual installed versions on this platform
+(`fdkaac` 1.0.0-1build1, `libfdk-aac2` 2.0.2-3~ubuntu5, Liquidsoap
+2.4.0+dev, arm64) during Phase 1 deployment. All of the below differ
+from Liquidsoap's/`fdkaac`'s older or commonly-documented APIs — each
+one produced a real failure before being found. Recorded here so a
+future encoder-config change doesn't have to rediscover them.
+
+**`fdkaac` invocation** (as built for `%external` in
+`liqEncoder`, `rivapi/store/liquidsoap_generator.go`):
+```
+fdkaac --bitrate <bps> --profile 2 --raw --raw-channels 2 \
+       --raw-rate <samplerate> -f 2 -o - -
+```
+- **Input is positional, not `-i <file>`.** This `fdkaac` build (1.0.0)
+  has no `-i` flag at all — `-i - -o -` fails with
+  `invalid option -- 'i'`. The input file/stream is the trailing
+  positional argument; `-` means stdin.
+- **`-f 2` (ADTS transport) is required to stream to stdout.**
+  `fdkaac`'s default transport format (`-f 0`) muxes into an M4A
+  container, which needs to seek back and write its `moov` box — it
+  refuses with `stdout streaming is not available on M4A output` if
+  `-o -` is used without `-f 2`. Without this flag, Liquidsoap sees the
+  encoder process die immediately, surfacing only as a generic
+  `Broken pipe in write()` crash loop with no indication of the real
+  cause.
+- **`--profile 5` (HE-AAC) and `--profile 29` (HE-AAC v2) both fail
+  with `ERROR: unsupported profile`** on this platform's `libfdk-aac2`
+  build. Only `--profile 2` (AAC-LC), `23` (AAC-LD), and `39` (AAC-ELD)
+  work — verified by testing all four directly against `fdkaac`,
+  outside of Liquidsoap. Ubuntu's package ships with SBR *encoding*
+  disabled (a patent restriction specific to the SBR encoder; AAC-LC
+  encoding and SBR *decoding* are unaffected and fully present). This
+  means the dashboard's he-aac-v1/he-aac-v2 codec options currently
+  produce plain AAC-LC, not true HE-AAC — see `BACKLOG.md`.
+
+**Liquidsoap `output.icecast()`/`%vorbis` API** (Liquidsoap 2.4.x, not
+necessarily older versions documented elsewhere):
+- `output.icecast()` has no `content_type` argument. The MIME-type
+  override is named **`format`** (e.g. `format="audio/aacp"`).
+  `content_type=...` fails with
+  `has no argument labeled "content_type"`.
+- `%vorbis` has no `bitrate` argument at all — it is VBR/quality-based:
+  **`%vorbis(quality=<float>)`**, range roughly `-0.2` (lowest) to
+  `1.0` (highest), Liquidsoap's own default is `0.3`. `bitrate=...`
+  fails with
+  `unknown parameter name (bitrate) or invalid parameter value`.
+- For any `%external`-based encoder (i.e. the AAC/`fdkaac` pipe),
+  `send_icy_metadata=true` must be passed explicitly to
+  `output.icecast()`. Liquidsoap can infer whether to send ICY
+  metadata for known formats like `%mp3`/`%ogg`, but not for
+  `%external`, and refuses to start with
+  `Could not guess send_icy_metadata for this format` if left unset.
 
 ### Liquidsoap systemd unit
 
@@ -352,7 +418,28 @@ Per tool, each of these must be confirmed after implementation:
 
 ## Implementation deviations
 
-None yet — implementation has not started.
+Implementation is complete and verified end-to-end (caed → PipeWire →
+Liquidsoap → Icecast, all mounts confirmed live). Deviations from this
+spec's original plan, found during verification:
+
+- **`fdkaac`/Vorbis command-line syntax** — see the "`fdkaac`/Vorbis
+  command-line reference" section above. The originally-planned
+  `-i - -o -` invocation, `content_type=` argument, and `bitrate=` for
+  Vorbis were all wrong for the actually-installed tool versions; each
+  produced a distinct failure (invalid option, unknown argument,
+  unknown parameter) that had to be traced individually.
+- **HE-AAC/SBR is not available** on this platform's `fdkaac` build —
+  the dashboard's he-aac-v1/he-aac-v2 options produce plain AAC-LC
+  instead. Tracked in `BACKLOG.md`, not re-documented here.
+- **`icecast.xml`'s `<clients>` (global max concurrent connections)
+  needs real headroom, not a small testing value.** A value of `5` —
+  low enough to be exhausted just by admin-panel/status-page traffic
+  plus a couple of real listeners, with zero source connections
+  involved — produced intermittent "Icecast connection limit reached"
+  errors on stream load. Not a bug in the generator; an operator
+  config value that needs sane defaults/guidance. `<sources>` does not
+  have this problem — it's auto-calculated from the stream count at
+  generate time, so it never has a fixed ceiling to outgrow.
 
 ## Critical note
 
