@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -79,9 +80,11 @@ type Branding struct {
 }
 
 type baseData struct {
-	Branding  Branding
-	PageTitle string
-	ActiveNav string
+	Branding          Branding
+	PageTitle         string
+	ActiveNav         string
+	ServerHost        string // hostname the browser used to reach this request, no port
+	StereoToolWebPort int
 }
 
 // Handler bundles the dependencies shared by all dashboard route handlers.
@@ -109,8 +112,34 @@ func New(cfg *config.Config, groups store.GroupStore, carts store.CartStore, car
 	}
 }
 
-func (h *Handler) base(pageTitle, activeNav string) baseData {
-	return baseData{Branding: h.brand, PageTitle: pageTitle, ActiveNav: activeNav}
+func (h *Handler) base(r *http.Request, pageTitle, activeNav string) baseData {
+	return baseData{
+		Branding:          h.brand,
+		PageTitle:         pageTitle,
+		ActiveNav:         activeNav,
+		ServerHost:        serverHost(r, h.cfg),
+		StereoToolWebPort: h.cfg.StereoToolWebPort,
+	}
+}
+
+// serverHost returns the hostname (no port) the browser used to reach this
+// request -- used to build links to sibling services on the same box
+// (Stereo Tool's web UI, Icecast's admin page) so they resolve correctly
+// whether the operator is on localhost, the LAN, or connected over
+// Tailscale, with zero per-install configuration. Honors X-Forwarded-Host
+// when TrustProxyHeaders is set, consistent with how auth.go already
+// trusts X-Forwarded-Proto for the cookie Secure flag under the same flag.
+func serverHost(r *http.Request, cfg *config.Config) string {
+	host := r.Host
+	if cfg.TrustProxyHeaders {
+		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
+			host = fwd
+		}
+	}
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		return h
+	}
+	return host
 }
 
 func isHTMX(r *http.Request) bool {
@@ -135,7 +164,7 @@ func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
 
 // Root serves the dashboard home page.
 func (h *Handler) Root(w http.ResponseWriter, r *http.Request) {
-	if err := tmplHome.ExecuteTemplate(w, "base", h.base("Home", "home")); err != nil {
+	if err := tmplHome.ExecuteTemplate(w, "base", h.base(r, "Home", "home")); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }
@@ -154,7 +183,7 @@ func (h *Handler) Groups(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if err := tmplGroups.ExecuteTemplate(w, "base", h.base("Groups", "groups")); err != nil {
+	if err := tmplGroups.ExecuteTemplate(w, "base", h.base(r, "Groups", "groups")); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }
@@ -191,18 +220,18 @@ func (h *Handler) Carts(w http.ResponseWriter, r *http.Request) {
 	if err := tmplCarts.ExecuteTemplate(w, "base", struct {
 		baseData
 		GroupFilter string
-	}{h.base("Carts", "carts"), group}); err != nil {
+	}{h.base(r, "Carts", "carts"), group}); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }
 
-func (h *Handler) systemData() (systemData, error) {
+func (h *Handler) systemData(r *http.Request) (systemData, error) {
 	statuses, err := store.QueryStackStatus()
 	if err != nil {
 		return systemData{}, err
 	}
 	return systemData{
-		baseData:         h.base("System", "system"),
+		baseData:         h.base(r, "System", "system"),
 		Services:         statuses,
 		Target:           store.StackTarget,
 		StereoToolPath:   h.cfg.StereoToolPath,
@@ -213,7 +242,7 @@ func (h *Handler) systemData() (systemData, error) {
 
 // System handles GET /system (full page and htmx status fragment).
 func (h *Handler) System(w http.ResponseWriter, r *http.Request) {
-	data, err := h.systemData()
+	data, err := h.systemData(r)
 	if err != nil {
 		http.Error(w, "error querying service status", http.StatusInternalServerError)
 		return
@@ -246,7 +275,7 @@ func (h *Handler) SystemAction(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(400 * time.Millisecond)
 	}
 
-	data, _ := h.systemData()
+	data, _ := h.systemData(r)
 	data.ActionError = actionErr
 	if err := tmplSystemStatus.ExecuteTemplate(w, "system_status.html", data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
@@ -375,7 +404,7 @@ func (h *Handler) CartDetail(w http.ResponseWriter, r *http.Request) {
 	if err := tmplCartDetail.ExecuteTemplate(w, "base", struct {
 		baseData
 		Cart *store.Cart
-	}{h.base(fmt.Sprintf("Cart %d", number), "carts"), cart}); err != nil {
+	}{h.base(r, fmt.Sprintf("Cart %d", number), "carts"), cart}); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }

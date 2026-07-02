@@ -25,7 +25,7 @@ type broadcastSaveResult struct {
 	Error   string
 }
 
-func (h *Handler) broadcastPageData(result *broadcastSaveResult) (broadcastPageData, error) {
+func (h *Handler) broadcastPageData(r *http.Request, result *broadcastSaveResult) (broadcastPageData, error) {
 	cfg, err := store.LoadBroadcastConfig(h.cfg.BroadcastConfigPath)
 	if err != nil {
 		return broadcastPageData{}, err
@@ -35,7 +35,7 @@ func (h *Handler) broadcastPageData(result *broadcastSaveResult) (broadcastPageD
 		return broadcastPageData{}, err
 	}
 	return broadcastPageData{
-		baseData:   h.base("Broadcast", "broadcast"),
+		baseData:   h.base(r, "Broadcast", "broadcast"),
 		Config:     cfg,
 		ConfigJS:   template.JS(cfgJSON),
 		SaveResult: result,
@@ -44,7 +44,7 @@ func (h *Handler) broadcastPageData(result *broadcastSaveResult) (broadcastPageD
 
 // Broadcast handles GET /broadcast.
 func (h *Handler) Broadcast(w http.ResponseWriter, r *http.Request) {
-	data, err := h.broadcastPageData(nil)
+	data, err := h.broadcastPageData(r, nil)
 	if err != nil {
 		http.Error(w, "error loading broadcast config: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -69,7 +69,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	cfg, parseErr := parseBroadcastForm(r)
 	if parseErr != nil {
 		result.Error = "form parse error: " + parseErr.Error()
-		data, _ := h.broadcastPageData(result)
+		data, _ := h.broadcastPageData(r, result)
 		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
 		return
 	}
@@ -77,7 +77,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	// Save JSON config first so the state is durable even if deploy steps fail.
 	if err := store.SaveBroadcastConfig(cfg, h.cfg.BroadcastConfigPath); err != nil {
 		result.Error = "saving config: " + err.Error()
-		data, _ := h.broadcastPageData(result)
+		data, _ := h.broadcastPageData(r, result)
 		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
 		return
 	}
@@ -86,7 +86,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	// Generate and install icecast.xml.
 	if err := store.GenerateIcecastXML(cfg); err != nil {
 		result.Error = "generating icecast.xml: " + err.Error()
-		data, _ := h.broadcastPageData(result)
+		data, _ := h.broadcastPageData(r, result)
 		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
 		return
 	}
@@ -95,7 +95,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	// Generate radio.liq.
 	if err := store.GenerateLiquidsoapScript(cfg); err != nil {
 		result.Error = "generating radio.liq: " + err.Error()
-		data, _ := h.broadcastPageData(result)
+		data, _ := h.broadcastPageData(r, result)
 		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
 		return
 	}
@@ -104,7 +104,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	// Restart icecast2.
 	if out, err := exec.Command("sudo", "systemctl", "restart", "icecast2.service").CombinedOutput(); err != nil {
 		result.Error = "restarting icecast2: " + err.Error() + ": " + strings.TrimSpace(string(out))
-		data, _ := h.broadcastPageData(result)
+		data, _ := h.broadcastPageData(r, result)
 		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
 		return
 	}
@@ -118,7 +118,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 			result.Steps = append(result.Steps, "liquidsoap not installed yet — radio.liq is ready for when it is.")
 		} else {
 			result.Error = "restarting liquidsoap: " + err.Error() + ": " + outStr
-			data, _ := h.broadcastPageData(result)
+			data, _ := h.broadcastPageData(r, result)
 			_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
 			return
 		}
@@ -128,7 +128,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result.Success = true
-	data, err := h.broadcastPageData(result)
+	data, err := h.broadcastPageData(r, result)
 	if err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return

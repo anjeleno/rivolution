@@ -43,6 +43,11 @@ type Config struct {
 	// which rd owns and can write to without privilege escalation.
 	StereoToolPath string
 
+	// StereoToolWebPort is the port Stereo Tool's headless web config UI
+	// listens on (conf/systemd/stereo-tool.service's ExecStart `-p` flag).
+	// Used to build the dashboard nav's "Processing" link.
+	StereoToolWebPort int
+
 	// BroadcastConfigPath is where the broadcast dashboard persists its
 	// JSON config (station, Icecast, Liquidsoap, stream list).
 	BroadcastConfigPath string
@@ -73,6 +78,7 @@ func Load() *Config {
 		AccentColor: getenv("RIVAPI_ACCENT_COLOR", rdConf.get("dashboard", "AccentColor", "")),
 
 		StereoToolPath:      getenv("RIVAPI_STEREO_TOOL_PATH", "/home/rd/bin/stereo_tool"),
+		StereoToolWebPort:   getenvInt("RIVAPI_STEREO_TOOL_WEB_PORT", 8079),
 		BroadcastConfigPath: getenv("RIVAPI_BROADCAST_CONFIG", "/home/rd/etc/rivolution/broadcast.json"),
 	}
 }
