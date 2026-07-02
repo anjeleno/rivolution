@@ -6,7 +6,7 @@
 ## Goal
 
 Define how the full Rivolution broadcast stack — Rivendell (including
-`caed`), Icecast, Liquidsoap, Stereo Tool, and Tailscale — is
+`caed`), Icecast, Liquidsoap, VLC, Stereo Tool, and Tailscale — is
 orchestrated as a reliable, correctly ordered set of systemd units with
 guaranteed startup sequencing and live-playout-safe reconfiguration,
 managed exclusively through the Go dashboard
@@ -65,11 +65,7 @@ name is a future installer concern, not a Phase 1 requirement.
 ### VLC audio routing: not a systemd stack concern
 
 VLC is used ad-hoc to capture live audio and route it into Rivendell.
-It is not a background service and has no place in the systemd stack.
-Its audio path — VLC output → Rivendell input — is established by
-WirePlumber persistent routing policy (spec 0007/0008 territory).
-When VLC is launched, WirePlumber automatically reconnects its audio
-port to the correct Rivendell input. No unit file required.
+It is not a background service and has no place in the systemd stack, but must be included in the dependencies. Its audio path — VLC output → Rivendell input — is established by WirePlumber persistent routing policy (spec 0007/0008 territory). When VLC is launched, WirePlumber automatically reconnects its audio port to the correct Rivendell input. No unit file required.
 
 ### The race condition, precisely
 
