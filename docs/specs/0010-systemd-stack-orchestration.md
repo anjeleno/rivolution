@@ -1,7 +1,7 @@
 # 0010 — Systemd stack orchestration
 
 **Date:** 2026-06-30
-**Revised:** 2026-07-01
+**Revised:** 2026-07-02
 
 ## Goal
 
@@ -260,33 +260,68 @@ and are called directly.
 ### Phase 1 (this implementation)
 
 - New: `/etc/systemd/system/rivapi.service` — systemd unit for the Go
-  dashboard process itself. Runs as `rd`, starts after `network.target`
-  and `mariadb.service`, reads credentials from an `EnvironmentFile=`.
-  `WantedBy=multi-user.target`. Binary path TBD at install time (likely
-  `/usr/local/bin/rivapi`). During development, started manually:
-  `cd ~/dev/rivolution/rivapi && go build -o rivapi . && ./rivapi`.
+  dashboard process itself. Runs as `rd`, starts after `network.target`,
+  `mariadb.service`, and (see deviations below) `pipewire-system.service`.
+  No `EnvironmentFile=` — reads DB credentials and the dashboard JWT
+  secret from `/etc/rd.conf`, same as every other Rivendell binary.
+  `WantedBy=multi-user.target`. Binary installed to `/usr/local/bin/rivapi`.
 - New: `/etc/systemd/system/rivolution-stack.target` — groups the full
   broadcast stack; `Wants=` for `rivendell.service`, `icecast2.service`,
-  `liquidsoap.service`, `stereo-tool.service`, `tailscaled.service`.
+  `liquidsoap.service`, `stereo-tool.service`, `tailscaled.service`, and
+  (see deviations below) `pipewire-system.service`/
+  `wireplumber-system.service`.
 - New: `/etc/systemd/system/rivendell.service.d/rivolution.conf` —
   drop-in setting `User=rd`, `Group=rd`, `LimitRTPRIO=99`,
   `LimitRTTIME=infinity`, `IOSchedulingClass=realtime`,
-  `IOSchedulingPriority=0`, plus an `ExecStartPost=` health probe
-  polling `caed`'s TCP port (5005) for readiness.
+  `IOSchedulingPriority=0`, `Environment=XDG_RUNTIME_DIR=/run/pipewire-system`
+  (see deviations below), plus an `ExecStartPost=` health probe polling
+  `caed`'s TCP port (5005) for readiness.
 - New: `/etc/systemd/system/icecast2.service.d/rivolution.conf` —
   drop-in adding `After=rivendell.service`.
+- New: `/etc/systemd/system/pipewire-system.service` — system-scope
+  PipeWire, running as `rd`, `RuntimeDirectory=pipewire-system` (creates
+  `/run/pipewire-system/`), socket at `/run/pipewire-system/pipewire-0`.
+  Required in Phase 1, not deferred to Phase 1.5 — see deviations below.
+- New: `/etc/systemd/system/wireplumber-system.service` — system-scope
+  WirePlumber, bound to `pipewire-system.service`, same
+  `XDG_RUNTIME_DIR`. Also required in Phase 1.
+- New: `/etc/systemd/system/liquidsoap.service` — full standalone unit,
+  not a drop-in (see deviations below): `ExecStart`,
+  `Restart=on-failure`, `RestartSec=5`,
+  `Environment=XDG_RUNTIME_DIR=/run/pipewire-system`.
 - New: `/etc/systemd/system/liquidsoap.service.d/rivolution.conf` —
-  drop-in adding `After=icecast2.service` and `After=rivendell.service`.
+  drop-in adding `After=icecast2.service`, `After=rivendell.service`
+  (the `[Unit]` ordering stanzas only; `ExecStart` lives in the full
+  unit above, not here).
 - New: `/etc/systemd/system/stereo-tool.service` — custom unit for
-  Stereo Tool; `After=liquidsoap.service`; `User=rd`.
+  Stereo Tool; `After=liquidsoap.service`, `After=pipewire-system.service`;
+  `User=rd`; `Environment=XDG_RUNTIME_DIR=/run/pipewire-system`;
+  `-p 8079` on `ExecStart` to expose its headless web config UI.
 - New: `/etc/sudoers.d/rivapi` — targeted rule: `rd` may run
   `systemctl start/stop/restart` for `rivolution-stack.target`,
   `rivendell.service`, `icecast2.service`, `liquidsoap.service`,
-  `stereo-tool.service`, `tailscaled.service` with `NOPASSWD`.
+  `stereo-tool.service`, `tailscaled.service`, `pipewire-system.service`,
+  `wireplumber-system.service` with `NOPASSWD`, plus `RIVAPI_INSTALL`
+  (`install -o root -g icecast -m 640 <staging> /etc/icecast2/icecast.xml`)
+  and `RIVAPI_SYSTEMCTL` (rebuild/restart `rivapi.service` itself, for
+  `scripts/rivapi-rebuild.sh`).
 - New: `/etc/udev/rules.d/99-ptp.rules` — assigns `/dev/ptpN` to `ptp`
   group (prerequisite for Phase 1.5 PTP clock access as `rd`).
+- New: `/etc/ld.so.conf.d/00-pipewire-jack-<multiarch-triplet>.conf` —
+  see deviations below; load-bearing for JACK clients to actually reach
+  PipeWire's JACK bridge instead of a real `libjack-jackd2-0`, if present.
+- New: `rivapi/store/patchbay.go`, `dashboard/handlers_patchbay.go`,
+  `dashboard/templates/patchbay.html` — `/patchbay`, the visual
+  PipeWire/WirePlumber connect/disconnect UI backed by `pw-link`, with
+  reconciler-based persistence (`SaveDesiredLinks`/`LoadDesiredLinks`/
+  `ReconcileLinks` + a 5s background poll loop). Not part of the
+  original Phase 1 plan — added once WirePlumber's own declarative
+  routing policy was confirmed not to apply to JACK-bridged ports (see
+  deviations below). This is the actual persistent-routing mechanism;
+  no static ALSA/WirePlumber config file is deployed.
 - Modified: `rivapi/` — `store/service_status.go` (unit state polling,
-  controlled action execution); `dashboard/handlers.go` + templates
+  controlled action execution, `Detail`/`Warn` fields for sub-state and
+  JACK-health surfacing); `dashboard/handlers.go` + templates
   (`/system` route: per-service status indicators, start/stop/restart
   buttons, category-3 confirmation dialogs).
 
@@ -350,6 +385,18 @@ sudo cp conf/systemd/icecast2.service.d/rivolution.conf /etc/systemd/system/icec
 ```
 
 ```
+sudo cp conf/systemd/pipewire-system.service /etc/systemd/system/
+```
+
+```
+sudo cp conf/systemd/wireplumber-system.service /etc/systemd/system/
+```
+
+```
+sudo cp conf/systemd/liquidsoap.service /etc/systemd/system/
+```
+
+```
 sudo cp conf/systemd/liquidsoap.service.d/rivolution.conf /etc/systemd/system/liquidsoap.service.d/
 ```
 
@@ -358,7 +405,26 @@ sudo cp conf/systemd/stereo-tool.service /etc/systemd/system/
 ```
 
 ```
+sudo cp conf/systemd/rivapi.service /etc/systemd/system/
+```
+
+```
 sudo cp conf/udev/99-ptp.rules /etc/udev/rules.d/
+```
+
+> **Load-bearing step, easy to skip silently:** rename the
+> `pipewire-jack` ld.so.conf.d entry so it sorts before the standard
+> multiarch conf file — otherwise a real `libjack-jackd2-0`, if
+> present, always wins SONAME resolution and PipeWire audio silently
+> never connects despite every service reporting `active`. See
+> "Implementation deviations" above for the full explanation.
+
+```
+sudo mv /etc/ld.so.conf.d/pipewire-jack-$(dpkg-architecture -qDEB_HOST_MULTIARCH).conf /etc/ld.so.conf.d/00-pipewire-jack-$(dpkg-architecture -qDEB_HOST_MULTIARCH).conf
+```
+
+```
+sudo ldconfig
 ```
 
 ```
@@ -370,26 +436,122 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
 ```
+sudo rddbmgr --modify
+```
+
+```
+sudo systemctl enable --now pipewire-system.service wireplumber-system.service
+```
+
+```
+sudo systemctl enable --now rivapi.service
+```
+
+```
 sudo systemctl enable rivolution-stack.target
 ```
 
+After first boot, open the dashboard's `/patchbay` page once to connect
+and save the `caed` → Stereo Tool → Liquidsoap chain — the only
+remaining manual step, and it's a browser action, not a terminal
+command (see "Implementation deviations" above).
+
 ### Unified installer (`anjeleno/rivolution-unified-installer`)
 
-A new Ansible role (or tasks in an existing role) must copy all files
-above, set correct permissions, run `daemon-reload` and `udevadm trigger`,
-and enable the target and services. This role must also build and install
-the `rivapi` binary and install `rivapi.service`. See
-[BACKLOG.md](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
-for the full task list.
+**This subsection is stale and needs its own pass, not done here.** The
+`broadcast_advanced` Ansible role this originally assumed would own
+conf-file deployment was removed entirely 2026-07-01 — its
+Icecast/Liquidsoap/VLC config generation moved into `rivapi` itself
+(specs 0007/0008), and its seed database was hardcoded to a single
+host name, not general-purpose (`BACKLOG.md` has the full removal
+writeup). Whether the unified installer still needs its own role for
+package installation + conf placement, or should simply install the
+Debian package below once it exists, is an open question — tracked in
+`BACKLOG.md`, not decided here.
 
 ### Debian package
 
-The long-term deployment path is a `rivolution` deb package that installs
-all conf files via standard package `postinst` hooks. The package must
-handle: sudoers rule install + `chmod 440`, systemd unit copies +
-`daemon-reload` + `systemctl enable`, udev rule + `udevadm trigger`, and
-the `rivapi` binary at a standard system path. This is a separate
-packaging effort not yet started.
+The long-term deployment path is a `rivolution` deb package whose
+`postinst` performs everything the "Manual installation" steps above do
+by hand, so a `.deb` install ends up with the identical, fully verified
+working state — no separate broadcast/runtime package, no manual
+post-install checklist beyond the one `/patchbay` browser action.
+
+**Current state (2026-07-02):** `debian/control`, `debian/rules`, and
+`debian/postinst` all predate specs 0007/0008/0010/0012 entirely —
+none of them reference `icecast2`, `liquidsoap`, `pipewire`, `fdkaac`,
+`vlc`, or `rivapi` in any form, and `postinst` still provisions the old
+pre-fork `rivendell` system user (uid 150) rather than the `rd`-user
+model this spec and 0007 are built around. A separate, narrower effort
+(getting `dpkg-buildpackage` to produce a working *core* `.deb` at all
+— unrelated packaging bugs, not a design gap) is in progress on
+`debian/rivolution-branding-fix` as of this writing. This section
+describes the follow-up work once that lands.
+
+**Package boundary:** fold into the existing `rivolution` package
+rather than a new `rivolution-broadcast` package. `rivolution`'s own
+`Description` already promises "a complete radio broadcast automation
+solution" — the broadcast/PipeWire/dashboard layer is core to that
+promise now, not an optional add-on, and a single package means a
+single `postinst` to reason about.
+
+**New `debian/control.src` dependencies** — add to `rivolution`'s
+`Depends`: `icecast2`, `liquidsoap`, `fdkaac`, `vlc`, `vlc-plugin-jack`,
+`pipewire`, `wireplumber`, `pipewire-jack | libjack-jackd2-0`. Add
+`golang-go` to `Build-Depends` so `rivapi` compiles as part of the
+package build instead of via the manual `scripts/rivapi-rebuild.sh`
+workflow.
+
+**New `debian/rules` build step:** `go build -o rivapi/rivapi
+rivapi/...` (or a `cd rivapi && go build` recipe line) alongside the
+existing autotools `build:` recipe, installing the resulting binary to
+`/usr/local/bin/rivapi` per `rivapi.service`'s `ExecStart=`.
+
+**`postinst` additions** (idempotent, matching the existing
+`test ! -e X` style already used for `/etc/rd.conf`/`/var/snd`/etc.):
+
+1. Copy every unit/drop-in listed under "Files" above
+   (`rivolution-stack.target`, `rivendell.service.d/rivolution.conf`,
+   `icecast2.service.d/rivolution.conf`, `pipewire-system.service`,
+   `wireplumber-system.service`, `liquidsoap.service` +
+   `liquidsoap.service.d/rivolution.conf`, `stereo-tool.service`,
+   `rivapi.service`) to `/etc/systemd/system/`.
+2. Install `conf/sudoers.d/rivapi` to `/etc/sudoers.d/rivapi`,
+   `chmod 440`.
+3. Install `conf/udev/99-ptp.rules` to `/etc/udev/rules.d/`, then
+   `udevadm control --reload-rules && udevadm trigger`.
+4. Apply the `ld.so.conf.d` rename fix (see "Implementation
+   deviations" above) + `ldconfig`. Must be idempotent — check the
+   target filename doesn't already exist before renaming, since a
+   `.deb` upgrade re-runs `postinst` on an already-fixed system.
+5. `daemon-reload`, then `enable --now` `pipewire-system.service` and
+   `wireplumber-system.service` *before* `rivendell.service` is
+   (re)started — `caed`'s JACK driver needs the socket present at
+   startup, not just eventually.
+6. Run `rddbmgr --modify` for the schema bump (378 → 379, see
+   "Implementation deviations" above). **Upgrade ordering matters**:
+   on a fresh install this runs before anything using the schema
+   starts, safe by construction. On an upgrade of an already-running
+   system, `postinst` must run the migration *before* restarting any
+   Rivendell binary that was just replaced with the new
+   `RD_VERSION_DATABASE` — restarting first would hard-block on the
+   version mismatch check (`rdcoreapplication.cpp:240`). The existing
+   `postinst`'s final `systemctl restart rivendell` call must move
+   after this step, not before.
+7. `enable --now rivapi.service`, then `enable rivolution-stack.target`
+   (matching "Manual installation" above — the target itself is
+   enabled, not started immediately, consistent with existing
+   `postinst` behavior for `rivendell.service`).
+8. **Not automated:** `/patchbay` connection setup. `postinst` cannot
+   meaningfully click through a browser UI, and it's the one step this
+   spec's own goal (deviations above) treats as acceptable to leave to
+   the operator — document it in the package's `NEWS`/post-install
+   message (`debian/rivolution.postinst`'s final echo, or a
+   `debconf` note), not silently skipped.
+
+**Not in scope for `postinst` at all:** `conf/alsa/rd.asoundrc` —
+superseded by `/patchbay`'s reconciler (see "Implementation
+deviations" above); nothing to deploy.
 
 ## Verification
 
@@ -414,8 +576,11 @@ packaging effort not yet started.
 2. `systemd-analyze critical-chain rivolution-stack.target` confirms
    each service's activation time follows its predecessor's ready
    signal, not just its start time.
-3. Reboot: WirePlumber routing policy written via the dashboard is
-   present and applied after a cold reboot with no operator action.
+3. Reboot: a patch saved via `/patchbay` before reboot is silently
+   reconnected by the reconciler poll loop after a cold reboot with no
+   operator action (see "Implementation deviations" — this replaced the
+   originally planned WirePlumber declarative routing policy, which
+   doesn't apply to JACK-bridged ports).
 4. `caed` restart isolation: restarting `caed.service` does not
    automatically restart RDAirPlay; dashboard surfaces RDAirPlay's
    degraded state.
@@ -462,3 +627,79 @@ packaging effort not yet started.
   `RIVAPI_SYSTEMCTL`/`RIVAPI_INSTALL` sudoers addition, replacing the
   manual `cd rivapi && go build -o rivapi . && ./rivapi` dev workflow
   noted in `BACKLOG.md`.
+- **2026-07-01 (later the same day):** `pipewire-system.service` and
+  `wireplumber-system.service` turned out to be a **Phase 1** dependency,
+  not Phase 1.5 as the dependency-chain diagram above shows. `caed`
+  reaches PipeWire via its existing JACK driver (through the
+  `pipewire-jack` bridge package) even before the Phase 1.5 native
+  `pw_stream` rewrite — that JACK driver needs a running system-scope
+  PipeWire socket the moment `rivendell.service` starts with
+  `User=rd`. Both units, plus `Environment=XDG_RUNTIME_DIR=/run/pipewire-system`
+  on `rivendell.service.d/rivolution.conf`, `liquidsoap.service`, and
+  `stereo-tool.service`, were required to get real audio flowing in
+  Phase 1, and are now part of Phase 1's own `Wants=` chain in
+  `rivolution-stack.target`.
+- **2026-07-01 (later the same day):** Ubuntu 26.04's `pipewire` package
+  ships **only user-scope** systemd units
+  (`/usr/lib/systemd/user/pipewire.service`) — the spec's original
+  assumption of a `pipewire-system.service` "available alongside the
+  default per-user unit" was wrong; no such unit exists upstream. Both
+  `pipewire-system.service` and `wireplumber-system.service` were
+  written from scratch as custom units for this project, not adapted
+  from an existing system-scope unit.
+- **2026-07-01 (later the same day):** Ubuntu's `liquidsoap` package
+  ships **no systemd unit at all**. `conf/systemd/liquidsoap.service`
+  had to be authored as a full standalone unit (`ExecStart`,
+  `Restart=on-failure`, `RestartSec=5`), not the drop-in this spec
+  originally planned; `liquidsoap.service.d/rivolution.conf` now only
+  carries the `[Unit]` `After=`/ordering stanzas.
+- **2026-07-01 (later the same day):** A real, silent JACK-connection
+  failure was traced to `ldconfig`'s alphabetic processing of
+  `/etc/ld.so.conf.d/*.conf`: the standard multiarch conf
+  (`aarch64-linux-gnu.conf`) sorts before
+  `pipewire-jack-aarch64-linux-gnu.conf`, so a pre-existing real
+  `libjack-jackd2-0` (pulled in as a dependency of something else, e.g.
+  Liquidsoap) always won the dynamic linker's SONAME lookup — the
+  `pipewire-jack` shim was never actually loaded by anything, and both
+  `caed` and Liquidsoap logged "unable to communicate with JACK server"
+  even with PipeWire confirmed up and `XDG_RUNTIME_DIR` set correctly.
+  Fixed by renaming the conf file so it sorts first:
+  `pipewire-jack-<triplet>.conf` → `00-pipewire-jack-<triplet>.conf`,
+  then `ldconfig`. This ordering fix must ship as part of any packaged
+  install — without it, PipeWire audio silently doesn't work despite
+  every service reporting `active`.
+- **2026-07-01 (later the same day):** Deviation entry above ("VLC
+  routing... handled by WirePlumber persistent policy") turned out to
+  be wrong once actually implemented. WirePlumber's declarative
+  `target.node` metadata mechanism does not apply to JACK-bridged ports
+  — verified empirically three independent ways (no link forms, an
+  internal WirePlumber script throws a Lua exception on these nodes,
+  and the metadata itself is keyed by an ephemeral `node.id` that
+  changes on every restart anyway). Replaced by `/patchbay`
+  (`rivapi/store/patchbay.go`'s `SaveDesiredLinks`/`LoadDesiredLinks`/
+  `ReconcileLinks` plus a 5-second background poll loop in `main.go`
+  that re-applies any saved link missing from the live graph) — a
+  reconciler running inside `rivapi` itself, not a WirePlumber policy
+  file. Verified surviving a real Liquidsoap restart with the saved
+  patch silently reconnecting. This is also the actual, complete answer
+  to Stereo Tool's routing (`rivendell_0:playout_0L/R` → Stereo Tool →
+  `liquidsoap:in_0/1`): no static `conf/alsa/rd.asoundrc` needs
+  deploying by the package at all. The one remaining manual step after
+  install is a one-time UI action — open `/patchbay`, connect the
+  chain, click "Save current patch" — not a terminal command, so it
+  stays consistent with this spec's "no operator should ever need to
+  touch a systemd unit file or restart a service from a terminal" goal.
+- **2026-07-01 (later the same day):** `STATIONS.JACK_VERSION`
+  (`char(16)`) was too narrow for the PipeWire JACK shim's
+  `jack_get_version_string()` output (`"v3.1.6.2 (using PipeWire
+  1.6.2)"`, 31 characters) — `caed` logged a non-fatal "Data too long
+  for column" error on every connect. Fixed with a schema migration,
+  `RD_VERSION_DATABASE` 378 → 379 (`lib/dbversion.h`,
+  `utils/rddbmgr/{updateschema,revertschema}.cpp`), widening the column
+  to `varchar(64)`. Any install/upgrade path (manual, unified installer,
+  or the Debian package below) must run `rddbmgr --modify` as part of
+  provisioning — safe to run without disrupting an already-running
+  stack, but required before the *next* restart of any Rivendell binary
+  once the new schema version is compiled in, since a schema/binary
+  version mismatch hard-blocks startup
+  (`rdcoreapplication.cpp:240`).
