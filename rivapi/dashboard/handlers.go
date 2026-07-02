@@ -57,11 +57,14 @@ func pageTmpl(page string) *template.Template {
 
 // Pre-parsed template sets — one per page so {{define "page"}} never conflicts.
 var (
-	tmplLogin        = template.Must(template.ParseFS(assets, "templates/login.html"))
-	tmplGroups       = pageTmpl("groups.html")
-	tmplCarts        = pageTmpl("carts.html")
-	tmplCartDetail   = pageTmpl("cart_detail.html")
-	tmplSystem       = pageTmpl("system.html")
+	tmplLogin            = template.Must(template.ParseFS(assets, "templates/login.html"))
+	tmplHome             = pageTmpl("home.html")
+	tmplGroups           = pageTmpl("groups.html")
+	tmplCarts            = pageTmpl("carts.html")
+	tmplCartDetail       = pageTmpl("cart_detail.html")
+	tmplSystem           = pageTmpl("system.html")
+	tmplBroadcast        = pageTmpl("broadcast.html")
+	tmplPatchbay         = pageTmpl("patchbay.html")
 	tmplGroupsList       = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
 	tmplCartsList        = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
 	tmplSystemStatus     = template.Must(template.ParseFS(assets, "templates/system_status.html"))
@@ -130,9 +133,11 @@ func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Root redirects to /groups.
+// Root serves the dashboard home page.
 func (h *Handler) Root(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/groups", http.StatusSeeOther)
+	if err := tmplHome.ExecuteTemplate(w, "base", h.base("Home", "home")); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
 }
 
 // Groups handles GET /groups (full page) and GET /groups?partial=1 (htmx fragment).

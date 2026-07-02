@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -68,7 +69,28 @@ func main() {
 		r.Post("/system/service/{unit}/{action}", dash.SystemAction)
 		r.Post("/system/stereo-tool/install", dash.StereoToolInstall)
 		r.Post("/system/stereo-tool/launch", dash.StereoToolLaunch)
+		r.Get("/broadcast", dash.Broadcast)
+		r.Post("/broadcast/save", dash.BroadcastSave)
+		r.Get("/patchbay", dash.Patchbay)
+		r.Post("/patchbay/connect", dash.PatchbayConnect)
+		r.Post("/patchbay/disconnect", dash.PatchbayDisconnect)
+		r.Post("/patchbay/save", dash.PatchbaySave)
 	})
+
+	// Patchbay link reconciler: PipeWire links don't survive either
+	// endpoint's restart, and WirePlumber's own declarative target-metadata
+	// mechanism doesn't apply to JACK-bridged ports (verified 2026-07-01 —
+	// see docs/specs/0007-pipewire-audio-engine.md), so persistence is done
+	// here instead: poll the saved link set and re-apply anything missing.
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := store.ReconcileLinks(store.DesiredLinksPath); err != nil {
+				log.Printf("patchbay reconcile: %v", err)
+			}
+		}
+	}()
 
 	log.Printf("rivapi listening on %s", cfg.ListenAddr)
 	if cfg.TLSCert != "" && cfg.TLSKey != "" {

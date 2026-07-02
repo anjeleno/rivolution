@@ -1,0 +1,37 @@
+# Overrides the stock pcm.jack definition from
+# /usr/share/alsa/alsa.conf.d/50-jack.conf, which hardcodes
+# system:capture_1/2 and system:playback_1/2 -- real jackd+ALSA hardware
+# port names that don't exist under system-scope PipeWire (spec 0007).
+#
+# This is what Stereo Tool's "jack (ALSA)" input/output option actually
+# routes through -- it accesses JACK only via this ALSA-JACK bridge
+# plugin, not as a native JACK client.
+#
+# TEMPORARY / HARDCODED: this pins Stereo Tool's input to caed's stream 0
+# and its output to Liquidsoap, matching the caed -> Stereo Tool ->
+# Liquidsoap signal chain. It is meant to be superseded by the dashboard's
+# visual patch matrix (dynamic WirePlumber-backed routing) once that
+# exists -- see BACKLOG.md.
+#
+# Install: copy to ~/.asoundrc (user-level override, takes precedence
+# over the system-wide /usr/share/alsa/alsa.conf.d/50-jack.conf without
+# touching Rivendell's own rdalsaconfig-managed /etc/asound.conf).
+
+pcm.jack {
+	type jack
+	playback_ports {
+		0 liquidsoap:in_0
+		1 liquidsoap:in_1
+	}
+	capture_ports {
+		0 rivendell_0:playout_0L
+		1 rivendell_0:playout_0R
+	}
+	hint {
+		show {
+			@func refer
+			name defaults.namehint.basic
+		}
+		description "JACK Audio Connection Kit (Rivolution: caed -> Stereo Tool -> Liquidsoap)"
+	}
+}

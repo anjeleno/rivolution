@@ -47,6 +47,7 @@ compile
 conf/rd-bin.conf
 config.guess
 config.log
+config.lt
 config.status
 config.sub
 configure

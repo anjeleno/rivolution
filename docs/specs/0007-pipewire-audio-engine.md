@@ -496,6 +496,151 @@ spec's AES67/routing work.
    configurations that don't use the new routing/AES67 functionality at
    all — this spec must not regress current single-driver deployments.
 
+## Phase 1 implementation (system-scope PipeWire, 2026-07-01)
+
+Before the full caed driver rewrite (see Files section above), Phase 1
+establishes the system-scope PipeWire foundation that everything else
+builds on. It does not touch caed's audio driver code. The full caed
+rewrite (driver_pipewire.cpp, transport-layer refactor, AES67) follows
+as Phase 2 once Phase 1 is verified end-to-end.
+
+### What Phase 1 delivers
+
+- `rdservice/rdservice.cpp:89–92`: removed the `geteuid()!=0` exit block
+  that prevented rdservice (and its children caed, ripcd, rdcatchd) from
+  running as the `rd` user. Enables the `User=rd` drop-in in
+  `conf/systemd/rivendell.service.d/rivolution.conf`.
+- `conf/systemd/pipewire-system.service`: system-scope PipeWire running as
+  `rd`, socket at `/run/pipewire-system/pipewire-0`. Ubuntu 26.04 ships
+  only user-scope PipeWire units; this is the system-scope equivalent
+  required for broadcast services to reach PipeWire without a logged-in
+  user session.
+- `conf/systemd/wireplumber-system.service`: system-scope WirePlumber
+  bound to `pipewire-system.service`. Routing policy from the dashboard
+  goes to `/etc/wireplumber/` (system-scope), not `~/.config/wireplumber/`
+  (which is session-scoped and unavailable before login).
+- `conf/systemd/rivolution-stack.target`: added `Wants=` for both new
+  services so they start with the stack.
+- `conf/systemd/rivendell.service.d/rivolution.conf` and
+  `conf/systemd/liquidsoap.service`: both add
+  `Environment=XDG_RUNTIME_DIR=/run/pipewire-system` so caed's JACK calls
+  and Liquidsoap's `input.jack()` both find the system PipeWire socket via
+  `pipewire-jack`.
+- Dashboard `service_status.go`: added PipeWire and WirePlumber to the
+  managed unit list so their status is visible on the System page.
+
+### Phase 1 runtime prerequisites (manual steps)
+
+These steps are performed once on the live system before the Phase 1
+configuration is deployed:
+
+1. Rebuild and install rdservice with the root check removed:
+
+```
+cd ~/dev/rivolution && make -j$(nproc) rdservice
+```
+
+```
+sudo cp rdservice/rdservice /usr/sbin/rdservice
+```
+
+2. Install the JACK-to-PipeWire compatibility bridge:
+
+```
+sudo apt install pipewire-jack
+```
+
+3. Configure the JACK client library system-wide so caed and Liquidsoap
+   use PipeWire's JACK implementation rather than a native JACK server:
+
+```
+sudo cp /usr/share/doc/pipewire/examples/ld.so.conf.d/pipewire-jack-x86_64-linux-gnu.conf /etc/ld.so.conf.d/
+```
+
+```
+sudo ldconfig
+```
+
+   On arm64 the filename may differ; use `ls /usr/share/doc/pipewire/examples/ld.so.conf.d/`
+   to confirm the exact name.
+
+4. In RDAdmin, configure the sound card(s) that Rivendell uses for
+   playout to use the **JACK** driver. caed will connect those cards to
+   the system PipeWire graph via the JACK bridge.
+
+5. Deploy all conf/ files per the deployment section and verify:
+   - `pipewire-system.service` and `wireplumber-system.service` show
+     `active (running)`
+   - `rivendell.service` shows `active (running)` with caed, ripcd,
+     rdcatchd listed as child processes running as `rd` (not root)
+   - `liquidsoap.service` shows `active (running)` with no JACK error
+     in `/home/rd/Log/liquidsoap.log`
+   - `pw-dump` (as `rd` with `XDG_RUNTIME_DIR=/run/pipewire-system`)
+     shows caed and Liquidsoap as nodes in the graph
+
+### Phase 1 known gap
+
+caed's JACK driver (`cae/driver_jack.cpp`) connects to the PipeWire-JACK
+bridge today, but the full Phase 2 goal — caed becoming a native PipeWire
+client (`pw_stream`) so ALSA and HPI cards also route through PipeWire —
+is not yet done. In the Phase 1 state, cards configured for ALSA driver
+in RDAdmin still use ALSA directly and are not visible in the PipeWire
+graph. Only JACK-driver cards participate in the unified PipeWire graph
+at this stage.
+
 ## Implementation deviations
 
-None yet — implementation has not started.
+- **2026-07-01:** Ubuntu 26.04's `pipewire` package ships no system-scope
+  unit files (only user-scope). Custom `pipewire-system.service` and
+  `wireplumber-system.service` unit files written for
+  `conf/systemd/`. Spec referenced `pipewire-system.service` as
+  "available alongside the default per-user unit" — that was incorrect;
+  the custom units correct the gap.
+- **2026-07-01:** the Routing UI section above (`WirePlumber manages
+  link policy via its own config... this is genuine persistence`)
+  describes the *native* PipeWire architecture this spec targets
+  end-to-end (Phase 2, `caed` as a `pw_stream` client) — and for that
+  architecture, the assumption holds: native PipeWire streams go
+  through PipeWire's own "select-target" event when created, which is
+  exactly what WirePlumber's declarative `target.node`/`target.object`
+  metadata mechanism (`find-defined-target.lua`) hooks into.
+
+  **Verified empirically 2026-07-01 that this does *not* apply to
+  Phase 1's actual deployed architecture** (`caed`/Liquidsoap/Stereo
+  Tool as JACK clients bridged through `pipewire-jack`, not native
+  `pw_stream` clients). Three independent findings, from a properly
+  instrumented test (correct endpoint restarted, `PIPEWIRE_DEBUG=3` on
+  `wireplumber-system.service`, checked the actual resulting graph via
+  `pw-link`, not just log silence):
+  1. Setting `target.node` metadata (via `pw-metadata`) on `caed`'s
+     JACK-bridged node, then restarting `rivendell.service` so that
+     node is freshly created, produced no resulting link — the
+     mechanism did not fire.
+  2. WirePlumber's own `state-stream.lua` (a bundled internal script,
+     not something this fork wrote) threw a Lua exception indexing a
+     nil `media.class` field around the same time — direct evidence
+     its internal machinery expects properties JACK-bridged nodes
+     don't carry, i.e. this isn't just "untested," it's actively
+     mismatched.
+  3. Even setting aside 1 and 2: `pw-metadata`'s `target.node` entry is
+     keyed by the *subject's own ephemeral node.id*, which changed
+     across both restarts tested (each JACK client gets a fresh
+     `node.id` on every process restart) — so even a working version of
+     this mechanism would need something to re-apply the metadata after
+     every restart of the node it's attached to, undercutting the
+     "persists on its own" value proposition for this specific
+     bridged-client scenario regardless of 1/2.
+
+  **Phase 1's actual persistence mechanism** (shipped, see
+  `rivapi/store/patchbay.go`'s `ReconcileLinks`/`DesiredLinksPath`,
+  `handlers_patchbay.go`'s `/patchbay/save`): a saved link list in
+  `/home/rd/etc/rivolution/patchbay.json`, reconciled against the live
+  graph on a 5-second poll in `rivapi`'s own process (`main.go`),
+  re-applying anything missing via direct `pw-link` calls. This is
+  deliberately *not* a WirePlumber policy — it's a pragmatic
+  poll-and-reapply layer that works today, to be retired in favor of
+  real WirePlumber policy once Phase 2 lands and `caed`/Liquidsoap/
+  Stereo Tool are native PipeWire clients rather than JACK-bridged
+  ones. The Routing UI section's persistence design above remains the
+  Phase 2 target; this note exists so that gap isn't rediscovered by
+  someone trying to make Phase 1 do something it structurally can't.

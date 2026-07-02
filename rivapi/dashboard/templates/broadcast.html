@@ -1,0 +1,294 @@
+{{define "page"}}
+<div x-data="broadcastConfig({{.ConfigJS}})">
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <h2 style="margin:0">Broadcast</h2>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+        <a :href="'http://' + icecast.hostname + ':' + icecast.port + '/admin/'"
+           target="_blank" rel="noopener noreferrer"
+           role="button" class="outline secondary" style="white-space:nowrap;">
+            Icecast Admin ↗
+        </a>
+        <button type="submit" form="broadcast-form" class="outline">Save &amp; Deploy</button>
+    </div>
+</div>
+
+{{if .SaveResult}}
+{{if .SaveResult.Success}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-ins-color); margin-bottom:1.5rem;">
+    <strong>Deployed</strong>
+    <ul style="margin:0.5rem 0 0; padding-left:1.25rem;">
+        {{range .SaveResult.Steps}}<li>{{.}}</li>{{end}}
+    </ul>
+</div>
+{{else}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
+    <strong>Deploy failed:</strong> {{.SaveResult.Error}}
+    {{if .SaveResult.Steps}}
+    <ul style="margin:0.5rem 0 0; padding-left:1.25rem;">
+        {{range .SaveResult.Steps}}<li>{{.}}</li>{{end}}
+    </ul>
+    {{end}}
+</div>
+{{end}}
+{{end}}
+
+<form id="broadcast-form"
+      method="POST"
+      action="/broadcast/save"
+      @submit="$el.querySelector('[name=streams_json]').value = JSON.stringify(streams)">
+
+    <input type="hidden" name="streams_json">
+
+    <!-- Station defaults -->
+    <details open>
+        <summary><strong>Station</strong></summary>
+        <div style="padding:1rem 0;">
+            <div class="grid">
+                <label>
+                    Name
+                    <input type="text" name="station_name" x-model="station.name" placeholder="My Radio Station">
+                </label>
+                <label>
+                    Genre
+                    <input type="text" name="station_genre" x-model="station.genre" placeholder="Various">
+                </label>
+            </div>
+            <label>
+                Description
+                <input type="text" name="station_description" x-model="station.description">
+            </label>
+            <label>
+                Station website URL
+                <input type="url" name="station_url" x-model="station.url" placeholder="https://yourstation.com">
+                <small>Your public website — appears as the station homepage link in Icecast.</small>
+            </label>
+        </div>
+    </details>
+
+    <hr>
+
+    <!-- Icecast settings -->
+    <details>
+        <summary><strong>Icecast</strong></summary>
+        <div style="padding:1rem 0;">
+            <div class="grid">
+                <label>
+                    Hostname
+                    <input type="text" name="icecast_hostname" x-model="icecast.hostname" placeholder="localhost">
+                    <small>Public hostname for listener URLs. Use internal address if relaying via AzuraCast.</small>
+                </label>
+                <label>
+                    Port
+                    <input type="number" name="icecast_port" x-model.number="icecast.port" min="1" max="65535">
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Admin email
+                    <input type="email" name="icecast_admin_email" x-model="icecast.admin_email">
+                </label>
+                <label>
+                    Location
+                    <input type="text" name="icecast_location" x-model="icecast.location">
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Source password
+                    <small>Liquidsoap connects with this</small>
+                    <input type="text" name="icecast_source_password" x-model="icecast.source_password">
+                </label>
+                <label>
+                    Relay password
+                    <input type="text" name="icecast_relay_password" x-model="icecast.relay_password">
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Admin username
+                    <input type="text" name="icecast_admin_user" x-model="icecast.admin_user">
+                </label>
+                <label>
+                    Admin password
+                    <input type="text" name="icecast_admin_password" x-model="icecast.admin_password">
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Max clients
+                    <input type="number" name="icecast_max_clients" x-model.number="icecast.max_clients" min="1">
+                    <small>Total listener connections. Keep low if AzuraCast is your public CDN.</small>
+                </label>
+                <label>
+                    Burst size (bytes)
+                    <input type="number" name="icecast_burst_size" x-model.number="icecast.burst_size" min="0">
+                </label>
+                <label>
+                    Sources
+                    <input type="text" :value="'auto (' + streams.length + ' streams)'" disabled>
+                    <small>Auto-calculated from stream count.</small>
+                </label>
+            </div>
+        </div>
+    </details>
+
+    <hr>
+
+    <!-- Liquidsoap settings -->
+    <details>
+        <summary><strong>Liquidsoap</strong></summary>
+        <div style="padding:1rem 0;">
+            <div class="grid">
+                <label>
+                    Icecast host
+                    <input type="text" name="liq_icecast_host" x-model="liquidsoap.icecast_host">
+                </label>
+                <label>
+                    Icecast port
+                    <input type="number" name="liq_icecast_port" x-model.number="liquidsoap.icecast_port" min="1" max="65535">
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    JACK input ID
+                    <input type="text" name="liq_jack_input_id" x-model="liquidsoap.jack_input_id">
+                    <small>Passed to <code>input.jack(id=…)</code>.</small>
+                </label>
+                <label>
+                    Sample rate (Hz)
+                    <input type="number" name="liq_sample_rate" x-model.number="liquidsoap.sample_rate">
+                </label>
+            </div>
+            <label>
+                Log path
+                <input type="text" name="liq_log_path" x-model="liquidsoap.log_path">
+            </label>
+        </div>
+    </details>
+
+    <hr>
+
+    <!-- Stream list -->
+    <div style="margin-bottom:1rem;">
+        <strong>Streams</strong>
+    </div>
+
+    <template x-for="(s, i) in streams" :key="i">
+        <article style="margin-bottom:1rem;">
+            <div class="grid" style="align-items:end;">
+                <label>
+                    Mount point
+                    <input type="text" :value="s.mount" @input="s.mount = $event.target.value" placeholder="/stream">
+                </label>
+                <label>
+                    Codec
+                    <select @change="setCodec(s, $event.target.value)">
+                        <option value="mp3"      :selected="s.codec === 'mp3'">MP3</option>
+                        <option value="he-aac-v1" :selected="s.codec === 'he-aac-v1'">HE-AAC v1 (AAC+, currently AAC-LC — see BACKLOG.md)</option>
+                        <option value="he-aac-v2" :selected="s.codec === 'he-aac-v2'">HE-AAC v2 (AAC+ PS, currently AAC-LC — see BACKLOG.md)</option>
+                        <option value="ogg"      :selected="s.codec === 'ogg'">OGG Vorbis</option>
+                    </select>
+                </label>
+                <label x-show="s.codec !== 'ogg'">
+                    Bitrate (kbps)
+                    <input type="number" :value="s.bitrate" @input="s.bitrate = +$event.target.value" min="8" max="320">
+                </label>
+                <label x-show="s.codec === 'ogg'">
+                    Quality (<span x-text="s.quality"></span> — -0.2 lowest, 1.0 highest, 0.3 is a reasonable default)
+                    <input type="range" :value="s.quality" @input="s.quality = +$event.target.value" min="-0.2" max="1.0" step="0.1">
+                </label>
+                <div style="padding-top:1.5rem;">
+                    <button type="button" @click="streams.splice(i, 1)"
+                            class="outline secondary" style="width:auto; margin:0;">Remove</button>
+                </div>
+            </div>
+
+            <div style="margin-top:0.5rem;">
+                <small style="color:var(--pico-muted-color);">
+                    Stream URL:
+                    <code x-text="'http://' + liquidsoap.icecast_host + ':' + liquidsoap.icecast_port + s.mount"></code>
+                </small>
+            </div>
+
+            <details style="margin-top:0.5rem;">
+                <summary style="font-size:0.875rem; color:var(--pico-muted-color);">
+                    Metadata override <span x-show="s.name || s.genre || s.description || s.url">(active)</span>
+                </summary>
+                <div style="padding:0.75rem 0 0;">
+                    <small style="display:block; margin-bottom:0.5rem; color:var(--pico-muted-color);">
+                        Leave blank to use station defaults. Station website URL falls through to all streams.
+                    </small>
+                    <div class="grid">
+                        <label>
+                            Name
+                            <input type="text" :value="s.name" @input="s.name = $event.target.value"
+                                   :placeholder="station.name">
+                        </label>
+                        <label>
+                            Genre
+                            <input type="text" :value="s.genre" @input="s.genre = $event.target.value"
+                                   :placeholder="station.genre">
+                        </label>
+                    </div>
+                    <label>
+                        Description
+                        <input type="text" :value="s.description" @input="s.description = $event.target.value"
+                               :placeholder="station.description || '(station default)'">
+                    </label>
+                    <label>
+                        Stream URL override
+                        <input type="text" :value="s.url" @input="s.url = $event.target.value"
+                               :placeholder="'http://' + liquidsoap.icecast_host + ':' + liquidsoap.icecast_port + s.mount">
+                        <small>Icecast "Listen Live" link for this stream. Auto-generated from host:port/mount — only set this if the public URL differs (e.g. behind a reverse proxy).</small>
+                    </label>
+                </div>
+            </details>
+        </article>
+    </template>
+
+    <div x-show="streams.length === 0"
+         style="padding:2rem; text-align:center; color:var(--pico-muted-color); border:1px dashed var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
+        No streams configured. Click <strong>+ Add stream</strong> below to create one.
+    </div>
+
+    <div style="margin-top:0.5rem; margin-bottom:0.75rem;">
+        <button type="button" @click="addStream()" class="outline" style="width:auto;">+ Add stream</button>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-bottom:1.5rem;">
+        <button type="submit" form="broadcast-form" style="width:auto;">Save &amp; Deploy</button>
+    </div>
+
+</form>
+</div>
+
+<script>
+function broadcastConfig(initial) {
+    return {
+        station:    initial.station    || {name:'', genre:'', description:'', url:''},
+        icecast:    initial.icecast    || {},
+        liquidsoap: initial.liquidsoap || {},
+        streams:    initial.streams    || [],
+        addStream() {
+            this.streams.push({
+                mount: '/stream' + (this.streams.length + 1),
+                codec: 'mp3',
+                bitrate: 128,
+                quality: 0.3,
+                name: '', genre: '', description: '', url: ''
+            });
+        },
+        // Vorbis has no bitrate= parameter (it's VBR quality-based), so
+        // switching to/from "ogg" needs to seed a sane default for
+        // whichever field the codec actually uses.
+        setCodec(s, codec) {
+            s.codec = codec;
+            if (codec === 'ogg' && !s.quality) {
+                s.quality = 0.3;
+            }
+        }
+    }
+}
+</script>
+{{end}}

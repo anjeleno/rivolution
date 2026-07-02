@@ -15,7 +15,10 @@
         {{range .Services}}
         <tr>
             <td>{{.DisplayName}}</td>
-            <td><span class="service-state service-state--{{.State}}">{{.State}}</span></td>
+            <td>
+                <span class="service-state service-state--{{.State}}">{{.State}}</span>{{if .Detail}}<small style="color:var(--pico-muted-color);"> ({{.Detail}})</small>{{end}}
+                {{if .Warn}}<br><small style="color:var(--pico-del-color);">&#9888; {{.Warn}}</small>{{end}}
+            </td>
             <td>
                 <div role="group">
                     <button hx-post="/system/service/{{.Unit}}/start"
