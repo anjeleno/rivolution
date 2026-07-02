@@ -1,5 +1,5 @@
 #!/bin/sh
-# postinst script for Rivendell
+# postinst script for Rivolution
 
 case "$1" in
     configure)

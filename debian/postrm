@@ -1,5 +1,5 @@
 #!/bin/sh
-# postrm script for Rivendell
+# postrm script for Rivolution
 #
 # see: dh_installdeb(1)
 
