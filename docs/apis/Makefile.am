@@ -32,14 +32,14 @@
 	xsltproc $(top_srcdir)/helpers/docbook/manpages/docbook.xsl $<
 
 install-exec-local:	
-	mkdir -p $(DESTDIR)$(prefix)/share/rivendell/apis
-	cp *.pdf $(DESTDIR)$(prefix)/share/rivendell/apis/
-	mkdir -p $(DESTDIR)$(prefix)/share/rivendell/apis/html
-	cp *.html $(DESTDIR)$(prefix)/share/rivendell/apis/html/
-	cp *.png $(DESTDIR)$(prefix)/share/rivendell/apis/html/
+	mkdir -p $(DESTDIR)$(prefix)/share/rivolution/apis
+	cp *.pdf $(DESTDIR)$(prefix)/share/rivolution/apis/
+	mkdir -p $(DESTDIR)$(prefix)/share/rivolution/apis/html
+	cp *.html $(DESTDIR)$(prefix)/share/rivolution/apis/html/
+	cp *.png $(DESTDIR)$(prefix)/share/rivolution/apis/html/
 
 uninstall-local:	
-	rm -rf $(DESTDIR)$(prefix)/share/rivendell/apis
+	rm -rf $(DESTDIR)$(prefix)/share/rivolution/apis
 
 all-local:	cae.html\
                 cae.pdf\

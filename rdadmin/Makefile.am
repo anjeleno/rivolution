@@ -1,6 +1,6 @@
 ## Makefile.am
 ##
-## Automake.am for rivendell/rdadmin
+## Automake.am for rivolution/rdadmin
 ##
 ## (C) Copyright 2002-2023 Fred Gleason <fredg@paravelsystems.com>
 ##
@@ -37,13 +37,13 @@ global_credits.cpp:
 
 # I18N Stuff
 install-exec-local:	
-	../helpers/rdi18n_helper.sh --install rdadmin $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --install rdadmin $(DESTDIR)$(prefix)/share/rivolution
 
 uninstall-local:
-	../helpers/rdi18n_helper.sh --uninstall rdadmin $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --uninstall rdadmin $(DESTDIR)$(prefix)/share/rivolution
 
 all:	
-	../helpers/rdi18n_helper.sh --update rdadmin $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --update rdadmin $(DESTDIR)$(prefix)/share/rivolution
 
 bin_PROGRAMS = rdadmin
 

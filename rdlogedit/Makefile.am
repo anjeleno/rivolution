@@ -28,13 +28,13 @@ moc_%.cpp:	%.h
 
 # I18N Stuff
 install-exec-local:	
-	../helpers/rdi18n_helper.sh --install rdlogedit $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --install rdlogedit $(DESTDIR)$(prefix)/share/rivolution
 
 uninstall-local:	
-	../helpers/rdi18n_helper.sh --uninstall rdlogedit $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --uninstall rdlogedit $(DESTDIR)$(prefix)/share/rivolution
 
 all:	
-	../helpers/rdi18n_helper.sh --update rdlogedit $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --update rdlogedit $(DESTDIR)$(prefix)/share/rivolution
 
 bin_PROGRAMS = rdlogedit
 

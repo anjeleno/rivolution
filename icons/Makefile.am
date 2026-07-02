@@ -1,6 +1,6 @@
 ## automake.am
 ##
-## icons/automake.am for Rivendell
+## icons/automake.am for Rivolution
 ##
 ## (C) Copyright 2002-2023 Fred Gleason <fredg@paravelsystems.com>
 ##
@@ -21,9 +21,9 @@
 ## Use automake to process this into a Makefile.in
 
 install-exec-am:	
-	mkdir -p $(DESTDIR)@prefix@/share/pixmaps/rivendell
-	cp rdairplay_skin.png $(DESTDIR)@prefix@/share/pixmaps/rivendell
-	cp rdpanel_skin.png $(DESTDIR)@prefix@/share/pixmaps/rivendell
+	mkdir -p $(DESTDIR)@prefix@/share/pixmaps/rivolution
+	cp rdairplay_skin.png $(DESTDIR)@prefix@/share/pixmaps/rivolution
+	cp rdpanel_skin.png $(DESTDIR)@prefix@/share/pixmaps/rivolution
 	mkdir -p $(DESTDIR)@libexecdir@
 	cp donut-spinner.gif $(DESTDIR)@libexecdir@
 	cp greencheckmark.png $(DESTDIR)@libexecdir@
@@ -216,17 +216,17 @@ install-exec-am:
 	cp rddbconfig-512x512.png $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rddbconfig.png
 	mkdir -p $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps
 	cp rddbconfig-128x128.png $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rddbconfig.png
-	mkdir -p $(DESTDIR)@prefix@/share/pixmaps/rivendell
-	cp rdairplay_logo.png $(DESTDIR)@prefix@/share/pixmaps/rivendell/
-	cp rdairplay_white_logo.png $(DESTDIR)@prefix@/share/pixmaps/rivendell/
+	mkdir -p $(DESTDIR)@prefix@/share/pixmaps/rivolution
+	cp rdairplay_logo.png $(DESTDIR)@prefix@/share/pixmaps/rivolution/
+	cp rdairplay_white_logo.png $(DESTDIR)@prefix@/share/pixmaps/rivolution/
 	mkdir -p $(DESTDIR)@prefix@/share/X11/fvwm2/pixmaps
 	cp rivendell-16x16.xpm $(DESTDIR)@prefix@/share/X11/fvwm2/pixmaps/mini.rivendell.xpm
 	cp rivendell-32x32.xpm $(DESTDIR)@prefix@/share/X11/fvwm2/pixmaps/rivendell.xpm
 	./update_icons.sh
 
 uninstall-local:	
-	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivendell/rdairplay_skin.png
-	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivendell/rdpanel_skin.png
+	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivolution/rdairplay_skin.png
+	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivolution/rdpanel_skin.png
 	rm -f $(DESTDIR)@libexecdir@/donut-spinner.gif
 	rm -f $(DESTDIR)@libexecdir@/greencheckmark.png
 	rm -f $(DESTDIR)@libexecdir@/redx.png
@@ -320,8 +320,8 @@ uninstall-local:
 	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/128x128/apps/rddbconfig-128x128.png
 	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/256x256/apps/rddbconfig.png
 	rm -f $(DESTDIR)@prefix@/share/icons/hicolor/512x512/apps/rddbconfig.png
-	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivendell/rdairplay_logo.png
-	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivendell/rdairplay_white_logo.png
+	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivolution/rdairplay_logo.png
+	rm -f $(DESTDIR)@prefix@/share/pixmaps/rivolution/rdairplay_white_logo.png
 	./update_icons.sh
 
 EXTRA_DIST = admin.xpm\

@@ -1,6 +1,6 @@
 ## Makefile.am
 ##
-## Automake.am for rivendell/rdcastmanager
+## Automake.am for rivolution/rdcastmanager
 ##
 ## (C) Copyright 2002-2021 Fred Gleason <fredg@paravelsystems.com>
 ##
@@ -30,13 +30,13 @@ moc_%.cpp:	%.h
 
 # I18N Stuff
 install-exec-local:	
-	../helpers/rdi18n_helper.sh --install rdcastmanager $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --install rdcastmanager $(DESTDIR)$(prefix)/share/rivolution
 
 uninstall-local:	
-	../helpers/rdi18n_helper.sh --uninstall rdcastmanager $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --uninstall rdcastmanager $(DESTDIR)$(prefix)/share/rivolution
 
 all:	
-	../helpers/rdi18n_helper.sh --update rdcastmanager $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --update rdcastmanager $(DESTDIR)$(prefix)/share/rivolution
 
 bin_PROGRAMS = rdcastmanager
 

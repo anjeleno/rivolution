@@ -1,6 +1,6 @@
 ## Makefile.am
 ##
-## Makefile.am for rivendell/web/stylesheets
+## Makefile.am for rivolution/web/stylesheets
 ##
 ##   (C) Copyright 2022-2023 Fred Gleason <fredg@paravelsystems.com>
 ##
@@ -20,15 +20,15 @@
 ## Use automake to process this into a Makefile.in
 
 install-exec-am:       
-	mkdir -p $(DESTDIR)/usr/share/rivendell
-	cp rss-item-enclosures.xsl $(DESTDIR)/usr/share/rivendell/
-	cp rss-front-item-report.xsl $(DESTDIR)/usr/share/rivendell/
-	cp rss-back-item-report.xsl $(DESTDIR)/usr/share/rivendell/
+	mkdir -p $(DESTDIR)/usr/share/rivolution
+	cp rss-item-enclosures.xsl $(DESTDIR)/usr/share/rivolution/
+	cp rss-front-item-report.xsl $(DESTDIR)/usr/share/rivolution/
+	cp rss-back-item-report.xsl $(DESTDIR)/usr/share/rivolution/
 
 uninstall-local:	
-	rm -f $(DESTDIR)/usr/share/rivendell/rss-item-enclosures.xsl
-	rm -f $(DESTDIR)/usr/share/rivendell/rss-front-item-report.xsl
-	rm -f $(DESTDIR)/usr/share/rivendell/rss-back-item-report.xsl
+	rm -f $(DESTDIR)/usr/share/rivolution/rss-item-enclosures.xsl
+	rm -f $(DESTDIR)/usr/share/rivolution/rss-front-item-report.xsl
+	rm -f $(DESTDIR)/usr/share/rivolution/rss-back-item-report.xsl
 
 EXTRA_DIST = rss-front-item-report.xsl\
              rss-back-item-report.xsl\

@@ -19,7 +19,7 @@ case "$1" in
 	  chmod 775 /etc/rivendell.d
       fi
       if test ! -e /etc/rd.conf ; then
-	  cp /usr/share/rivendell/rd.conf-sample /etc/rivendell.d/rd-default.conf
+	  cp /usr/share/rivolution/rd.conf-sample /etc/rivendell.d/rd-default.conf
 	  ln -s /etc/rivendell.d/rd-default.conf /etc/rd.conf
       fi
       if test ! -h /etc/rd.conf ; then
@@ -27,7 +27,7 @@ case "$1" in
 	  ln -s /etc/rivendell.d/rd-default.conf /etc/rd.conf
       fi
       if test ! -e /etc/profile.d/rivendell-env.sh ; then
-	 cp /usr/share/rivendell/rivendell-env.sh /etc/profile.d/
+	 cp /usr/share/rivolution/rivendell-env.sh /etc/profile.d/
       fi
       #
       # FIXME: Configure ALSA Here!
@@ -51,7 +51,7 @@ case "$1" in
       fi
       if test ! -f /var/www/rd-bin/logos/webget_logo.png ; then
 	  mkdir -p /var/www/rd-bin/logos
-	  cp -f /usr/share/rivendell/logos/webget_logo.png /var/www/rd-bin/logos/webget_logo.png
+	  cp -f /usr/share/rivolution/logos/webget_logo.png /var/www/rd-bin/logos/webget_logo.png
       fi
 
       mkdir -p /var/log/rivendell
@@ -64,7 +64,7 @@ case "$1" in
       chmod 640 /var/log/rivendell/debug
       chown syslog:adm /var/log/rivendell/debug
       if test ! -e /etc/rsyslog.d/10-rivendell.conf ; then
-	  cp /usr/share/rivendell/syslog.conf-sample /etc/rsyslog.d/10-rivendell.conf
+	  cp /usr/share/rivolution/syslog.conf-sample /etc/rsyslog.d/10-rivendell.conf
       fi
       /bin/systemctl restart rsyslog
 

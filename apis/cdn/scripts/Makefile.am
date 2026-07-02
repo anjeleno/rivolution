@@ -21,13 +21,13 @@
 ## Use automake to process this into a Makefile.in
 
 install-exec-am:	
-	mkdir -p $(DESTDIR)/usr/lib/rivendell/cdn
-	cp aka_purge.sh $(DESTDIR)/usr/lib/rivendell/cdn/
-	cp akamai_purge.cdn $(DESTDIR)/usr/lib/rivendell/cdn/
+	mkdir -p $(DESTDIR)/usr/lib/rivolution/cdn
+	cp aka_purge.sh $(DESTDIR)/usr/lib/rivolution/cdn/
+	cp akamai_purge.cdn $(DESTDIR)/usr/lib/rivolution/cdn/
 
 uninstall-local:	
-	rm -f $(DESTDIR)/usr/lib/rivendell/cdn/aka_purge.sh
-	rm -f $(DESTDIR)/usr/lib/rivendell/cdn/akamai_purge.cdn
+	rm -f $(DESTDIR)/usr/lib/rivolution/cdn/aka_purge.sh
+	rm -f $(DESTDIR)/usr/lib/rivolution/cdn/akamai_purge.cdn
 
 EXTRA_DIST = aka_purge.sh\
              akamai_purge.cdn

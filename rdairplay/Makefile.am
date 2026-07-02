@@ -1,6 +1,6 @@
 ## Makefile.am
 ##
-## Automake.am for rivendell/rdairplay
+## Automake.am for rivolution/rdairplay
 ##
 ## (C) 2002-2024 Fred Gleason <fredg@paravelsystems.com>
 ##
@@ -30,13 +30,13 @@ moc_%.cpp:	%.h
 
 # I18N Stuff
 install-exec-local:	
-	../helpers/rdi18n_helper.sh --install rdairplay $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --install rdairplay $(DESTDIR)$(prefix)/share/rivolution
 
 uninstall-local:	
-	../helpers/rdi18n_helper.sh --uninstall rdairplay $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --uninstall rdairplay $(DESTDIR)$(prefix)/share/rivolution
 
 all:	
-	../helpers/rdi18n_helper.sh --update rdairplay $(DESTDIR)$(prefix)/share/rivendell
+	../helpers/rdi18n_helper.sh --update rdairplay $(DESTDIR)$(prefix)/share/rivolution
 
 bin_PROGRAMS = rdairplay
 
