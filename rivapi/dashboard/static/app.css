@@ -82,3 +82,17 @@ button.theme-toggle {
     width: auto;
     border-radius: var(--pico-border-radius);
 }
+
+/* Service state badges on the /system page */
+.service-state {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: var(--pico-border-radius);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.service-state--active      { background: var(--pico-ins-color, #2d9e2d); color: #fff; }
+.service-state--inactive    { background: var(--pico-muted-color, #888); color: #fff; }
+.service-state--failed      { background: var(--pico-del-color, #c0392b); color: #fff; }
+.service-state--activating  { background: var(--pico-primary, #1971c2); color: #fff; }
+.service-state--unknown     { background: transparent; color: var(--pico-muted-color); border: 1px solid currentColor; }

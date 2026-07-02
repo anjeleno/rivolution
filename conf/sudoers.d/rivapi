@@ -1,0 +1,26 @@
+# Targeted sudoers rule for the rivapi dashboard process (runs as rd).
+# Grants NOPASSWD access to start/stop/restart exactly the managed stack
+# units. Read-only commands (is-active, status) do not require privilege
+# and are called directly without sudo.
+
+Cmnd_Alias RIVAPI_SYSTEMCTL = \
+    /usr/bin/systemctl start rivolution-stack.target, \
+    /usr/bin/systemctl stop rivolution-stack.target, \
+    /usr/bin/systemctl restart rivolution-stack.target, \
+    /usr/bin/systemctl start rivendell.service, \
+    /usr/bin/systemctl stop rivendell.service, \
+    /usr/bin/systemctl restart rivendell.service, \
+    /usr/bin/systemctl start icecast2.service, \
+    /usr/bin/systemctl stop icecast2.service, \
+    /usr/bin/systemctl restart icecast2.service, \
+    /usr/bin/systemctl start liquidsoap.service, \
+    /usr/bin/systemctl stop liquidsoap.service, \
+    /usr/bin/systemctl restart liquidsoap.service, \
+    /usr/bin/systemctl start stereo-tool.service, \
+    /usr/bin/systemctl stop stereo-tool.service, \
+    /usr/bin/systemctl restart stereo-tool.service, \
+    /usr/bin/systemctl start tailscaled.service, \
+    /usr/bin/systemctl stop tailscaled.service, \
+    /usr/bin/systemctl restart tailscaled.service
+
+rd ALL=(root) NOPASSWD: RIVAPI_SYSTEMCTL

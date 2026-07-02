@@ -119,25 +119,247 @@ containerized deployment isn't being implemented now. This does not
 apply to the live audio routing itself, which depends on real hardware
 and PTP clock access and is covered separately in spec 0007.
 
+## Phase 1 implementation — Icecast & Liquidsoap dashboard
+
+Phase 1 covers the `/broadcast` dashboard page: a live config editor
+for Icecast and Liquidsoap that reads the current state, lets the
+operator add/edit/remove streams and adjust all settings, then writes
+and deploys both config files in one action.
+
+Remaining tools in scope (Stereo Tool `.rc`, VLC, PyPad, persistent
+WirePlumber patch connections) are deferred to later phases once the
+Icecast/Liquidsoap path is proven end-to-end.
+
+### Deployment topology note
+
+This box is a **source server**, not a public streaming endpoint.
+The intended production topology is: Rivendell → Liquidsoap →
+Icecast (here) → AzuraCast (CDN/listener-facing). AzuraCast connects
+as a relay source and handles public listener capacity. Icecast's
+`max_clients` can therefore stay low (enough for the relay connection
+plus local monitoring), and the hostname should be the internal/private
+address.
+
+The dashboard supports both topologies. Nothing in the config model is
+hard-coded to one mode — operators who want to serve listeners directly
+from this box set a public hostname and higher `max_clients`; operators
+following the AzuraCast relay model set an internal hostname and leave
+`max_clients` small. The UI surfaces both settings without hiding
+either.
+
+### Data model
+
+Config is stored as a single JSON file at
+`/home/rd/etc/rivolution/broadcast.json` (rd-owned, no privilege
+needed to write). rivapi reads it on startup and after every save;
+the file is the source of truth for the dashboard state.
+
+```go
+// rivapi/store/broadcast_config.go
+
+type StationDefaults struct {
+    Name        string `json:"name"`
+    Genre       string `json:"genre"`
+    Description string `json:"description"`
+    URL         string `json:"url"`
+}
+
+type StreamConfig struct {
+    Mount       string `json:"mount"`        // e.g. "/192", "/stream", "/aac64"
+    Codec       string `json:"codec"`        // "mp3", "he-aac-v1", "he-aac-v2", "ogg"
+    Bitrate     int    `json:"bitrate"`      // kbps; user-entered, no preset list
+    // Per-stream overrides — empty string means "use station default"
+    Name        string `json:"name"`
+    Genre       string `json:"genre"`
+    Description string `json:"description"`
+    URL         string `json:"url"`
+}
+
+type IcecastConfig struct {
+    Hostname       string `json:"hostname"`
+    Port           int    `json:"port"`
+    AdminEmail     string `json:"admin_email"`
+    Location       string `json:"location"`
+    SourcePassword string `json:"source_password"`
+    RelayPassword  string `json:"relay_password"`
+    AdminUser      string `json:"admin_user"`
+    AdminPassword  string `json:"admin_password"`
+    MaxClients     int    `json:"max_clients"`
+    BurstSize      int    `json:"burst_size"`
+    // Sources is not stored — auto-calculated as len(Streams) at
+    // generate time. Icecast must accept one source connection per
+    // active Liquidsoap output.icecast() call.
+}
+
+type LiquidsoapConfig struct {
+    IcecastHost string `json:"icecast_host"` // usually "localhost"
+    IcecastPort int    `json:"icecast_port"`
+    JackInputID string `json:"jack_input_id"` // id= passed to input.jack()
+    LogPath     string `json:"log_path"`
+    SampleRate  int    `json:"sample_rate"`
+}
+
+type BroadcastConfig struct {
+    Station    StationDefaults  `json:"station"`
+    Icecast    IcecastConfig    `json:"icecast"`
+    Liquidsoap LiquidsoapConfig `json:"liquidsoap"`
+    Streams    []StreamConfig   `json:"streams"`
+}
+```
+
+### Config generation
+
+Two generators run server-side at save time, never client-side:
+
+**`rivapi/store/icecast_generator.go`** — produces a complete
+`icecast.xml` from `BroadcastConfig`. Key points:
+- `<sources>` is set to `len(cfg.Streams)` — the only calculated field
+- All other values come directly from `IcecastConfig`
+- The generated file is written to a staging path
+  (`/home/rd/etc/icecast/icecast.xml`) that rivapi owns, then
+  installed to `/etc/icecast2/icecast.xml` via:
+  `sudo install -o root -g icecast -m 640 <staging> /etc/icecast2/icecast.xml`
+- A new sudoers rule in `conf/sudoers.d/rivapi` covers this `install`
+  invocation with the exact source and destination paths
+
+**`rivapi/store/liquidsoap_generator.go`** — produces a complete
+`radio.liq` from `BroadcastConfig`. Key points:
+- Written to `/home/rd/etc/liquidsoap/radio.liq` (rd-owned, no sudo)
+- Station defaults fill each `output.icecast()` call; a stream with a
+  non-empty per-stream override uses that value instead
+- AAC streams use `%external`:
+  ```
+  %external(
+    channels=2, samplerate=<cfg.Liquidsoap.SampleRate>,
+    header=false, restart_on_crash=true,
+    "fdkaac -b <bitrate>000 -p <profile> --raw -i - -o -"
+  )
+  ```
+  where profile is `5` for HE-AAC v1 and `29` for HE-AAC v2
+- `content_type` in `output.icecast()` is set to `"audio/aacp"` for
+  AAC streams, left at default for MP3/OGG
+- The Liquidsoap systemd unit's `ExecStart` must point to this path;
+  update `conf/systemd/liquidsoap.service` (new custom unit, replacing
+  the upstream package unit's default invocation) accordingly
+
+### Liquidsoap systemd unit
+
+The upstream `liquidsoap.service` from the package does not point to
+our generated `.liq` file. Replace its `ExecStart` via a drop-in:
+
+`conf/systemd/liquidsoap.service.d/rivolution.conf` gets a
+`[Service]` section:
+```ini
+ExecStart=
+ExecStart=/usr/bin/liquidsoap /home/rd/etc/liquidsoap/radio.liq
+```
+
+The leading `ExecStart=` line clears the upstream value before setting
+the new one (standard systemd drop-in pattern for overriding
+`ExecStart`).
+
+### Save & Deploy flow
+
+1. Dashboard POSTs the full form to `POST /broadcast/save`
+2. rivapi validates, marshals to `BroadcastConfig`, writes
+   `broadcast.json`
+3. Generates and stages `icecast.xml`, installs via sudo
+4. Generates and writes `radio.liq`
+5. Runs `sudo systemctl restart icecast2` then
+   `sudo systemctl restart liquidsoap` (both already in the sudoers
+   allowlist from spec 0010)
+6. Returns the updated `/broadcast` page fragment with a success
+   banner or an inline error if any step failed
+
+### AAC+ dependency
+
+`fdkaac` is added as a bundled dependency alongside `liquidsoap` in
+the unified installer and deb package — it is not installed on demand
+when an operator adds an AAC stream. This follows the bundled-not-
+on-demand decision already made for Icecast and Liquidsoap above:
+presence is free, absence creates runtime surprises. On both amd64 and
+arm64, `fdkaac` (version 1.0.0+) is available in Ubuntu universe and
+depends only on `libfdk-aac2`.
+
+### Dashboard UI — `/broadcast` page
+
+The page has three sections, each a collapsible card:
+
+**Station defaults** — name, genre, description, URL. Applied to all
+streams that don't override the field. These map directly to the
+`name=`, `genre=`, `url=`, `description=` params in
+`output.icecast()`.
+
+**Icecast settings** — all `IcecastConfig` fields exposed as labeled
+inputs with defaults shown. Hostname, port, passwords (source, relay,
+admin), admin user, admin email, location, max clients, burst size.
+`<sources>` is displayed read-only as "auto (N streams)" — not
+editable, computed at generate time.
+
+**Stream list** — a dynamic list of stream rows. Each row:
+- Mount point (text input, e.g. `/192`)
+- Codec (dropdown: MP3 / HE-AAC v1 / HE-AAC v2 / OGG Vorbis)
+- Bitrate (number input, kbps — no preset list, fully user-controlled)
+- "Override station metadata" toggle — expands per-stream name/genre/
+  description/URL inputs when enabled; collapsed by default
+- Delete button
+
+"Add stream" button appends a new empty row. Rows can be reordered
+(drag handle or up/down buttons — final choice at implementation time).
+
+Single **Save & Deploy** button at the bottom. After deploy, a status
+banner shows which services were restarted and whether they came back
+active (re-queries via `QueryStackStatus`).
+
+### New files
+
+```
+rivapi/store/broadcast_config.go    — BroadcastConfig type, load/save
+rivapi/store/icecast_generator.go   — icecast.xml generation
+rivapi/store/liquidsoap_generator.go — radio.liq generation
+rivapi/dashboard/handlers_broadcast.go — /broadcast handlers
+rivapi/dashboard/templates/broadcast.html
+conf/sudoers.d/rivapi               — updated with icecast.xml install rule
+conf/systemd/liquidsoap.service.d/rivolution.conf — updated with ExecStart override
+```
+
+Config file at runtime: `/home/rd/etc/rivolution/broadcast.json`
+Generated staging files: `/home/rd/etc/icecast/icecast.xml`,
+`/home/rd/etc/liquidsoap/radio.liq`
+
 ## Files
 
-Not yet determined — this spec defines scope, not implementation
-file layout. Implementation will require, at minimum: a configuration
-schema/validation layer per tool (Icecast XML, Liquidsoap `.liq`,
-Stereo Tool's `.rc` format, VLC's config format), and read/write
-access to each tool's actual config file location.
+See Phase 1 new files above. VLC, Stereo Tool `.rc`, PyPad, and
+WirePlumber patch management file layout to be determined in later
+phases.
 
 ## Verification
 
-Not yet determined in detail — implementation has not started. At
-minimum, each tool's configuration round-trip (write via the new UI,
-confirm the tool itself picks up and correctly applies the resulting
-config file) must be verified per tool, not assumed from successful
-file writes alone.
+Per tool, each of these must be confirmed after implementation:
+
+- **Icecast**: write config via dashboard → `icecast2` restarts and
+  serves the configured mounts; confirm `sources` count matches stream
+  count; confirm all passwords take effect.
+- **Liquidsoap**: write config → `liquidsoap` restarts and connects to
+  Icecast; confirm each mount appears live in Icecast's status page;
+  confirm AAC+ mounts have correct content-type (`audio/aacp`).
+- **Round-trip**: load the dashboard after a rivapi restart and confirm
+  it reads back what was last saved (no lossy transform in either
+  direction).
+- **Error visibility**: force a bad config (wrong password, wrong port)
+  and confirm the error surfaces in the dashboard rather than silently
+  leaving the service stopped.
 
 ## Implementation deviations
 
 None yet — implementation has not started.
 
-## Critical note:
-One of the most frustrating symptoms of the current Rivendell QjackCtl + Icecast + Liquidsoap implementation is a race condition where, if the system doesn't launch the stack in the exact correct order, Rivendell (for example) will fail to register as a JACK client. The current Ubuntu startup application and bash scripts are notoriously unreliable for this. So I don't know if this is handled by a systemd unit(?), but it needs to be orchestrated in a way that is 100% predictable and reliable after a system reboot or restarting the Rivendell service. And all patches need to reliably persist. This needs to be ROCK SOLID stable.
+## Critical note
+
+The stack start-order race condition (Rivendell failing to register as
+a JACK client if services start out of order) is addressed by the
+systemd dependency chain in spec 0010 (`After=` drop-ins, the
+`ExecStartPost` readiness probe on caed's port 5005). This spec
+assumes that chain is verified working before Liquidsoap configuration
+is deployed, since Liquidsoap's audio source depends on Rivendell and
+JACK being fully ready.

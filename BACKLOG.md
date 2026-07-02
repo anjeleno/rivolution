@@ -6,6 +6,47 @@ This is **not** a feature roadmap or pipeline of planned work; see
 [`docs/specs/`](https://github.com/anjeleno/rivolution/tree/main/docs/specs) for that. Entries here get promoted to a real spec and
 branch once they're picked up.
 
+## conf/ deployment files need installer and deb packaging integration
+
+The `conf/` directory in this repo is the source of truth for all
+system-level configuration files introduced by Rivolution: systemd unit
+files and drop-ins, the sudoers rule, and udev rules. None of them are
+auto-deployed. On a fresh installation every file must be placed manually
+(see [spec 0010 Deployment section](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0010-systemd-stack-orchestration.md#deployment)).
+This needs to be automated in two places:
+
+**1. `anjeleno/rivolution-unified-installer`**
+
+A new Ansible role (tentatively `rivapi`) must:
+- Build the `rivapi` Go binary (`go build` in `rivapi/`)
+- Install the binary to the system path expected by `rivapi.service`
+- Copy `conf/sudoers.d/rivapi` → `/etc/sudoers.d/rivapi`, set `chmod 440`
+- Create drop-in directories and copy `conf/systemd/*.d/*.conf` files
+- Copy `conf/systemd/rivolution-stack.target` and
+  `conf/systemd/stereo-tool.service` to `/etc/systemd/system/`
+- Copy `conf/udev/99-ptp.rules` to `/etc/udev/rules.d/`
+- Run `systemctl daemon-reload`, `udevadm control --reload-rules &&
+  udevadm trigger`, `systemctl enable rivolution-stack.target`
+- Install and enable `rivapi.service`
+
+**2. Debian package**
+
+The long-term path is a `rivolution` (or `rivolution-rivapi`) deb package
+whose `postinst` script handles all the above. Required package components:
+- `rivapi` binary in `/usr/bin/rivapi` or `/usr/local/bin/rivapi`
+- `rivapi.service` in `/lib/systemd/system/`
+- `rivolution-stack.target` and `stereo-tool.service` in
+  `/lib/systemd/system/`
+- Drop-ins in `/lib/systemd/system/<unit>.d/`
+- Sudoers rule in `/etc/sudoers.d/rivapi` (set `chmod 440` in `postinst`)
+- udev rule in `/lib/udev/rules.d/99-ptp.rules`
+- `postinst`: `daemon-reload`, `udevadm trigger`, `systemctl enable`
+
+Neither path has been started. Until one of them is implemented, all
+deployment steps are manual.
+
+---
+
 ## `rivapi` has no systemd unit — started manually during development
 
 `rivapi` (the Go dashboard process) has no `rivapi.service` unit file yet.

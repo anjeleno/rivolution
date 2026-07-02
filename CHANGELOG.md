@@ -7,6 +7,170 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 6)
+
+- `docs/specs/0008-broadcast-tool-suite-integration.md`: added Phase 1
+  implementation plan — `BroadcastConfig` data model (station defaults,
+  per-stream overrides, Icecast and Liquidsoap config structs), Icecast
+  XML and Liquidsoap `.liq` generators, Save & Deploy flow, `/broadcast`
+  dashboard UI design (stream list with add/remove/codec/bitrate,
+  per-stream metadata overrides), `fdkaac` bundled dependency decision,
+  deployment topology note (source-server vs public streaming), and
+  Verification section. Critical note updated to reference the spec 0010
+  stack start-order solution.
+
+## 2026-07-01 (continued, 5)
+
+- `conf/systemd/rivendell.service.d/rivolution.conf`,
+  `conf/systemd/icecast2.service.d/rivolution.conf`,
+  `conf/systemd/liquidsoap.service.d/rivolution.conf`: added
+  `PartOf=rivolution-stack.target` to each. `Wants=` in the target
+  propagates start only; without `PartOf=` on the services, stopping
+  or restarting the target had no effect on the running units.
+  `stereo-tool.service` already had this; `tailscaled` intentionally
+  excluded (stopping the broadcast stack should not drop VPN).
+
+## 2026-07-01 (continued, 4)
+
+- `rivapi/store/service_status.go`: `ControlUnit` now detects `systemctl`
+  exit code 5 ("unit not loaded") and returns a friendly error naming the
+  file to copy and the `daemon-reload` command needed, rather than a raw
+  process error.
+
+- `docs/specs/0010-systemd-stack-orchestration.md`: added Deployment
+  section covering manual install steps for all `conf/` files (sudoers,
+  systemd units, drop-ins, udev rule), a unified-installer placeholder,
+  and a deb-package placeholder. Implementation deviations section
+  updated.
+
+- `BACKLOG.md`: added entry documenting that `conf/` deployment files
+  have no automated install path — lists all files needing coverage and
+  what both the Ansible role and the `postinst` deb hook need to do.
+
+- `docs/handoff/2026-07-01.md` (gitignored): session handoff — full
+  account of architecture decisions, what was built, what's working,
+  what needs manual deployment, the installer gap, and open items for
+  the next session.
+
+## 2026-07-01 (continued, 3)
+
+- `rivapi/dashboard/handlers.go`: fixed Stereo Tool GUI launch — was
+  hardcoding `DISPLAY=:0` which misses xRDP sessions on `:10` or other
+  display numbers. `launchEnv()` now uses the process's inherited DISPLAY
+  if set, otherwise auto-detects from `/tmp/.X11-unix/` (picks the first
+  available socket). Returns nil (no-op with error message) if no display
+  is found. Added `"os"` import.
+
+## 2026-07-01 (continued, 2)
+
+- `rivapi/store/service_status.go`: renamed display label for
+  `rivendell.service` from "Rivendell" to "Rivolution".
+
+- `rivapi/dashboard/handlers.go`: `SystemAction` now always returns HTTP
+  200 — control errors are embedded in the returned status fragment via
+  `ActionError` rather than returning a 4xx that htmx silently ignores.
+  Added 400ms settle delay after a successful action so systemd state is
+  current before querying. Added `StereoToolLaunch` handler (`POST
+  /system/stereo-tool/launch`): starts the binary with `DISPLAY=:0` in
+  the background; returns a result fragment.
+
+- `rivapi/dashboard/templates/system_status.html`: renders `ActionError`
+  as a visible banner when set.
+
+- `rivapi/dashboard/templates/system.html`: added "Launch GUI" button for
+  Stereo Tool (`POST /system/stereo-tool/launch`).
+
+- `rivapi/main.go`: wired `POST /system/stereo-tool/launch`.
+
+## 2026-07-01 (continued)
+
+- `rivapi/store/stereo_tool_install.go` (new): `StereoToolArch` (detects
+  server architecture via `runtime.GOARCH`), `StereoToolDownloadURL`
+  (constructs the correct Thimeo URL for the arch and optional pinned
+  version — `jack_64` for amd64, `jack_pi2_64` for arm64),
+  `StereoToolInstalled` (checks path exists), `InstallStereoTool`
+  (downloads binary, atomic temp-file+rename install, 5-minute timeout).
+
+- `rivapi/config/config.go`: added `StereoToolPath` / `RIVAPI_STEREO_TOOL_PATH`
+  (default `/home/rd/bin/stereo_tool`; `rd`-owned path avoids privilege
+  escalation for dashboard-driven installs).
+
+- `rivapi/dashboard/handlers.go`: extracted `systemData()` helper (shared
+  by `System`, `SystemAction`, and populated Stereo Tool fields).
+  Added `StereoToolInstall` handler (`POST /system/stereo-tool/install`):
+  reads optional `version` form param, calls `store.InstallStereoTool`,
+  returns `stereo_tool_result.html` fragment.
+
+- `rivapi/dashboard/templates/system.html`: added Stereo Tool binary section
+  below the service status table — shows arch, install path, install status,
+  "Install Latest" button, and "Install Version" form (version input +
+  submit). htmx posts to `/system/stereo-tool/install` and swaps result
+  into `#stereo-tool-result`.
+
+- `rivapi/dashboard/templates/stereo_tool_result.html` (new): install
+  outcome fragment (success message or error).
+
+- `rivapi/main.go`: wired `POST /system/stereo-tool/install`.
+
+- `conf/systemd/stereo-tool.service`: updated `ExecStart` path to
+  `/home/rd/bin/stereo_tool` to match default `StereoToolPath`.
+
+## 2026-07-01
+
+- `rivapi/store/service_status.go` (new): `QueryStackStatus` polls
+  `systemctl is-active` for each managed stack unit and returns current
+  state; `ControlUnit` runs `sudo systemctl start/stop/restart` for
+  allowed units only (allowlist-validated to prevent injection). Units
+  not yet installed surface as `"unknown"` rather than erroring.
+
+- `rivapi/dashboard/handlers.go`: `System` handler (`GET /system`) and
+  `SystemAction` handler (`POST /system/service/{unit}/{action}`) added.
+  Full page renders via `system.html`; htmx requests return
+  `system_status.html` fragment. Action buttons use `hx-confirm` for
+  category-3 (audio-path) services per spec 0010 live-playout protection.
+
+- `rivapi/dashboard/templates/system.html` (new): System page — full-stack
+  Start/Stop/Restart buttons at top; status table loaded via htmx on page
+  load.
+
+- `rivapi/dashboard/templates/system_status.html` (new): htmx-swappable
+  service status table with per-unit Start/Stop/Restart buttons and
+  state badges.
+
+- `rivapi/dashboard/templates/base.html`: added System nav link.
+
+- `rivapi/dashboard/static/app.css`: added `.service-state` badge styles
+  for `active`, `inactive`, `failed`, `activating`, `unknown` states.
+
+- `rivapi/main.go`: wired `/system` GET and `/system/service/{unit}/{action}`
+  POST routes under `DashboardMiddleware`.
+
+- `conf/sudoers.d/rivapi` (new): targeted NOPASSWD rule for `rd` to run
+  `systemctl start/stop/restart` for the five stack units and the target.
+
+- `conf/systemd/rivolution-stack.target` (new): stack target; `Wants=`
+  `rivendell.service`, `icecast2.service`, `liquidsoap.service`,
+  `stereo-tool.service`, `tailscaled.service`.
+
+- `conf/systemd/rivendell.service.d/rivolution.conf` (new): drop-in setting
+  `User=rd`, `Group=rd`, `LimitRTPRIO=99`, `LimitRTTIME=infinity`,
+  `IOSchedulingClass=realtime`, `IOSchedulingPriority=0`, plus an
+  `ExecStartPost` health probe on caed's TCP port (5005). Resolves the
+  root→rd permission prerequisite for PipeWire integration (Phase 1 of
+  two-phase caed migration; see spec 0010).
+
+- `conf/systemd/icecast2.service.d/rivolution.conf` (new): adds
+  `After=rivendell.service`.
+
+- `conf/systemd/liquidsoap.service.d/rivolution.conf` (new): adds
+  `After=rivendell.service` and `After=icecast2.service`.
+
+- `conf/systemd/stereo-tool.service` (new): custom unit for Stereo Tool;
+  `After=liquidsoap.service`; `User=rd`; `PartOf=rivolution-stack.target`.
+
+- `conf/udev/99-ptp.rules` (new): assigns `/dev/ptpN` to `ptp` group
+  (Phase 1.5 prerequisite for non-root PTP clock access).
+
 ## 2026-06-30 (continued, 4)
 
 - `rivapi/auth/auth.go`: dashboard session cookie is now a browser

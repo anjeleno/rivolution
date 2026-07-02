@@ -1,0 +1,80 @@
+{{define "page"}}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <h2 style="margin:0">System</h2>
+    <div role="group">
+        <button hx-post="/system/service/rivolution-stack.target/start"
+                hx-target="#service-status"
+                hx-swap="outerHTML"
+                hx-confirm="Start the full broadcast stack?"
+                class="outline">Start Stack</button>
+        <button hx-post="/system/service/rivolution-stack.target/stop"
+                hx-target="#service-status"
+                hx-swap="outerHTML"
+                hx-confirm="Stop the full broadcast stack? This will interrupt live audio."
+                class="outline secondary">Stop Stack</button>
+        <button hx-post="/system/service/rivolution-stack.target/restart"
+                hx-target="#service-status"
+                hx-swap="outerHTML"
+                hx-confirm="Restart the full broadcast stack? Live audio will be interrupted."
+                class="outline contrast">Restart Stack</button>
+    </div>
+</div>
+
+<div id="service-status"
+     hx-get="/system?partial=1"
+     hx-trigger="load"
+     hx-indicator="#status-spinner">
+    <span id="status-spinner" class="htmx-indicator">Loading…</span>
+</div>
+
+<hr>
+
+<section>
+    <h3>Stereo Tool Binary</h3>
+    <p style="color: var(--pico-muted-color); margin-bottom:1rem;">
+        Architecture: <strong>{{.StereoToolArch}}</strong> &nbsp;·&nbsp;
+        Install path: <code>{{.StereoToolPath}}</code> &nbsp;·&nbsp;
+        {{if .StereoToolExists}}
+        <ins>Installed</ins>
+        {{else}}
+        <mark>Not installed</mark>
+        {{end}}
+    </p>
+
+    <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-end;">
+        <div>
+            <button hx-post="/system/stereo-tool/launch"
+                    hx-target="#stereo-tool-result"
+                    hx-swap="outerHTML"
+                    class="outline secondary">
+                Launch GUI
+            </button>
+        </div>
+        <div>
+            <button hx-post="/system/stereo-tool/install"
+                    hx-target="#stereo-tool-result"
+                    hx-swap="outerHTML"
+                    hx-indicator="#st-spinner"
+                    hx-confirm="Download and install the latest Stereo Tool build? This will replace any existing binary."
+                    class="outline">
+                Install Latest
+            </button>
+        </div>
+        <form hx-post="/system/stereo-tool/install"
+              hx-target="#stereo-tool-result"
+              hx-swap="outerHTML"
+              hx-indicator="#st-spinner"
+              style="display:flex; gap:0.5rem; align-items:flex-end; margin:0;">
+            <label style="margin:0;">
+                Version
+                <input type="text" name="version" placeholder="e.g. 1030"
+                       style="width:10rem; margin:0;" required>
+            </label>
+            <button type="submit" class="outline">Install Version</button>
+        </form>
+    </div>
+
+    <span id="st-spinner" class="htmx-indicator" style="margin-top:0.5rem; display:block;">Downloading…</span>
+    <div id="stereo-tool-result"></div>
+</section>
+{{end}}

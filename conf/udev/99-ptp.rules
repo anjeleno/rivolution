@@ -1,0 +1,9 @@
+# Assign PTP clock devices to the ptp group so caed can access them
+# as the rd user (Phase 1.5 prerequisite — rd needs /dev/ptpN access
+# for PTP-based audio clock synchronization without running as root).
+#
+# Install: copy to /etc/udev/rules.d/99-ptp.rules
+# then: sudo udevadm control --reload-rules && sudo udevadm trigger
+# Also: sudo groupadd -r ptp && sudo usermod -aG ptp rd
+
+KERNEL=="ptp*", GROUP="ptp", MODE="0660"

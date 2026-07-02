@@ -1,0 +1,43 @@
+{{define "system_status.html"}}
+<div id="service-status">
+{{if .ActionError}}
+<mark style="display:block; margin-bottom:1rem;">{{.ActionError}}</mark>
+{{end}}
+    <table>
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>State</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {{range .Services}}
+        <tr>
+            <td>{{.DisplayName}}</td>
+            <td><span class="service-state service-state--{{.State}}">{{.State}}</span></td>
+            <td>
+                <div role="group">
+                    <button hx-post="/system/service/{{.Unit}}/start"
+                            hx-target="#service-status"
+                            hx-swap="outerHTML"
+                            {{if .AudioPath}}hx-confirm="Start {{.DisplayName}}? This service is on the live audio path."{{end}}
+                            class="outline small">Start</button>
+                    <button hx-post="/system/service/{{.Unit}}/stop"
+                            hx-target="#service-status"
+                            hx-swap="outerHTML"
+                            hx-confirm="Stop {{.DisplayName}}?{{if .AudioPath}} This will interrupt live audio.{{end}}"
+                            class="outline secondary small">Stop</button>
+                    <button hx-post="/system/service/{{.Unit}}/restart"
+                            hx-target="#service-status"
+                            hx-swap="outerHTML"
+                            hx-confirm="Restart {{.DisplayName}}?{{if .AudioPath}} This will interrupt live audio.{{end}}"
+                            class="outline contrast small">Restart</button>
+                </div>
+            </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}

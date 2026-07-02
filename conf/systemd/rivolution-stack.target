@@ -1,0 +1,22 @@
+# Rivolution broadcast stack target.
+# Groups all broadcast stack services under a single unit so the dashboard
+# can start/stop/restart the full stack with one systemctl command.
+#
+# This file is stable infrastructure — never regenerated on config change.
+# Wants= lists every service the stack may run; whether each actually runs
+# is controlled by systemctl enable/disable (or mask). A service that fails
+# to start does not bring down other units in the target.
+#
+# Install: copy to /etc/systemd/system/rivolution-stack.target
+# then: sudo systemctl daemon-reload && sudo systemctl enable rivolution-stack.target
+
+[Unit]
+Description=Rivolution Broadcast Stack
+Wants=rivendell.service
+Wants=icecast2.service
+Wants=liquidsoap.service
+Wants=stereo-tool.service
+Wants=tailscaled.service
+
+[Install]
+WantedBy=multi-user.target
