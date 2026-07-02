@@ -23,7 +23,7 @@ Type=simple
 User=rd
 Group=rd
 Environment=XDG_RUNTIME_DIR=/run/pipewire-system
-ExecStart=/home/rd/bin/stereo_tool --silent
+ExecStart=/home/rd/bin/stereo_tool --silent -p 8079
 Restart=on-failure
 RestartSec=5
 

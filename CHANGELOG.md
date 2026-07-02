@@ -7,6 +7,21 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 23)
+
+- `conf/systemd/stereo-tool.service`: added `-p 8079` to expose Stereo
+  Tool's web config UI (needed since it runs headless, no X11 display).
+- `conf/alsa/rd.asoundrc` (new): overrides the stock `pcm.jack` ALSA
+  definition (`/usr/share/alsa/alsa.conf.d/50-jack.conf`), which
+  hardcodes `system:capture_1/2`/`system:playback_1/2` — real jackd+ALSA
+  hardware port names that don't exist under system-scope PipeWire.
+  Stereo Tool's "jack (ALSA)" I/O option routes through this ALSA-JACK
+  bridge plugin, not as a native JACK client, so this was needed for it
+  to reach caed/Liquidsoap at all. Pins caed stream 0 -> Stereo Tool
+  input, Stereo Tool output -> Liquidsoap for now — temporary/hardcoded
+  until the dashboard's visual patch matrix (dynamic WirePlumber-backed
+  routing) replaces it; see BACKLOG.md.
+
 ## 2026-07-01 (continued, 22)
 
 - `conf/systemd/stereo-tool.service`: added the missing

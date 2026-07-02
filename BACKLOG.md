@@ -469,3 +469,27 @@ quality, but loses the low-bitrate efficiency SBR is chosen for.
 build compiled with SBR encoding enabled, or switching the
 low-bitrate-efficient stream option to a different codec (e.g. Opus,
 which isn't patent-restricted and is already linked into Liquidsoap).
+
+## Audio processing chain routing (caed -> Stereo Tool -> Liquidsoap) is hardcoded
+
+The signal chain needs caed's JACK output routed into Stereo Tool, and
+Stereo Tool's output routed into Liquidsoap. Stereo Tool only reaches
+JACK via an ALSA-JACK bridge plugin (its "jack (ALSA)" I/O option) —
+not as a native JACK client — and that plugin's default port mapping
+(`/usr/share/alsa/alsa.conf.d/50-jack.conf`) is hardcoded to
+`system:capture_1/2`/`system:playback_1/2`, real jackd+ALSA hardware
+port names that don't exist under system-scope PipeWire.
+
+**Current mitigation:** `conf/alsa/rd.asoundrc` overrides the `pcm.jack`
+definition with a hardcoded mapping to `rivendell_0:playout_0L/R` (input)
+and `liquidsoap:in_0/1` (output). Works, but is fixed at exactly one
+routing — no way to reassign which caed stream feeds Stereo Tool, or add
+additional processing/monitoring taps, without hand-editing this file.
+
+**Deferred** — the real fix is the dashboard's planned visual patch
+matrix: a live view of PipeWire/WirePlumber nodes and ports the operator
+can connect/disconnect from the browser, backed by dynamic
+`pw-link`/WirePlumber calls instead of a static config file. Needs its
+own design pass (spec) before implementation — this isn't a small
+addition, it's a new subsystem (live graph state, an API surface for
+link/unlink, and a UI to visualize and manipulate it).
