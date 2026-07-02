@@ -1,5 +1,7 @@
-rivolution (@VERSION@-1) unstable; urgency=medium
+rivolution (@VERSION@-2) unstable; urgency=medium
 
   * Beta release (see ChangeLog for details)
+  * Added mariadb-server to rivolution's Depends -- postinst's database
+    provisioning needs a running mysqld, previously not guaranteed
 
  -- Anjeleno <la90046@gmail.com>  @DATESTAMP@

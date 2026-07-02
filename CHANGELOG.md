@@ -7,6 +7,18 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-02 (continued, 3)
+
+- `debian/control.src`: added `mariadb-server` to `rivolution`'s
+  `Depends` (was `mariadb-client` only). Found via a real install on a
+  clean arm64 system: `postinst`'s new database-creation step (see the
+  previous entry) needs a running `mysqld` to connect to, which was
+  never guaranteed to exist — `mariadb-client` only provides the `mysql`
+  CLI tool, not the server daemon. `apt install` now pulls in
+  `mariadb-server` automatically, whose own `postinst` starts `mysqld`
+  before `rivolution`'s `postinst` runs (guaranteed by dependency
+  ordering), so the connection succeeds.
+
 ## 2026-07-02 (continued, 2)
 
 - `debian/postinst`: full rewrite folding in `scripts/rivolution-first-run.sh`'s
