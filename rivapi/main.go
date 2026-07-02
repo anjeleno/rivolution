@@ -70,6 +70,8 @@ func main() {
 		r.Post("/system/stereo-tool/launch", dash.StereoToolLaunch)
 		r.Get("/broadcast", dash.Broadcast)
 		r.Post("/broadcast/save", dash.BroadcastSave)
+		r.Get("/patchbay", dash.Patchbay)
+		r.Post("/patchbay/toggle", dash.PatchbayToggle)
 	})
 
 	log.Printf("rivapi listening on %s", cfg.ListenAddr)

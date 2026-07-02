@@ -7,6 +7,19 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 25)
+
+- `rivapi/store/patchbay.go`, `dashboard/handlers_patchbay.go`,
+  `dashboard/templates/patchbay.html` (new): MVP visual patchbay —
+  `/patchbay` shows every PipeWire output x input port as a clickable
+  connect/disconnect matrix, backed directly by `pw-link`. Replaces
+  needing to hand-edit `conf/alsa/rd.asoundrc` or SSH in to run
+  `pw-link` manually. Intentionally minimal (no client grouping, no
+  live refresh, no persistence across a client restart) — see
+  `BACKLOG.md` for what's deliberately deferred to a later pass.
+- `conf/systemd/rivapi.service`: added `Environment=XDG_RUNTIME_DIR=/run/pipewire-system`
+  (needed for the patchbay's `pw-link` calls) and `After=pipewire-system.service`.
+
 ## 2026-07-01 (continued, 24)
 
 - `conf/systemd/rivapi.service` (new): rivapi now runs as a real systemd

@@ -20,13 +20,17 @@
 
 [Unit]
 Description=Rivolution dashboard/API server
-After=network.target mariadb.service
+After=network.target mariadb.service pipewire-system.service
 Wants=mariadb.service
 
 [Service]
 Type=simple
 User=rd
 Group=rd
+# For the /patchbay page's pw-link calls to reach the system-scope
+# PipeWire instance (spec 0007), same pattern as rivendell/liquidsoap/
+# stereo-tool.
+Environment=XDG_RUNTIME_DIR=/run/pipewire-system
 ExecStart=/usr/local/bin/rivapi
 Restart=on-failure
 RestartSec=5

@@ -477,10 +477,23 @@ and `liquidsoap:in_0/1` (output). Works, but is fixed at exactly one
 routing — no way to reassign which caed stream feeds Stereo Tool, or add
 additional processing/monitoring taps, without hand-editing this file.
 
-**Deferred** — the real fix is the dashboard's planned visual patch
-matrix: a live view of PipeWire/WirePlumber nodes and ports the operator
-can connect/disconnect from the browser, backed by dynamic
-`pw-link`/WirePlumber calls instead of a static config file. Needs its
-own design pass (spec) before implementation — this isn't a small
-addition, it's a new subsystem (live graph state, an API surface for
-link/unlink, and a UI to visualize and manipulate it).
+**Update 2026-07-01:** an MVP patchbay page now exists (`/patchbay`,
+`rivapi/store/patchbay.go`, `handlers_patchbay.go`) — a live matrix of
+every PipeWire output x input port, click-to-connect/disconnect, backed
+directly by `pw-link`. This replaces needing to hand-edit
+`conf/alsa/rd.asoundrc` or SSH in to run `pw-link` manually, but it's
+intentionally minimal, not the full design this entry originally
+described:
+- No grouping by client — a flat table, can get wide with many ports.
+- No live/auto-refresh — full page reload to see changes made outside
+  the dashboard (e.g. a client restart dropping links).
+- No persistence — like manual `pw-link`, connections still vanish
+  when a client restarts. Does not (yet) replace `rd.asoundrc` for
+  Stereo Tool, which needs a link to exist *before* it starts probing.
+- Talks to `pw-link` directly, not WirePlumber — no saved "policy"
+  concept, just the current live graph.
+
+**Still deferred:** persistent/policy-backed auto-relinking (a real
+WirePlumber integration), and a nicer client-grouped visual graph (vs.
+a flat table) — both are the "real" version of this feature and
+deserve their own design pass when there's time for it.

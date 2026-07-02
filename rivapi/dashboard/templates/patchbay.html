@@ -1,0 +1,59 @@
+{{define "page"}}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <h2 style="margin:0">Patchbay</h2>
+    <a href="/patchbay" role="button" class="outline secondary">Refresh</a>
+</div>
+
+<p style="color: var(--pico-muted-color); margin-bottom:1rem;">
+    Every PipeWire output (row) and input (column) port. Click a cell to
+    connect or disconnect that pair. Links are not persistent across a
+    client restart (e.g. Liquidsoap) — this view always reflects the live
+    graph, reload after any service restart.
+</p>
+
+{{if .Error}}
+<p><mark>{{.Error}}</mark></p>
+{{end}}
+
+{{if or (not .Outputs) (not .Inputs)}}
+<p>No ports found — is PipeWire running?</p>
+{{else}}
+<div style="overflow-x:auto;">
+<table style="white-space:nowrap;">
+    <thead>
+        <tr>
+            <th>Output \ Input</th>
+            {{range .Inputs}}
+            <th style="writing-mode:vertical-rl; text-orientation:mixed;">{{.}}</th>
+            {{end}}
+        </tr>
+    </thead>
+    <tbody>
+        {{$linked := .Linked}}
+        {{range $out := .Outputs}}
+        <tr>
+            <th style="text-align:left;">{{$out}}</th>
+            {{range $in := $.Inputs}}
+            {{$key := printf "%s|%s" $out $in}}
+            <td style="text-align:center; padding:0.25rem;">
+                <form method="post" action="/patchbay/toggle" style="margin:0;">
+                    <input type="hidden" name="output" value="{{$out}}">
+                    <input type="hidden" name="input" value="{{$in}}">
+                    {{if index $linked $key}}
+                    <button type="submit" title="Connected to {{$in}} — click to disconnect"
+                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">●</button>
+                    {{else}}
+                    <button type="submit" class="outline secondary"
+                            title="Not connected to {{$in}} — click to connect"
+                            style="width:2rem; height:2rem; padding:0; margin:0; border-radius:50%;">○</button>
+                    {{end}}
+                </form>
+            </td>
+            {{end}}
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+</div>
+{{end}}
+{{end}}
