@@ -450,3 +450,15 @@ packaging effort not yet started.
   the rebuilt binary is in place. Tailscale intentionally excluded from
   `PartOf=rivolution-stack.target` — stopping the broadcast stack must
   not kill the VPN.
+- **2026-07-01:** `rivapi.service` implemented without an
+  `EnvironmentFile=` — unnecessary. `rivapi/config/config.go` already
+  reads DB credentials and the dashboard JWT secret from `/etc/rd.conf`
+  (the standard Rivendell config file, same as every other Rivendell
+  binary), and `scripts/rivolution-first-run.sh` already populates
+  `[dashboard] JwtSecret` there automatically. `RIVAPI_*` env vars still
+  override individual values if ever needed, per the existing
+  `config.Load()` precedence. Also added `scripts/rivapi-rebuild.sh`
+  (build + install + restart in one command) and a matching
+  `RIVAPI_SYSTEMCTL`/`RIVAPI_INSTALL` sudoers addition, replacing the
+  manual `cd rivapi && go build -o rivapi . && ./rivapi` dev workflow
+  noted in `BACKLOG.md`.

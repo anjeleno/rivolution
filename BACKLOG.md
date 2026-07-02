@@ -45,22 +45,13 @@ whose `postinst` script handles all the above. Required package components:
 Neither path has been started. Until one of them is implemented, all
 deployment steps are manual.
 
----
-
-## `rivapi` has no systemd unit — started manually during development
-
-`rivapi` (the Go dashboard process) has no `rivapi.service` unit file yet.
-During development it is started by hand:
-
-```
-cd ~/dev/rivolution/rivapi && go build -o rivapi . && ./rivapi
-```
-
-The unit file is scoped to [spec 0010](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0010-systemd-stack-orchestration.md),
-which is where it belongs: rivapi is the process that controls the broadcast
-stack, so its own service unit is part of the same orchestration work.
-Until that unit exists, the process must be started manually after every
-reboot or restart.
+**Update 2026-07-01:** `conf/systemd/rivapi.service` now exists and is
+deployed on the dev box (survives reboot, no more manual
+`go build && ./rivapi` every time — see `scripts/rivapi-rebuild.sh` for
+the one-command rebuild-and-restart workflow after a source change).
+This closes the specific "rivapi has no systemd unit" gap that used to
+be its own entry here, but not the automation this entry describes —
+a fresh install still needs every `conf/` file placed by hand.
 
 ---
 

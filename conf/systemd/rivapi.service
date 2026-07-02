@@ -1,0 +1,35 @@
+# Custom systemd unit for rivapi (the Go dashboard/API process).
+#
+# Deliberately NOT part of rivolution-stack.target: rivapi is the
+# process that controls the broadcast stack from the dashboard, so if
+# it were PartOf the stack target, stopping the stack would also stop
+# the only way to restart it from the dashboard. It stays up
+# independently, under multi-user.target, regardless of stack state.
+#
+# No EnvironmentFile needed: rivapi reads DB credentials and the
+# dashboard JWT secret from /etc/rd.conf (the standard Rivendell config
+# file every other Rivendell binary already reads), as long as
+# [dashboard] JwtSecret is set there -- done automatically by
+# scripts/rivolution-first-run.sh. Env vars (RIVAPI_*) still override
+# individual values for dev/container use if ever needed.
+#
+# Install: copy to /etc/systemd/system/rivapi.service
+# then: sudo systemctl daemon-reload && sudo systemctl enable --now rivapi.service
+#
+# To rebuild after a source change: scripts/rivapi-rebuild.sh
+
+[Unit]
+Description=Rivolution dashboard/API server
+After=network.target mariadb.service
+Wants=mariadb.service
+
+[Service]
+Type=simple
+User=rd
+Group=rd
+ExecStart=/usr/local/bin/rivapi
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

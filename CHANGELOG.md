@@ -7,6 +7,22 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 24)
+
+- `conf/systemd/rivapi.service` (new): rivapi now runs as a real systemd
+  service — survives reboot, no more manual `go build && ./rivapi`.
+  Deliberately independent of `rivolution-stack.target` (it's the
+  process that controls the stack from the dashboard, so it can't be
+  stopped along with it). No `EnvironmentFile=` needed — reads DB
+  credentials and the dashboard JWT secret from `/etc/rd.conf`, same as
+  every other Rivendell binary.
+- `scripts/rivapi-rebuild.sh` (new): one-command build + install +
+  restart, replacing the manual `cd rivapi && go build -o rivapi . &&
+  ./rivapi` dev workflow.
+- `conf/sudoers.d/rivapi`: added `restart rivapi.service` to
+  `RIVAPI_SYSTEMCTL` and the `/usr/local/bin/rivapi` install path to
+  `RIVAPI_INSTALL`, both needed by the rebuild script.
+
 ## 2026-07-01 (continued, 23)
 
 - `conf/systemd/stereo-tool.service`: added `-p 8079` to expose Stereo
