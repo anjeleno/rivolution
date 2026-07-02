@@ -7,6 +7,20 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-01 (continued, 22)
+
+- `conf/systemd/stereo-tool.service`: added the missing
+  `Environment=XDG_RUNTIME_DIR=/run/pipewire-system` (same pattern as
+  `rivendell.service.d`/`liquidsoap.service`) and `After=pipewire-system.service`.
+  Without it, Stereo Tool had no way to find the system-scope PipeWire
+  socket and was very likely falling back to the user-session PipeWire
+  instance instead — its own log showed repeated JACK auto-connect
+  failures (`cannot connect system:capture_1 to stereo_tool...`),
+  and it never appeared in the system-scope PipeWire graph. Also fixed
+  the unit's description comment, which had the signal chain backwards
+  (said "downstream of Liquidsoap"; it's upstream — caed -> Stereo Tool
+  -> Liquidsoap).
+
 ## 2026-07-01 (continued, 21)
 
 - `rivapi/store/broadcast_config.go`: added `StreamConfig.Quality`

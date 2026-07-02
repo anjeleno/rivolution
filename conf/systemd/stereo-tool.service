@@ -1,5 +1,8 @@
 # Custom systemd unit for Stereo Tool.
-# Stereo Tool processes the audio signal downstream of Liquidsoap.
+# Stereo Tool processes the audio signal between Rivendell (caed) and
+# Liquidsoap: caed's JACK output -> Stereo Tool input -> Stereo Tool
+# output -> Liquidsoap's JACK input. It is upstream of Liquidsoap, not
+# downstream.
 # The binary path below matches the default RIVAPI_STEREO_TOOL_PATH config
 # value (/home/rd/bin/stereo_tool). If RIVAPI_STEREO_TOOL_PATH is changed,
 # update ExecStart to match.
@@ -12,13 +15,14 @@
 
 [Unit]
 Description=Stereo Tool audio processor
-After=liquidsoap.service
+After=pipewire-system.service liquidsoap.service
 PartOf=rivolution-stack.target
 
 [Service]
 Type=simple
 User=rd
 Group=rd
+Environment=XDG_RUNTIME_DIR=/run/pipewire-system
 ExecStart=/home/rd/bin/stereo_tool --silent
 Restart=on-failure
 RestartSec=5
