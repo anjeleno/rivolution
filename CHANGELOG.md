@@ -7,6 +7,19 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-02 (continued, 5)
+
+- `debian/postinst`: stopped calling `dpkg-architecture` to compute the
+  multiarch triplet for the `pipewire-jack` `ld.so.conf.d` fix. Found
+  via a real install of `v6.0.0int0-3` on a clean arm64 system:
+  `dpkg-architecture` lives in `dpkg-dev`, a build-time-only package --
+  present on this fork's own dev box (where every `.deb` gets built,
+  which is why this passed local testing) but not on a plain install
+  target, so `postinst` failed outright with `dpkg-architecture: not
+  found` (exit 127). Now reads the triplet straight off the filesystem
+  (`/usr/lib/*-linux-gnu`, always present on any multiarch Debian/
+  Ubuntu system) instead of depending on any external tool.
+
 ## 2026-07-02 (continued, 4)
 
 - `debian/control.src`: `pipewire-jack` is now a hard `Depends`, not an

@@ -28,10 +28,22 @@ case "$1" in
       # Copy it into place with the 00- prefix directly, then also handle
       # the case where an older deployment already copied it under its
       # original (unprefixed) name.
-      pw_jack_conf="pipewire-jack-$(dpkg-architecture -qDEB_HOST_MULTIARCH).conf"
-      if test -e "/usr/share/doc/pipewire/examples/ld.so.conf.d/$pw_jack_conf" && \
-	 test ! -e "/etc/ld.so.conf.d/00-$pw_jack_conf" ; then
-	  cp "/usr/share/doc/pipewire/examples/ld.so.conf.d/$pw_jack_conf" "/etc/ld.so.conf.d/00-$pw_jack_conf"
+      #
+      # Multiarch triplet read straight off the filesystem rather than
+      # via `dpkg-architecture` -- that command lives in dpkg-dev, a
+      # build-time-only package. It's present on any box that can build
+      # this .deb (which is why this passed local testing) but not on a
+      # plain install target: confirmed 2026-07-02 via a real install,
+      # "dpkg-architecture: not found", postinst exit 127.
+      # /usr/lib/<triplet>/ always exists on any multiarch Debian/Ubuntu
+      # system regardless of what's installed.
+      multiarch_dir=$(ls -d /usr/lib/*-linux-gnu 2>/dev/null | head -n1)
+      if test -n "$multiarch_dir" ; then
+	  pw_jack_conf="pipewire-jack-$(basename "$multiarch_dir").conf"
+	  if test -e "/usr/share/doc/pipewire/examples/ld.so.conf.d/$pw_jack_conf" && \
+	     test ! -e "/etc/ld.so.conf.d/00-$pw_jack_conf" ; then
+	      cp "/usr/share/doc/pipewire/examples/ld.so.conf.d/$pw_jack_conf" "/etc/ld.so.conf.d/00-$pw_jack_conf"
+	  fi
       fi
       for f in /etc/ld.so.conf.d/pipewire-jack-*.conf; do
 	  test -e "$f" || continue

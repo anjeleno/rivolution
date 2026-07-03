@@ -1,4 +1,4 @@
-rivolution (@VERSION@-3) unstable; urgency=medium
+rivolution (@VERSION@-4) unstable; urgency=medium
 
   * Beta release (see ChangeLog for details)
   * Added mariadb-server to rivolution's Depends -- postinst's database
@@ -8,5 +8,8 @@ rivolution (@VERSION@-3) unstable; urgency=medium
   * postinst now copies pipewire-jack's ld.so.conf.d snippet into place
     before renaming it; it was never auto-installed there to begin with
   * Added gedit to Depends
+  * postinst no longer calls dpkg-architecture (a dpkg-dev build tool,
+    not present on a plain install target) -- multiarch triplet now
+    read from the filesystem instead
 
  -- Anjeleno <la90046@gmail.com>  @DATESTAMP@
