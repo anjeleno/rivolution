@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+      # Tags ending in "-test" are for exercising the manual ARM64
+      # tag/release flow without also kicking off a real x64 build --
+      # e.g. `v6.0.0-1-test`. Use workflow_dispatch instead to test the
+      # x64 build itself without any tag at all.
+      - '!*-test'
   workflow_dispatch: {}
 
 permissions:
