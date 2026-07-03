@@ -330,27 +330,52 @@ priority (dead air on a live broadcast). See [`ROADMAP.md`](https://github.com/a
 related feature request (a library-wide missing-audio audit tool) that
 came up alongside this report — distinct from this bug fix itself.
 
-## Edit Markers waveform goes blank at maximum zoom near end-of-file
+## Edit Markers waveform goes blank/truncated at high zoom on long cuts — fixed
 
-**Flagged 2026-06-22.** Long-standing, pre-existing Rivendell v4
-behavior — not introduced by this fork.
+**Flagged 2026-06-22, root-caused and fixed 2026-07-03.** Long-standing,
+pre-existing Rivendell v4 behavior — not introduced by this fork. Same
+underlying bug as upstream `ElvishArtisan/rivendell` issue #835
+("RdLibrary: Waveform display broken when zooming"), open there since
+2022 with only a stopgap (capping the maximum zoom level rather than
+fixing the rendering).
 
-In "Edit Markers" (used to view a cut's waveform and place segue
-markers), zooming all the way in while positioned near the end of the
-file doesn't peg the waveform at the highest zoom level the way it
-does everywhere else in the file — instead the display goes blank,
-showing empty space rather than the actual waveform at that zoom
-level. Working around it means staying two or three zoom steps back
-from maximum, which costs real precision when placing a segue marker
-right at a file's tail.
+**Root cause:** `RDMarkerView::WriteWave()` rendered a cut's entire
+waveform into a single `QPixmap`, sized to `cut_length / zoom_level`.
+Long cuts at high zoom need a pixmap wider than Qt/X11's roughly
+32767px maximum single-bitmap dimension, which silently truncates or
+blanks the pixmap's contents past that width rather than erroring —
+explaining both symptoms (blank near the end of a long file, or
+truncated mid-file) as the same limit hit from different starting
+positions. A partial safety net already existed
+(`RDMarkerView::d_min_shrink_factor`, capping how far a user could zoom
+in) but wasn't actually enforced on either real interaction path
+(mouse-wheel zoom, the "Full In" toolbar button), so in practice it
+provided no protection at all.
 
-Not yet investigated — no file/line citations yet for the zoom/
-rendering logic responsible (likely in the waveform widget's
-end-of-file boundary handling, where the visible window's pixel-to-
-sample mapping runs past the actual sample count at high zoom).
+**Fix:** `RDWaveFactory::generate()` (`lib/rdwavefactory.cpp`) now
+accepts an optional column range and can render just a slice of the
+waveform; `WriteWave()` (`lib/rdmarkerview.cpp`) renders the full width
+as a strip of bounded-width tiles (each well under the ~32767px limit)
+laid edge-to-edge in the same `QGraphicsScene`, instead of one pixmap.
+No single `QPixmap` this widget creates can hit the limit regardless of
+cut length or zoom, so the now-superfluous `d_min_shrink_factor` cap
+was removed entirely — zoom is limited only by the underlying peak
+data's own resolution (see the precision entry below), not an
+artificial ceiling.
 
-**Current mitigation:** manually zoom out two or three steps from
-maximum when placing markers near the end of a file.
+**Known remaining limitation, deferred:** the peak data
+`RDWaveFactory`/`RDWavePainter` render from is pre-computed in
+1152-sample blocks (~26ms at 44.1kHz) — `RDWaveFile::GetEnergy()`, the
+same mechanism used for the MP3 passthrough autotrim support added
+2026-07-03. Zooming in past that resolution doesn't reveal finer real
+detail, it just stretches the same block value across more pixels.
+Genuinely sample-accurate marker placement at extreme zoom would need
+a further change: falling back to reading real per-sample PCM data
+directly from the file (rather than the coarse peak-block cache) once
+the visible zoom level exceeds that resolution. Not implemented here —
+this fix resolves the crash/truncation bug and the artificial
+file-length-dependent zoom ceiling, not the separate ~26ms precision
+floor.
 
 ## RDLibrary's manual "Add" cart flow may still lose audio after a confirmed OK click — suspected Qt6-migration regression
 

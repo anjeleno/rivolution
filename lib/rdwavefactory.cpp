@@ -64,9 +64,27 @@ int RDWaveFactory::cutNumber() const
 
 
 QPixmap RDWaveFactory::generate(int height,int x_shrink,int gain,
-				bool incl_scale)
+				bool incl_scale,int start_col,int width)
 {
-  QPixmap pix(d_energy.size()/(x_shrink*d_energy_channels),height);
+  //
+  // start_col/width let the caller render just a horizontal slice of the
+  // full waveform (in the same pixel-column space the whole-file pixmap
+  // would use) instead of the whole cut in one QPixmap. This exists so a
+  // caller can tile a long cut into several pixmaps that each stay safely
+  // under Qt/X11's ~32767px maximum single-bitmap width -- rendering the
+  // full width in one QPixmap silently truncates or corrupts once that
+  // limit is exceeded (Rivendell issue #835 upstream). All column/index
+  // math below is expressed in *global* terms (as if one full-width
+  // pixmap were still being generated) and only converted to pixmap-
+  // local coordinates at the point something is actually drawn, so a
+  // tiled render is pixel-identical to what the untiled render would
+  // have produced at the same position.
+  //
+  int total_width=d_energy.size()/(x_shrink*d_energy_channels);
+  if(width<0) {
+    width=total_width-start_col;
+  }
+  QPixmap pix(width,height);
   pix.fill(Qt::white);  // FIXME: make the background transparent
   QPainter *p=new QPainter(&pix);
   p->setFont(d_font_engine->defaultFont());
@@ -76,16 +94,25 @@ QPixmap RDWaveFactory::generate(int height,int x_shrink,int gain,
   //
   if(incl_scale) {
     int interval=2*rda->system()->sampleRate()/1152;
-    int msec=2000;
-    for(int i=interval;i<(d_energy.size()/x_shrink);i+=interval) {
+    int end_col=start_col+width;
+    int n=start_col/interval;
+    if((n*interval)<start_col) {
+      n++;
+    }
+    if(n<1) {
+      n=1;
+    }
+    for(int global_col=n*interval;global_col<end_col;
+	global_col+=interval,n++) {
+      int local_col=global_col-start_col;
+      int msec=2000*n;
       p->setPen(Qt::gray);
-      p->drawLine(i,0,i,height);
+      p->drawLine(local_col,0,local_col,height);
       p->setPen(Qt::red);
       for(unsigned j=0;j<d_energy_channels;j++) {
-	p->drawText(i+5,(j+1)*height/d_energy_channels-2,
+	p->drawText(local_col+5,(j+1)*height/d_energy_channels-2,
 		    RDGetTimeLength(msec*x_shrink,false,false));
       }
-      msec+=2000;
     }
   }
 
@@ -101,6 +128,11 @@ QPixmap RDWaveFactory::generate(int height,int x_shrink,int gain,
   //  int ref_line=exp10((double)(-REFERENCE_LEVEL)/2000.00)*height*ratio/
   //    ((double)d_energy_channels*2.0);
   int clip_line=height/(2*d_energy_channels);
+  int start_index=start_col*x_shrink*d_energy_channels;
+  int end_index=(start_col+width)*x_shrink*d_energy_channels;
+  if(end_index>d_energy.size()) {
+    end_index=d_energy.size();
+  }
   for(unsigned i=0;i<d_energy_channels;i++) {
     int zero_line=height/(d_energy_channels*2)+i*height/(d_energy_channels);
     if(incl_scale) {
@@ -108,15 +140,15 @@ QPixmap RDWaveFactory::generate(int height,int x_shrink,int gain,
       if(ref_line<clip_line) {
 	p->setPen(Qt::red);
 	p->drawLine(0,zero_line+ref_line,
-		    d_energy.size()/x_shrink,zero_line+ref_line);
+		    width,zero_line+ref_line);
 	p->drawLine(0,zero_line-ref_line,
-		    d_energy.size()/x_shrink,zero_line-ref_line);
+		    width,zero_line-ref_line);
 	p->setPen(Qt::black);
       }
       */
     }
-    p->drawLine(0,zero_line,d_energy.size()/x_shrink,zero_line);
-    for(int j=i;j<d_energy.size();j+=(d_energy_channels*x_shrink)) {
+    p->drawLine(0,zero_line,width,zero_line);
+    for(int j=start_index+i;j<end_index;j+=(d_energy_channels*x_shrink)) {
       uint16_t lvl=d_energy.at(j);
       for(int k=1;k<x_shrink;k++) {
 	if(((j+k)<d_energy.size())&&(d_energy.at(j+k))>lvl) {
@@ -128,11 +160,13 @@ QPixmap RDWaveFactory::generate(int height,int x_shrink,int gain,
       if(rlvl>clip_line) {
 	rlvl=clip_line;
       }
+      int col=(j-start_index)/(x_shrink*d_energy_channels);
+
       // Bottom half
-      p->fillRect(j/(x_shrink*d_energy_channels),zero_line,1,rlvl,Qt::black);
+      p->fillRect(col,zero_line,1,rlvl,Qt::black);
 
       // Top half
-      p->fillRect(j/(x_shrink*d_energy_channels),zero_line,1,-rlvl,Qt::black);
+      p->fillRect(col,zero_line,1,-rlvl,Qt::black);
     }
   }
 
@@ -142,7 +176,7 @@ QPixmap RDWaveFactory::generate(int height,int x_shrink,int gain,
   p->setPen(Qt::gray);
   for(unsigned i=1;i<d_energy_channels;i++) {
     p->drawLine(0,i*height/d_energy_channels,
-		d_energy.size()/x_shrink,i*height/d_energy_channels);
+		width,i*height/d_energy_channels);
   }
 
   p->end();

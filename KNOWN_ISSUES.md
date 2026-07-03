@@ -244,14 +244,41 @@ not just the incidental closes it was meant to protect against. See
 cart actually discarded, delete it manually afterward through
 RDLibrary (not raw SQL, to keep bookkeeping consistent).
 
-## Edit Markers waveform goes blank when zoomed in fully near end-of-file
+## Edit Markers waveform goes blank/truncated on long cuts at high zoom — fixed 2026-07-03, pending real-world confirmation
 
-**Symptom:** in "Edit Markers," zooming all the way in while positioned
-near the end of a cut shows blank space instead of the waveform,
-making it hard to place a segue marker precisely at a file's tail.
+**Symptom:** in "Edit Markers," zooming in on a long cut could show
+blank space or a truncated waveform instead of the actual audio,
+making it hard to place a segue marker precisely.
 
-**Cause:** long-standing Rivendell v4 behavior, not introduced by this
-fork — not yet investigated in detail (see [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)).
+**Cause:** the waveform display rendered an entire cut into a single
+image sized to fit the whole file at the current zoom level; long
+cuts at high zoom needed an image wider than the display toolkit
+supports, silently corrupting the image past that width. Long-standing
+Rivendell v4 behavior, not introduced by this fork (see
+[`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
+for the technical detail).
 
-**Workaround:** zoom out two or three steps from maximum when placing
-markers near the end of a file.
+**Fix:** the waveform is now rendered as a strip of bounded-width tiles
+instead of one oversized image, and the artificial zoom-level cap this
+issue's earlier workaround relied on has been removed — zoom is no
+longer limited by cut length at all.
+
+**Workaround (if still seen after updating):** zoom out two or three
+steps from maximum when placing markers near the end of a file.
+
+## Waveform zoom has a precision floor of about 26 milliseconds
+
+**Symptom:** zooming in on a cut's waveform past a certain point in
+"Edit Markers" doesn't reveal any finer detail — the same shape just
+stretches across more screen pixels rather than showing more of the
+actual waveform.
+
+**Cause:** the waveform display draws from pre-computed peak data
+sampled in fixed ~26-millisecond blocks, not the raw audio itself.
+That's fine for placing most markers, but it's a real precision limit
+for edits that need finer-than-26ms accuracy. Deferred — see
+[`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
+for the technical detail and what a real fix would require.
+
+**Workaround:** none currently; place markers with the understanding
+that sub-26ms accuracy isn't achievable in the waveform display yet.

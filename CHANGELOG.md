@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-03
 
+- `lib/rdwavefactory.cpp`, `lib/rdmarkerview.cpp`: fixed the Edit
+  Markers waveform going blank or truncated on long cuts at high zoom
+  (same root cause as upstream `ElvishArtisan/rivendell` issue #835,
+  open since 2022 with only a zoom-level cap as a stopgap). The
+  waveform previously rendered into a single oversized image that
+  silently corrupted past the display toolkit's maximum image width;
+  it's now rendered as a strip of bounded-width tiles, and the
+  now-unnecessary zoom-level cap has been removed. A separate, known
+  ~26ms zoom precision floor (from the underlying peak data's own
+  resolution) remains and is documented in `BACKLOG.md`/
+  `KNOWN_ISSUES.md` as deferred.
 - `debian/control.src`: added `mp3gain` to `rivolution`'s `Depends`. The
   MP3 gain-patch passthrough path (spec 0004) silently falls back to a
   full decode/re-encode whenever `mp3gain` isn't present, so its absence
