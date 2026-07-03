@@ -1,12 +1,25 @@
-# Spec 0013 — RDAdmin parity roadmap
+# Spec 0013 — RDAdmin section classification
 
 ## Purpose
 
-This spec is a classification and sequencing document, not a per-screen
-design doc. Its job is to map all ~48 RDAdmin management sections
-against the Go dashboard's implementation strategy, so each subsequent
-dashboard PR has a clear place in the order and knows which
-implementation bucket it belongs to before design begins.
+This spec is a classification and reference document, not a per-screen
+design doc — and, as of 2026-07-03, not a commitment that every section
+listed here will end up reimplemented in the dashboard. Its original
+goal was mapping all ~48 RDAdmin management sections against a possible
+Go dashboard implementation strategy, treating full 1:1 parity as the
+end state. That assumption has since been revisited: RDAdmin already
+works for most of its existing configuration screens, and the
+dashboard's actual priority has shifted toward operational capabilities
+RDAdmin never had at all — broadcast tool configuration, systemd
+service control, PipeWire/JACK routing, and similar — rather than
+reimplementing screens that already work. Some sections below may
+simply stay RDAdmin-only indefinitely; that's a legitimate outcome, not
+an unfinished one.
+
+The bucket classification and file/table references below remain
+useful as-is for *if and when* a given section is actually picked up,
+so none of it has been removed — only the framing around it. This may
+get revisited again later.
 
 The three-bucket model from spec 0005 (originally used to classify
 rdxport.cgi's 46 commands) is extended here to cover all dashboard
@@ -102,6 +115,16 @@ are what spec 0010's "zero-disruption / deferred / explicit" config
 change categories operate on.
 
 ## Build order
+
+**Framing note, added 2026-07-03:** this list was originally written
+as a committed sequence, on the assumption that every section below
+would eventually get a dashboard PR. That assumption no longer holds —
+see Purpose above. Read this as "if a given section is picked up, this
+is the sensible order to do it in relative to the others," not a
+promise that all eleven items will happen. Items already built
+(1–3) are real; later items, especially the Bucket D long tail, are
+now speculative, contingent on actual future need rather than a fixed
+queue.
 
 Priority is determined by: (1) operational importance — what breaks or
 is unmanageable without it; (2) dependency order — Bucket C before D;
