@@ -33,6 +33,16 @@
 
 #define LEFT_MARGIN 30
 
+// Maximum width, in pixels, of any single waveform QPixmap tile.
+// Comfortably under Qt/X11's ~32767px hard ceiling on a single bitmap's
+// dimensions -- exceeding that limit is what silently truncated or
+// blanked the waveform display on long cuts at high zoom (Rivendell
+// issue #835 upstream). WriteWave() renders the full (now zoom-
+// unlimited) waveform width as a strip of these tiles instead of one
+// pixmap, so no single QPixmap the widget creates can ever hit that
+// ceiling regardless of cut length or zoom level.
+#define MAX_WAVE_TILE_WIDTH 16000
+
 RDMarkerHandle::RDMarkerHandle(RDMarkerHandle::PointerRole role,
 			       PointerType type,void *mkrview,
 			       QGraphicsItem *parent)
@@ -745,11 +755,14 @@ bool RDMarkerView::setCut(QString *err_msg,unsigned cartnum,int cutnum)
   //
   // Minimum Shrink Factor
   //
-  int min_shrink=d_wave_factory->energySize()/(32768);
+  // Previously derived from a 32768-column ceiling to keep the single
+  // whole-cut QPixmap WriteWave() built under Qt/X11's hard max bitmap
+  // width -- no longer a constraint now that WriteWave() tiles the
+  // waveform instead of rendering it as one pixmap, so the floor is
+  // just the finest resolution the underlying peak data actually has
+  // (one screen pixel per energy block).
+  //
   d_min_shrink_factor=1;
-  while(d_min_shrink_factor<min_shrink) {
-    d_min_shrink_factor*=2;
-  }
 
   d_pad_size=64+(d_width*d_max_shrink_factor-d_wave_factory->energySize())/d_max_shrink_factor-1;
   d_shrink_factor=d_max_shrink_factor;
@@ -1273,20 +1286,29 @@ bool RDMarkerView::LoadCutData()
 void RDMarkerView::WriteWave()
 {
   //
-  // Waveform
+  // Waveform -- rendered as a strip of MAX_WAVE_TILE_WIDTH-wide tiles
+  // rather than one QPixmap for the whole cut, so total width (which
+  // grows with both cut length and zoom) can never hit Qt/X11's max
+  // single-bitmap width. Scene-coordinate math elsewhere in this class
+  // is unaffected: the tiles are laid edge-to-edge at the exact x
+  // positions a single full-width pixmap's content would have occupied.
   //
-  QPixmap wavemap=
-    d_wave_factory->generate(d_height-20,d_shrink_factor,d_audio_gain,true);
+  int wave_width=d_wave_factory->energySize()/d_shrink_factor;
 
   if(d_scene!=NULL) {
     d_scene->deleteLater();
   }
-  d_scene=new QGraphicsScene(0,0,wavemap.width()+d_pad_size,d_height-20,this);
+  d_scene=new QGraphicsScene(0,0,wave_width+d_pad_size,d_height-20,this);
 
   d_scene->addRect(0,0,LEFT_MARGIN,d_height-20,QPen(Qt::gray),QBrush(Qt::gray));
-  d_scene->addPixmap(wavemap)->setPos(LEFT_MARGIN,0);
-  d_scene->addRect(LEFT_MARGIN+wavemap.width(),0,d_pad_size,d_height-20,QPen(Qt::gray),QBrush(Qt::gray));
-  d_right_margin=LEFT_MARGIN+wavemap.width();
+  for(int col=0;col<wave_width;col+=MAX_WAVE_TILE_WIDTH) {
+    int tile_width=qMin(MAX_WAVE_TILE_WIDTH,wave_width-col);
+    QPixmap tile=d_wave_factory->
+      generate(d_height-20,d_shrink_factor,d_audio_gain,true,col,tile_width);
+    d_scene->addPixmap(tile)->setPos(LEFT_MARGIN+col,0);
+  }
+  d_scene->addRect(LEFT_MARGIN+wave_width,0,d_pad_size,d_height-20,QPen(Qt::gray),QBrush(Qt::gray));
+  d_right_margin=LEFT_MARGIN+wave_width;
 
   //
   // Reference Level Lines

@@ -35,7 +35,8 @@ class RDWaveFactory
   TrackMode trackMode() const;
   unsigned cartNumber() const;
   int cutNumber() const;
-  QPixmap generate(int height,int x_shrink,int gain,bool incl_scale);
+  QPixmap generate(int height,int x_shrink,int gain,bool incl_scale,
+		   int start_col=0,int width=-1);
   bool setCut(QString *err_msg,unsigned cartnum,int cutnum);
   QList<uint16_t> energy() const;
   int energySize() const;
