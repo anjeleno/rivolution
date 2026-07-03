@@ -7,7 +7,7 @@ Standards-Version: 4.4.1
 
 Package: rivolution
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, mariadb-server, mariadb-client, libqt6sql6-mysql, apache2, curl, rsyslog, python3, python3-pycurl, python3-pymysql, python3-serial, python3-requests, icedax, xsltproc, pipewire-jack, icecast2, liquidsoap, fdkaac, vlc, vlc-plugin-jack, pipewire, wireplumber, gedit, libasound2-plugins
+Depends: ${shlibs:Depends}, ${misc:Depends}, mariadb-server, mariadb-client, libqt6sql6-mysql, apache2, curl, rsyslog, python3, python3-pycurl, python3-pymysql, python3-serial, python3-requests, icedax, xsltproc, pipewire-jack, icecast2, liquidsoap, fdkaac, vlc, vlc-plugin-jack, pipewire, wireplumber, gedit, libasound2-plugins, mp3gain
 Replaces: rivolution-pypad
 Description: Radio Broadcast Automation System
  Rivolution is a complete radio broadcast automation solution, with

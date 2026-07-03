@@ -230,27 +230,33 @@ void Xport::Import()
 
   //
   // True passthrough: whenever the source is genuinely MP3 (MPEG audio
-  // layer 3), the effective target format is also MP3, the source's
-  // real sample rate already matches the system rate, and no autotrim
-  // was requested -- there is never a reason to decode and re-encode an
-  // MP3 back to MP3 in that case. The sample-rate check matters because
-  // caed's MPEG playback path (cae/driver_alsa.cpp) does not resample
-  // mismatched-rate MPEG audio at playout time, unlike its PCM/Vorbis
-  // paths -- a passthrough copy of a file recorded at a different rate
-  // than the system's would play back pitch-shifted. The autotrim check
-  // matters because it needs real sample-accurate start/end editing,
-  // unrelated to a gain shift and not expressible as a bitstream patch.
-  // When any of these don't hold, fall through to the normal conversion
-  // path below, which resamples/normalizes/trims correctly.
+  // layer 3), the effective target format is also MP3, and the source's
+  // real sample rate already matches the system rate, there is never a
+  // reason to decode and re-encode an MP3 back to MP3. The sample-rate
+  // check matters because caed's MPEG playback path
+  // (cae/driver_alsa.cpp) does not resample mismatched-rate MPEG audio
+  // at playout time, unlike its PCM/Vorbis paths -- a passthrough copy
+  // of a file recorded at a different rate than the system's would play
+  // back pitch-shifted. When either of these don't hold, fall through
+  // to the normal conversion path below, which resamples correctly.
   //
   // A requested normalization doesn't rule passthrough out by itself --
   // see the gain-patch attempt below (docs/specs/0004-mp3-gain-patch.md):
   // normalization can be applied directly to the MP3 bitstream, without
-  // decoding/re-encoding, whenever that succeeds.
+  // decoding/re-encoding, whenever that succeeds. Neither does a
+  // requested autotrim: RDWaveFile::startTrim()/endTrim() (via
+  // GetEnergy()/LoadEnergyMpegLayer3()) already decode MP3 in memory to
+  // measure real sample-accurate trim points, no re-encode required --
+  // the same libmad-based decode already run against every passthrough
+  // import's destination file for LEVL/peak persistence (the
+  // wave->hasEnergy() call below). That call's PutLevl() persists the
+  // resulting energy data into the file's own LEVL chunk, so the
+  // separate RDWaveFile that autoTrim() opens afterward finds it
+  // already there (via GetLevl()) and never has to decode a second
+  // time.
   //
   bool passthrough_eligible=source_is_mp3&&(effective_format==3)&&
-    (source_sample_rate==rda->system()->sampleRate())&&
-    (autotrim_level==0);
+    (source_sample_rate==rda->system()->sampleRate());
   bool do_passthrough=passthrough_eligible&&(normalization_level==0);
   bool do_gain_patch=passthrough_eligible&&(normalization_level!=0);
   QString passthrough_source_file=filename;
@@ -286,6 +292,36 @@ void Xport::Import()
 		 cartnum,cutnum,
 		 RDMpegGainPatch::errorText(gainpatch_err).toUtf8().
 		 constData());
+      //
+      // The full conversion below decodes the source, so re-encoding
+      // it back into another lossy format (MP3, the passthrough target
+      // implied by effective_format/format_override) would add a
+      // second generation of lossy compression on top of whatever the
+      // gain-patch was trying to avoid in the first place. Fall back to
+      // the station's own real configured default instead -- discarding
+      // the per-request format override for this one case -- which also
+      // sidesteps RDLIBRARY's DEFAULT_BITRATE being meaningless (left
+      // at 0) whenever that default format isn't itself MP3/Layer 2,
+      // since the RDLibrary editor only exposes a bitrate field then.
+      //
+      switch(conf->defaultFormat()) {
+      case 0:
+	settings->setFormat(RDSettings::Pcm16);
+	break;
+
+      case 1:
+	settings->setFormat(RDSettings::MpegL2Wav);
+	break;
+
+      case 2:
+	settings->setFormat(RDSettings::Pcm24);
+	break;
+
+      case 3:
+	settings->setFormat(RDSettings::MpegL3);
+	break;
+      }
+      settings->setBitRate(channels*conf->defaultBitrate());
     }
     delete gainpatch;
   }
@@ -358,6 +394,9 @@ void Xport::Import()
       cart->setMetadata(&wavedata);
     }
     cut->setMetadata(&wavedata,use_metadata);
+    if(autotrim_level!=0) {
+      cut->autoTrim(RDCut::AudioBoth,100*autotrim_level);
+    }
     cart->updateLength();
     cart->resetRotation();
     cart->calculateAverageLength(&length_deviation);
