@@ -7,6 +7,45 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-03
+
+- `debian/control.src`: added `mp3gain` to `rivolution`'s `Depends`. The
+  MP3 gain-patch passthrough path (spec 0004) silently falls back to a
+  full decode/re-encode whenever `mp3gain` isn't present, so its absence
+  produced no obvious symptom on its own -- only surfaced once the
+  fallback conversion's own separate bug (below) turned it into an
+  outright import failure on a real install lacking the binary.
+- `debian/postinst`, `scripts/rivolution-first-run.sh`: `/var/snd` is
+  now `rd:rivendell` (was `rivendell:rivendell`) in both the `.deb` and
+  from-source install paths, applied unconditionally so an existing
+  install self-heals on upgrade rather than only fixing fresh installs.
+  `rd` owns it outright for native `rdimport`/`caed` writes; `rivendell`
+  keeps write access via the group for `rdxport.cgi`'s setuid-drop
+  identity; and unlike relying on supplementary group membership alone,
+  this also allows a third-party desktop sync client staging files in
+  as `rd` to write into `/var/snd` directly.
+- `web/rdxport/import.cpp`: when the MP3 gain-patch passthrough fails
+  (`mp3gain` missing, or any other patch failure) and falls back to a
+  full conversion, the destination format/bitrate are now taken from
+  the station's own configured library default instead of carrying the
+  request's format override forward. Previously the fallback kept
+  targeting whatever format the passthrough attempt had been aiming
+  for (typically MP3) using the library's configured bitrate, which is
+  only ever set (and otherwise sits at `0`) when that library's default
+  format is itself MP3/Layer 2 -- on a library whose default is PCM,
+  falling back to MP3 encoding at bitrate `0` failed outright
+  ("Unable to create destination file"), and re-encoding into another
+  lossy format on a fallback path would have added an avoidable second
+  generation of lossy compression regardless.
+- `web/rdxport/import.cpp`: MP3 passthrough imports now support
+  autotrim. `RDWaveFile::startTrim()`/`endTrim()` already decode MP3 in
+  memory via `libmad` to measure real sample-accurate trim points
+  (`GetEnergy()`/`LoadEnergyMpegLayer3()`) -- the same decode already
+  run against every passthrough import's destination file for LEVL/peak
+  persistence, whose result persists into the file's own LEVL chunk and
+  is reused rather than recomputed. Requesting autotrim no longer
+  disqualifies a file from the passthrough path.
+
 ## 2026-07-02 (continued, 7)
 
 - `debian/postinst`: added `rd` to the `rivendell` group. `/var/snd` is

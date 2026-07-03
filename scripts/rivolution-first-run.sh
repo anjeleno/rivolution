@@ -43,7 +43,7 @@ id rivendell >/dev/null 2>&1 || useradd -o -u 150 -g rivendell -s /bin/false -r 
 getent group pypad >/dev/null || groupadd -r -g 151 pypad
 id pypad >/dev/null 2>&1 || useradd -o -u 151 -g pypad -s /bin/false -r -c "Rivendell PyPAD scripts" -d /dev/null pypad
 mkdir -p /var/snd
-chown rivendell:rivendell /var/snd
+chown "$RIVENDELL_USER":rivendell /var/snd
 chmod 775 /var/snd
 
 if [ -z "$RIVENDELL_SKIP_DB_SETUP" ]; then
@@ -103,6 +103,11 @@ sed -i 's/# autospawn = yes/autospawn = no/' /etc/pulse/client.conf
 gpasswd -d pulse audio || true
 usermod -aG audio "$RIVENDELL_USER"
 usermod -aG audio rivendell
+
+# rdselect_helper, webget.cgi, and /var/log/rivendell are all still
+# rivendell-group-owned (see debian/postinst) -- membership here keeps
+# those working even though /var/snd itself no longer depends on it.
+usermod -aG rivendell "$RIVENDELL_USER"
 grep -qF '@audio      hard      memlock     unlimited' /etc/security/limits.conf || cat >> /etc/security/limits.conf <<'EOF'
 @audio      hard      rtprio          90
 @audio      hard      memlock     unlimited
