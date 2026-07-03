@@ -23,8 +23,44 @@
 #   4. Runs dpkg-buildpackage itself, parallelized across all cores.
 #
 # Run from anywhere: cd ~/dev/rivolution && scripts/rebuild-deb.sh
+#
+# Pass --no-bump to skip step 1 and build the revision already
+# committed in debian/changelog.src/control.src as-is -- used by CI,
+# which builds whatever revision a tag already points at rather than
+# minting a new one.
+#
+# Pass --version=X.Y.Z to change the upstream version itself (e.g.
+# crossing from a pre-release "6.0.0int0" into a clean "6.0.0"), instead
+# of bumping the Debian revision under the current version. Writes the
+# new string to versions/PACKAGE_VERSION and resets the Debian revision
+# to 1 -- a version change always restarts revision numbering, since
+# "6.0.0-8" would falsely imply seven prior 6.0.0 revisions. Mutually
+# exclusive with --no-bump.
 
 set -euo pipefail
+
+BUMP_REVISION=1
+NEW_VERSION=""
+for arg in "$@"; do
+  case "$arg" in
+    --no-bump)
+      BUMP_REVISION=0
+      ;;
+    --version=*)
+      NEW_VERSION="${arg#--version=}"
+      ;;
+    *)
+      echo "Unknown argument: $arg" >&2
+      echo "Usage: $0 [--no-bump] [--version=X.Y.Z]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -n "$NEW_VERSION" && "$BUMP_REVISION" -eq 0 ]]; then
+  echo "--version and --no-bump are mutually exclusive" >&2
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -32,10 +68,19 @@ PARENT_DIR="$(cd "$REPO_ROOT/.." && pwd)"
 
 cd "$REPO_ROOT"
 
-CURRENT_REV=$(grep -oP '(?<=@VERSION@-)[0-9]+(?=\))' debian/changelog.src | head -1)
-NEW_REV=$((CURRENT_REV + 1))
-echo "==> Bumping Debian revision: ${CURRENT_REV} -> ${NEW_REV}"
-sed -i "s/@VERSION@-${CURRENT_REV}/@VERSION@-${NEW_REV}/g" debian/changelog.src debian/control.src
+if [[ -n "$NEW_VERSION" ]]; then
+  CURRENT_REV=$(grep -oP '(?<=@VERSION@-)[0-9]+(?=\))' debian/changelog.src | head -1)
+  echo "==> Setting version: $(cat versions/PACKAGE_VERSION) -> ${NEW_VERSION}, revision reset to 1"
+  printf '%s' "$NEW_VERSION" > versions/PACKAGE_VERSION
+  sed -i "s/@VERSION@-${CURRENT_REV}/@VERSION@-1/g" debian/changelog.src debian/control.src
+elif [[ "$BUMP_REVISION" -eq 1 ]]; then
+  CURRENT_REV=$(grep -oP '(?<=@VERSION@-)[0-9]+(?=\))' debian/changelog.src | head -1)
+  NEW_REV=$((CURRENT_REV + 1))
+  echo "==> Bumping Debian revision: ${CURRENT_REV} -> ${NEW_REV}"
+  sed -i "s/@VERSION@-${CURRENT_REV}/@VERSION@-${NEW_REV}/g" debian/changelog.src debian/control.src
+else
+  echo "==> --no-bump: building revision already committed in debian/*.src"
+fi
 
 echo "==> Removing stray built package files in $PARENT_DIR"
 find "$PARENT_DIR" -maxdepth 1 -type f \

@@ -56,6 +56,21 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   persistence, whose result persists into the file's own LEVL chunk and
   is reused rather than recomputed. Requesting autotrim no longer
   disqualifies a file from the passthrough path.
+- `.github/workflows/build-deb.yml`: added GitHub Actions CI to build
+  x64 `.deb` packages on `ubuntu-26.04` runners, triggered on version
+  tag pushes (and manually via `workflow_dispatch`). On a tag push it
+  attaches the built packages to that tag's GitHub Release and appends
+  an x64 download/install section to the release notes, leaving any
+  existing arm64 notes untouched. `scripts/rebuild-deb.sh` gained a
+  `--no-bump` flag so CI builds the revision a tag already points at
+  instead of minting a new one.
+- `.github/workflows/build-deb.yml`: tags ending in `-test` (e.g.
+  `v6.0.0-1-test`) are now excluded from the x64 build trigger, so the
+  manual ARM64 tag/release flow can be exercised without also kicking
+  off a real x64 build. `scripts/rebuild-deb.sh` gained a
+  `--version=X.Y.Z` flag to change the upstream version string itself
+  (writing `versions/PACKAGE_VERSION` and resetting the Debian revision
+  to 1), separate from its existing same-version revision auto-bump.
 
 ## 2026-07-02 (continued, 7)
 
