@@ -23,8 +23,18 @@
 #   4. Runs dpkg-buildpackage itself, parallelized across all cores.
 #
 # Run from anywhere: cd ~/dev/rivolution && scripts/rebuild-deb.sh
+#
+# Pass --no-bump to skip step 1 and build the revision already
+# committed in debian/changelog.src/control.src as-is -- used by CI,
+# which builds whatever revision a tag already points at rather than
+# minting a new one.
 
 set -euo pipefail
+
+BUMP_REVISION=1
+if [[ "${1:-}" == "--no-bump" ]]; then
+  BUMP_REVISION=0
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -32,10 +42,14 @@ PARENT_DIR="$(cd "$REPO_ROOT/.." && pwd)"
 
 cd "$REPO_ROOT"
 
-CURRENT_REV=$(grep -oP '(?<=@VERSION@-)[0-9]+(?=\))' debian/changelog.src | head -1)
-NEW_REV=$((CURRENT_REV + 1))
-echo "==> Bumping Debian revision: ${CURRENT_REV} -> ${NEW_REV}"
-sed -i "s/@VERSION@-${CURRENT_REV}/@VERSION@-${NEW_REV}/g" debian/changelog.src debian/control.src
+if [[ "$BUMP_REVISION" -eq 1 ]]; then
+  CURRENT_REV=$(grep -oP '(?<=@VERSION@-)[0-9]+(?=\))' debian/changelog.src | head -1)
+  NEW_REV=$((CURRENT_REV + 1))
+  echo "==> Bumping Debian revision: ${CURRENT_REV} -> ${NEW_REV}"
+  sed -i "s/@VERSION@-${CURRENT_REV}/@VERSION@-${NEW_REV}/g" debian/changelog.src debian/control.src
+else
+  echo "==> --no-bump: building revision already committed in debian/*.src"
+fi
 
 echo "==> Removing stray built package files in $PARENT_DIR"
 find "$PARENT_DIR" -maxdepth 1 -type f \
