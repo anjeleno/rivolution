@@ -1,4 +1,4 @@
-rivolution (@VERSION@-5) unstable; urgency=medium
+rivolution (@VERSION@-6) unstable; urgency=medium
 
   * Beta release (see ChangeLog for details)
   * Added mariadb-server to rivolution's Depends -- postinst's database
@@ -16,5 +16,9 @@ rivolution (@VERSION@-5) unstable; urgency=medium
   * postinst deploys conf/alsa/rd.asoundrc to ~/.asoundrc again --
     still required underneath /patchbay's dynamic routing, not
     superseded by it
+  * postinst adds rd to the rivendell group -- /var/snd is
+    rivendell:rivendell mode 775, and rd (the account caed/rdimport
+    actually run as) was never a member, so audio import failed
+    outright with no destination write access
 
  -- Anjeleno <la90046@gmail.com>  @DATESTAMP@

@@ -7,6 +7,18 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-02 (continued, 7)
+
+- `debian/postinst`: added `rd` to the `rivendell` group. `/var/snd` is
+  created `rivendell:rivendell` mode `775` -- correct under the
+  pre-`User=rd` model, but `caed`/`rdimport` running as `rd` only ever
+  got that mode's "other" bits there (`r-x`, no write). Audio import
+  failed outright ("Unable to create destination file") on a real
+  install -- unlike this session's other packaging bugs, not masked by
+  dev-box state (this dev box has the same gap), but by audio import
+  specifically never having been exercised in any of this fork's real-
+  system verification until now. Bumped the Debian revision to `-6`.
+
 ## 2026-07-02 (continued, 6)
 
 - `debian/control.src`: added `libasound2-plugins` to `rivolution`'s

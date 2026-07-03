@@ -558,14 +558,28 @@ existing autotools `build:` recipe, installing the resulting binary to
    Tool's ALSA layer fails outright and never becomes a JACK client at
    all — there is nothing for `/patchbay` to connect. Confirmed missing
    on a real install 2026-07-02.
-9. **Not automated, and can't be:** Stereo Tool's own I/O device
-   selection must be changed from its default (real hardware ALSA,
-   e.g. `HDA Intel: Generic Analog (hw:0,0)`) to "jack (ALSA)" through
-   Stereo Tool's own web UI (reachable via the dashboard's "Processing"
-   nav link). This is Stereo Tool's own persisted setting
-   (`~/.stereo_tool.rc`), not a file this package ships or should
-   hand-edit — a genuine one-time operator step, alongside item 10.
-10. **Not automated:** `/patchbay` connection setup. `postinst` cannot
+9. Add `rd` to the `rivendell` group (`usermod -aG rivendell rd`,
+   after the `rivendell` group is created below — ordering matters,
+   the group must exist first). `/var/snd` is created `rivendell:
+   rivendell` mode `775`; under the pre-`User=rd` model that was
+   sufficient since Rivendell's binaries ran as `rivendell`/root, but
+   `caed`/`rdimport` running as `rd` (the whole point of this spec's
+   migration) only ever got that mode's "other" bits there — `r-x`, no
+   write. Audio import failed outright (`Audio Converter Error: Unable
+   to create destination file`) with no obviously-wrong permission bit
+   to spot by eye. Confirmed missing on a real install 2026-07-02 — see
+   `ARCHITECTURE.md`'s "Related mistake class" section for why this one
+   slipped through differently than items 4/8 above (not dev-box
+   masking — audio import specifically had never been exercised in any
+   of this fork's real-system verification until this point).
+10. **Not automated, and can't be:** Stereo Tool's own I/O device
+    selection must be changed from its default (real hardware ALSA,
+    e.g. `HDA Intel: Generic Analog (hw:0,0)`) to "jack (ALSA)" through
+    Stereo Tool's own web UI (reachable via the dashboard's "Processing"
+    nav link). This is Stereo Tool's own persisted setting
+    (`~/.stereo_tool.rc`), not a file this package ships or should
+    hand-edit — a genuine one-time operator step, alongside item 11.
+11. **Not automated:** `/patchbay` connection setup. `postinst` cannot
     meaningfully click through a browser UI, and it's a step this
     spec's own goal (deviations above) treats as acceptable to leave to
     the operator — document it in the package's `NEWS`/post-install

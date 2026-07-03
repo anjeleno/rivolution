@@ -90,6 +90,20 @@ case "$1" in
       /usr/sbin/useradd -o -u 150 -g rivendell -s /bin/false -r -c "Rivendell radio automation system" -d /var/snd rivendell
       /usr/sbin/groupadd -r -g 151 pypad
       /usr/sbin/useradd -o -u 151 -g pypad -s /bin/false -r -c "Rivendell PyPAD scripts" -d /dev/null pypad
+
+      # /var/snd below is owned rivendell:rivendell 775 -- rd (the
+      # account caed/rdimport/rdlibrary actually run as, per the
+      # spec 0007/0010 User=rd migration) was never a member of that
+      # group, so it only got the "other" bits there (r-x, no write).
+      # Audio import failed outright ("Unable to create destination
+      # file") with no obviously-wrong permission bit to spot by eye --
+      # confirmed 2026-07-02 on a real install. This postinst's own
+      # ownership logic for /var/snd was never updated when the rest of
+      # this fork moved off running everything as rivendell/root.
+      if getent passwd rd >/dev/null; then
+	  usermod -aG rivendell rd
+      fi
+
       if test ! -e /var/snd ; then
 	  mkdir -p /var/snd
 	  chown rivendell:rivendell /var/snd
