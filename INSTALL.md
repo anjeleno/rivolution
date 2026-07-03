@@ -312,7 +312,7 @@ sudo apt install git g++ automake autoconf autoconf-archive libtool \
   docbook5-xml docbook-xsl-ns xsltproc fop libxml2-utils \
   python3 python3-pycurl python3-pymysql python3-serial python3-requests \
   python3-venv python3-virtualenv python3-build twine \
-  apache2 mariadb-server mariadb-client mp3gain
+  apache2 mariadb-server mariadb-client mp3gain gedit
 ```
 
 `mp3gain` is a runtime dependency, not a build-time one: it's never

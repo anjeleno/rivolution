@@ -7,6 +7,33 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-02 (continued, 4)
+
+- `debian/control.src`: `pipewire-jack` is now a hard `Depends`, not an
+  alternative with `libjack-jackd2-0`. Found via a real install of
+  `v6.0.0int0-2` on a clean arm64 system: apt satisfied the alternative
+  with `libjack-jackd2-0` instead, which has no relationship to this
+  fork's system-scope PipeWire instance -- `/patchbay` showed no JACK
+  sources at all as a result, since `caed`/`liquidsoap` were linking
+  against a real, unrelated JACK library with no daemon behind it.
+  `debian/shlibs.local`'s override simplified to match (`pipewire-jack`
+  only, dropping the alternative).
+- `debian/postinst`: the `ld.so.conf.d` ordering fix now copies
+  `pipewire-jack`'s conf snippet into place before renaming it.
+  Previously only renamed an *existing* file -- confirmed on the same
+  real install that `pipewire-jack` ships this file solely as a doc
+  example (`/usr/share/doc/pipewire/examples/ld.so.conf.d/`), never
+  auto-installed to `/etc/ld.so.conf.d/`, so the rename-only step
+  silently found nothing to act on and JACK never worked. Both bugs
+  compounded: even with `pipewire-jack` now guaranteed installed, this
+  fix was still required for the ordering itself to take effect.
+- `debian/control.src`: added `gedit` to `rivolution`'s `Depends`
+  (already noted in `INSTALL.md`'s build-dependency list, never
+  reflected in the actual package).
+- Debian revision bumped to `-3` (`debian/changelog.src` + the four
+  exact-version `Depends` in `debian/control.src`) -- real content
+  changes on top of the already-published `v6.0.0int0-2`.
+
 ## 2026-07-02 (continued, 3)
 
 - `debian/control.src`: added `mariadb-server` to `rivolution`'s

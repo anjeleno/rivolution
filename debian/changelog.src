@@ -1,7 +1,12 @@
-rivolution (@VERSION@-2) unstable; urgency=medium
+rivolution (@VERSION@-3) unstable; urgency=medium
 
   * Beta release (see ChangeLog for details)
   * Added mariadb-server to rivolution's Depends -- postinst's database
     provisioning needs a running mysqld, previously not guaranteed
+  * pipewire-jack is now a hard Depends, not an alternative with
+    libjack-jackd2-0 -- apt was satisfying it with the wrong package
+  * postinst now copies pipewire-jack's ld.so.conf.d snippet into place
+    before renaming it; it was never auto-installed there to begin with
+  * Added gedit to Depends
 
  -- Anjeleno <la90046@gmail.com>  @DATESTAMP@

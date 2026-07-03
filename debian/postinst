@@ -17,8 +17,22 @@ case "$1" in
       # multiarch conf sorts before pipewire-jack's -- so a real
       # libjack-jackd2-0, if present, always wins SONAME resolution and
       # PipeWire audio silently never connects despite every service
-      # reporting active. Renaming makes the pipewire-jack entry sort
-      # first. Idempotent: only acts if the un-prefixed file still exists.
+      # reporting active.
+      #
+      # pipewire-jack ships this conf file only as a doc/example
+      # (/usr/share/doc/pipewire/examples/ld.so.conf.d/), never installed
+      # to /etc/ld.so.conf.d/ automatically -- confirmed 2026-07-02 on a
+      # real fresh install, where the rename-only version of this step
+      # silently found nothing to rename (the source file never existed
+      # in /etc/ld.so.conf.d/ in the first place) and JACK never worked.
+      # Copy it into place with the 00- prefix directly, then also handle
+      # the case where an older deployment already copied it under its
+      # original (unprefixed) name.
+      pw_jack_conf="pipewire-jack-$(dpkg-architecture -qDEB_HOST_MULTIARCH).conf"
+      if test -e "/usr/share/doc/pipewire/examples/ld.so.conf.d/$pw_jack_conf" && \
+	 test ! -e "/etc/ld.so.conf.d/00-$pw_jack_conf" ; then
+	  cp "/usr/share/doc/pipewire/examples/ld.so.conf.d/$pw_jack_conf" "/etc/ld.so.conf.d/00-$pw_jack_conf"
+      fi
       for f in /etc/ld.so.conf.d/pipewire-jack-*.conf; do
 	  test -e "$f" || continue
 	  target="$(dirname "$f")/00-$(basename "$f")"
