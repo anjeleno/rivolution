@@ -215,6 +215,8 @@ binary-arch: build-arch
 	cp conf/sudoers.d/rivapi debian/rivolution/usr/share/rivolution/sudoers.d/
 	mkdir -p debian/rivolution/usr/share/rivolution/udev
 	cp conf/udev/99-ptp.rules debian/rivolution/usr/share/rivolution/udev/
+	mkdir -p debian/rivolution/usr/share/rivolution/alsa
+	cp conf/alsa/rd.asoundrc debian/rivolution/usr/share/rivolution/alsa/
 
 	dh_strip_nondeterminism
 	dh_compress

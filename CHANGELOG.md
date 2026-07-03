@@ -7,6 +7,24 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-02 (continued, 6)
+
+- `debian/control.src`: added `libasound2-plugins` to `rivolution`'s
+  `Depends`. Found via a real install of `v6.0.0int0-4`: Stereo Tool's
+  ALSA `jack` PCM plugin was never installed at all -- already present
+  on the dev box from earlier manual setup, so its absence went
+  completely unnoticed. Without it, Stereo Tool's ALSA layer falls back
+  to real hardware and fails outright instead of ever reaching JACK.
+- `debian/rules.src`, `debian/postinst`: `conf/alsa/rd.asoundrc` is
+  deployed to the `rd` user's `~/.asoundrc` again, correcting an
+  earlier decision (recorded in spec 0010) that it was fully superseded
+  by `/patchbay`'s dynamic routing. It isn't -- `/patchbay` only
+  reconnects ports that already exist; `rd.asoundrc`'s job (giving
+  Stereo Tool's ALSA `jack` PCM type valid, existing port names instead
+  of the stock definition's hardcoded nonexistent ones) is a separate,
+  still-required baseline underneath it.
+- Debian revision bumped to `-5`.
+
 ## 2026-07-02 (continued, 5)
 
 - `debian/postinst`: stopped calling `dpkg-architecture` to compute the

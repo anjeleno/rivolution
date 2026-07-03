@@ -61,6 +61,25 @@ case "$1" in
       # real-time sound device access if the account is present.
       if getent passwd rd >/dev/null; then
 	  usermod -aG audio rd
+
+	  # Stereo Tool reaches JACK only via ALSA's "jack (ALSA)" I/O
+	  # option, which routes through the stock pcm.jack definition
+	  # (shipped by libasound2-plugins, a Depends) -- that stock
+	  # definition hardcodes system:capture_1/2 / system:playback_1/2,
+	  # real jackd+hardware ALSA port names that don't exist under
+	  # this fork's system-scope PipeWire, causing Stereo Tool's ALSA
+	  # layer to fail outright rather than become a valid, patchable
+	  # JACK client. This override points it at real, existing ports
+	  # instead. /patchbay's reconciler can still change the *actual*
+	  # routing afterward -- this only gives Stereo Tool something
+	  # valid to open at all. Confirmed 2026-07-02 missing on a real
+	  # install: not deploying this was a mistake in the original
+	  # postinst automation, corrected here.
+	  rd_home=$(getent passwd rd | cut -d: -f6)
+	  if test -n "$rd_home" && test -d "$rd_home" && test ! -e "$rd_home/.asoundrc" ; then
+	      cp /usr/share/rivolution/alsa/rd.asoundrc "$rd_home/.asoundrc"
+	      chown rd:rd "$rd_home/.asoundrc" 2>/dev/null || true
+	  fi
       fi
 
       # Legacy rivendell/pypad system accounts -- upstream's fixed

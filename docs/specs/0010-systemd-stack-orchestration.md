@@ -493,10 +493,17 @@ single `postinst` to reason about.
 
 **New `debian/control.src` dependencies** — add to `rivolution`'s
 `Depends`: `icecast2`, `liquidsoap`, `fdkaac`, `vlc`, `vlc-plugin-jack`,
-`pipewire`, `wireplumber`, `pipewire-jack | libjack-jackd2-0`. Add
-`golang-go` to `Build-Depends` so `rivapi` compiles as part of the
-package build instead of via the manual `scripts/rivapi-rebuild.sh`
-workflow.
+`pipewire`, `wireplumber`, `mariadb-server`, `gedit`,
+`libasound2-plugins` (ships the ALSA `jack` PCM plugin Stereo Tool's
+"jack (ALSA)" I/O option needs — see item 8 below), and `pipewire-jack`
+as a **hard** dependency, not an alternative with `libjack-jackd2-0` —
+an earlier version of this plan listed it as `pipewire-jack |
+libjack-jackd2-0`, which turned out wrong in practice: apt is free to
+satisfy an alternative with either package, and did, installing the
+real unrelated JACK library instead of the PipeWire bridge this fork's
+architecture actually needs. Add `golang-go` to `Build-Depends` so
+`rivapi` compiles as part of the package build instead of via the
+manual `scripts/rivapi-rebuild.sh` workflow.
 
 **New `debian/rules` build step:** `go build -o rivapi/rivapi
 rivapi/...` (or a `cd rivapi && go build` recipe line) alongside the
@@ -538,16 +545,32 @@ existing autotools `build:` recipe, installing the resulting binary to
    (matching "Manual installation" above — the target itself is
    enabled, not started immediately, consistent with existing
    `postinst` behavior for `rivendell.service`).
-8. **Not automated:** `/patchbay` connection setup. `postinst` cannot
-   meaningfully click through a browser UI, and it's the one step this
-   spec's own goal (deviations above) treats as acceptable to leave to
-   the operator — document it in the package's `NEWS`/post-install
-   message (`debian/rivolution.postinst`'s final echo, or a
-   `debconf` note), not silently skipped.
-
-**Not in scope for `postinst` at all:** `conf/alsa/rd.asoundrc` —
-superseded by `/patchbay`'s reconciler (see "Implementation
-deviations" above); nothing to deploy.
+8. Deploy `conf/alsa/rd.asoundrc` to the `rd` user's `~/.asoundrc`
+   (idempotent — skip if the file already exists, same as everything
+   else here). Corrects an earlier version of this spec, which said
+   this file was fully superseded by `/patchbay`'s reconciler and
+   shouldn't be deployed at all — wrong. `/patchbay` only changes
+   *connections between existing ports*; `rd.asoundrc`'s job is
+   different and still required: without it, Stereo Tool's ALSA `jack`
+   PCM type resolves to the stock definition (shipped by
+   `libasound2-plugins`, see below), which hardcodes port names that
+   don't exist under this fork's system-scope PipeWire, so Stereo
+   Tool's ALSA layer fails outright and never becomes a JACK client at
+   all — there is nothing for `/patchbay` to connect. Confirmed missing
+   on a real install 2026-07-02.
+9. **Not automated, and can't be:** Stereo Tool's own I/O device
+   selection must be changed from its default (real hardware ALSA,
+   e.g. `HDA Intel: Generic Analog (hw:0,0)`) to "jack (ALSA)" through
+   Stereo Tool's own web UI (reachable via the dashboard's "Processing"
+   nav link). This is Stereo Tool's own persisted setting
+   (`~/.stereo_tool.rc`), not a file this package ships or should
+   hand-edit — a genuine one-time operator step, alongside item 10.
+10. **Not automated:** `/patchbay` connection setup. `postinst` cannot
+    meaningfully click through a browser UI, and it's a step this
+    spec's own goal (deviations above) treats as acceptable to leave to
+    the operator — document it in the package's `NEWS`/post-install
+    message (`debian/rivolution.postinst`'s final echo, or a
+    `debconf` note), not silently skipped.
 
 ## Verification
 
@@ -699,3 +722,31 @@ deviations" above); nothing to deploy.
   once the new schema version is compiled in, since a schema/binary
   version mismatch hard-blocks startup
   (`rdcoreapplication.cpp:240`).
+- **2026-07-02:** The entry above claiming "no static
+  `conf/alsa/rd.asoundrc` needs deploying by the package at all" was
+  wrong — confirmed via a real install missing exactly this file.
+  `/patchbay`'s reconciler changes *connections between ports that
+  already exist*; it has no bearing on whether Stereo Tool's ALSA layer
+  can become a valid JACK client in the first place. Without
+  `rd.asoundrc`, Stereo Tool's `pcm.jack` resolves to the stock
+  definition (shipped by `libasound2-plugins`, itself missing from
+  `Depends` until this same investigation — see below), which hardcodes
+  port names that don't exist under this fork's PipeWire setup, so
+  Stereo Tool's ALSA layer fails outright rather than becoming a
+  patchable client at all — there is nothing for `/patchbay` to show or
+  connect. `rd.asoundrc` is deployed by `postinst` again as of this
+  date; `/patchbay` still handles the *actual* routing on top of it,
+  which is the part of the original claim that was correct.
+- **2026-07-02:** `libasound2-plugins` (the ALSA plugin package
+  providing the `jack` PCM type Stereo Tool's ALSA I/O bridge depends
+  on) was never added to `rivolution`'s `Depends` at all. Invisible
+  locally because it was already installed on the dev box from the
+  original manual Stereo Tool setup the day before — same masking
+  pattern as the `ld.so.conf.d` and `dpkg-architecture` bugs found
+  earlier the same day (see `ARCHITECTURE.md`'s "Recurring mistake
+  class" section). Without it, ALSA has no `jack` PCM type at all, so
+  Stereo Tool's ALSA layer falls back to trying real hardware and fails
+  outright in a VM. Separately, Stereo Tool's own I/O device selection
+  also needs manually changing to "jack (ALSA)" through its web UI —
+  its own persisted setting, not something any package can
+  preconfigure — see the `postinst` additions list above.

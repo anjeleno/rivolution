@@ -1,4 +1,4 @@
-rivolution (@VERSION@-4) unstable; urgency=medium
+rivolution (@VERSION@-5) unstable; urgency=medium
 
   * Beta release (see ChangeLog for details)
   * Added mariadb-server to rivolution's Depends -- postinst's database
@@ -11,5 +11,10 @@ rivolution (@VERSION@-4) unstable; urgency=medium
   * postinst no longer calls dpkg-architecture (a dpkg-dev build tool,
     not present on a plain install target) -- multiarch triplet now
     read from the filesystem instead
+  * Added libasound2-plugins to Depends -- Stereo Tool's ALSA jack PCM
+    plugin, previously missing entirely
+  * postinst deploys conf/alsa/rd.asoundrc to ~/.asoundrc again --
+    still required underneath /patchbay's dynamic routing, not
+    superseded by it
 
  -- Anjeleno <la90046@gmail.com>  @DATESTAMP@
