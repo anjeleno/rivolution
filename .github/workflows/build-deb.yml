@@ -9,13 +9,32 @@ on:
       # e.g. `v6.0.0-1-test`. Use workflow_dispatch instead to test the
       # x64 build itself without any tag at all.
       - '!*-test'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which OS target(s) to build'
+        required: false
+        default: both
+        type: choice
+        options:
+          - both
+          - "26.04"
+          - "24.04"
 
 permissions:
   contents: write
 
 jobs:
   build:
+    # Only relevant for a manual dispatch with target != both -- a real
+    # tag push always builds every matrix leg regardless of this input
+    # (inputs.target is only meaningful on workflow_dispatch, so the
+    # first clause short-circuits true for every other trigger).
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.target == 'both' ||
+      (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
+      (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04')
     strategy:
       # max-parallel: 1 -- the release-notes step below does a
       # read-modify-write (fetch current body, append a section, write

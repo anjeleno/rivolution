@@ -95,6 +95,9 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   is identical either way. No dependency-list changes were needed
   between the two OSes -- `rivolution.wiki`'s own `Build-From-Source.md`
   had already verified the same package list builds cleanly on both.
+  `workflow_dispatch` gained a `target` input (`both`/`26.04`/`24.04`)
+  so a single leg can be tested manually without spending runner time
+  building the other one too.
 
 ## 2026-07-02 (continued, 7)
 
