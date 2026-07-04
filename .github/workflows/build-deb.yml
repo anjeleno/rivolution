@@ -26,15 +26,17 @@ permissions:
 
 jobs:
   build:
-    # Only relevant for a manual dispatch with target != both -- a real
-    # tag push always builds every matrix leg regardless of this input
-    # (inputs.target is only meaningful on workflow_dispatch, so the
-    # first clause short-circuits true for every other trigger).
-    if: >-
-      github.event_name != 'workflow_dispatch' ||
-      inputs.target == 'both' ||
-      (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
-      (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04')
+    # NOTE: the target-selection condition below (aliased as
+    # &target_selected) cannot live at the job level -- GitHub Actions
+    # confirmed at runtime that `matrix` isn't a recognized named-value
+    # in a job-level `if:` (the job's own `if:` is evaluated before the
+    # matrix expands into per-leg instances). So instead every step
+    # below carries it individually: the unwanted leg's job still
+    # "starts", but every step inside it is skipped in seconds rather
+    # than running the real ~39-minute build. Any *new* step added to
+    # this job must also carry `if: *target_selected` (or fold it into
+    # that step's own condition, as the last two steps below do) --
+    # forgetting it would let a step for the unwanted leg actually run.
     strategy:
       # max-parallel: 1 -- the release-notes step below does a
       # read-modify-write (fetch current body, append a section, write
@@ -58,9 +60,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
+        if: &target_selected >-
+          github.event_name != 'workflow_dispatch' ||
+          inputs.target == 'both' ||
+          (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
+          (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04')
         uses: actions/checkout@v4
 
       - name: Install build dependencies
+        if: *target_selected
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -81,19 +89,26 @@ jobs:
             golang-go
 
       - name: Verify Go toolchain version
+        if: *target_selected
         run: go version
 
       - name: Build .deb packages
+        if: *target_selected
         run: scripts/rebuild-deb.sh --no-bump
 
       - name: Collect build artifacts
+        if: *target_selected
         run: |
           mkdir -p dist
           mv ../rivolution*.deb ../rivolution*.buildinfo ../rivolution*.changes dist/
           ls -la dist/
 
       - name: Rename secondary-target artifacts
-        if: matrix.suffix != ''
+        if: >-
+          matrix.suffix != '' && (github.event_name != 'workflow_dispatch' ||
+          inputs.target == 'both' ||
+          (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
+          (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04'))
         run: |
           # arch:all packages (opsguide) are identical regardless of which
           # Ubuntu release built them -- the primary (26.04) leg's copy
@@ -106,13 +121,18 @@ jobs:
           ls -la dist/
 
       - name: Upload workflow artifact
+        if: *target_selected
         uses: actions/upload-artifact@v4
         with:
           name: rivolution-x64-debs${{ matrix.suffix }}
           path: dist/*
 
       - name: Attach to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: >-
+          startsWith(github.ref, 'refs/tags/') && (github.event_name != 'workflow_dispatch' ||
+          inputs.target == 'both' ||
+          (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
+          (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
