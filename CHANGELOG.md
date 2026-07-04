@@ -71,6 +71,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   `--version=X.Y.Z` flag to change the upstream version string itself
   (writing `versions/PACKAGE_VERSION` and resetting the Debian revision
   to 1), separate from its existing same-version revision auto-bump.
+- `.github/workflows/build-deb.yml`, `scripts/rebuild-deb.sh`: fixed
+  broken wget/`apt install` links in release notes for any version
+  containing `~` (e.g. `6.0.0~beta1-1`). GitHub Releases silently
+  renames `~` to `.` in uploaded asset filenames, so a download command
+  built from the real Debian version string 404s. `build-deb.yml`'s
+  x64 release-notes step now substitutes `.` for `~` before building
+  the URL; `rebuild-deb.sh` prints the correct dot-form filename at the
+  end of a build so the manual arm64 release notes use the right name
+  too. Caught on the first `v6.0.0~beta1-1` release, whose notes
+  shipped with 404ing links in both the arm64 and x64 sections until
+  directly verified by curling the URL.
 
 ## 2026-07-02 (continued, 7)
 

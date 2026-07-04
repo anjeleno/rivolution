@@ -115,3 +115,12 @@ DEBUILD_MAKE_ARGS="-j$(nproc)" dpkg-buildpackage -us -uc -b
 
 echo "==> Done. Packages in $PARENT_DIR:"
 ls -la "$PARENT_DIR"/rivolution*.deb
+
+if [[ "$(cat versions/PACKAGE_VERSION)" == *"~"* ]]; then
+  echo
+  echo "==> NOTE: GitHub silently renames \"~\" to \".\" in uploaded release"
+  echo "    asset filenames. When writing wget/apt install commands in the"
+  echo "    release notes, use the GitHub-safe form instead of the real"
+  echo "    Debian version above, e.g.:"
+  echo "      $(basename "$(ls "$PARENT_DIR"/rivolution_*.deb | head -1)" | sed 's/~/./')"
+fi
