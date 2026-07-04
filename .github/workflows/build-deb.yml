@@ -16,7 +16,27 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-26.04
+    strategy:
+      # max-parallel: 1 -- the release-notes step below does a
+      # read-modify-write (fetch current body, append a section, write
+      # back) against the *same* release for both matrix legs. Running
+      # them in parallel risks one leg's edit clobbering the other's
+      # just-appended section. Serializing costs real wall-clock time
+      # (~2x a single build), but avoiding that race isn't worth solving
+      # with a more complex retry/lock mechanism for a workflow that only
+      # runs on an actual version tag push.
+      max-parallel: 1
+      matrix:
+        include:
+          - os: ubuntu-26.04
+            suffix: ""
+            header: "## x64 build"
+            caveat: ""
+          - os: ubuntu-24.04
+            suffix: "-noble"
+            header: "## x64 build (Ubuntu 24.04 -- best-effort)"
+            caveat: "\n\nBuilt on Ubuntu 24.04 as a temporary accommodation for cloud providers that don't yet offer 26.04 images. Ubuntu 26.04 remains the primary supported target -- use the build above unless your host genuinely can't offer it yet."
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -53,10 +73,23 @@ jobs:
           mv ../rivolution*.deb ../rivolution*.buildinfo ../rivolution*.changes dist/
           ls -la dist/
 
+      - name: Rename secondary-target artifacts
+        if: matrix.suffix != ''
+        run: |
+          # arch:all packages (opsguide) are identical regardless of which
+          # Ubuntu release built them -- the primary (26.04) leg's copy
+          # already covers this, so don't re-upload a second, differently
+          # -suffixed copy of the same content.
+          rm -f dist/*_all.deb
+          for f in dist/*; do
+            mv "$f" "$(echo "$f" | sed "s/_amd64/_amd64${{ matrix.suffix }}/")"
+          done
+          ls -la dist/
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rivolution-x64-debs
+          name: rivolution-x64-debs${{ matrix.suffix }}
           path: dist/*
 
       - name: Attach to GitHub Release
@@ -72,7 +105,7 @@ jobs:
               --notes "Automated x64 build. arm64 build/notes to follow."
           fi
 
-          echo "==> Uploading x64 build artifacts"
+          echo "==> Uploading x64 build artifacts (${{ matrix.os }})"
           gh release upload "$TAG" dist/* --clobber
 
           VERSION_REV="$(cat versions/PACKAGE_VERSION)-$(grep -oP '(?<=@VERSION@-)[0-9]+(?=\))' debian/changelog.src | head -1)"
@@ -86,12 +119,14 @@ jobs:
           # else, so the wget/apt commands below point at a file that
           # actually exists.
           ASSET_VERSION_REV="${VERSION_REV//\~/.}"
+          FILENAME_SUFFIX="${{ matrix.suffix }}"
+          HEADER="${{ matrix.header }}"
 
-          if ! grep -q '^## x64 build$' <<<"$CURRENT_BODY"; then
-            echo "==> Appending x64 section to release notes"
-            NEW_SECTION=$(printf '\n\n## x64 build\n\n```\nwget https://github.com/%s/releases/download/%s/rivolution_%s_amd64.deb\n```\n\n```\nsudo apt install ./rivolution_%s_amd64.deb\n```' \
-              "$GITHUB_REPOSITORY" "$TAG" "$ASSET_VERSION_REV" "$ASSET_VERSION_REV")
+          if ! grep -qF -- "$HEADER" <<<"$CURRENT_BODY"; then
+            echo "==> Appending section to release notes"
+            NEW_SECTION=$(printf '\n\n%s\n\n```\nwget https://github.com/%s/releases/download/%s/rivolution_%s_amd64%s.deb\n```\n\n```\nsudo apt install ./rivolution_%s_amd64%s.deb\n```%b' \
+              "$HEADER" "$GITHUB_REPOSITORY" "$TAG" "$ASSET_VERSION_REV" "$FILENAME_SUFFIX" "$ASSET_VERSION_REV" "$FILENAME_SUFFIX" "${{ matrix.caveat }}")
             gh release edit "$TAG" --notes "${CURRENT_BODY}${NEW_SECTION}"
           else
-            echo "==> x64 section already present in release notes, leaving as-is"
+            echo "==> Section already present in release notes, leaving as-is"
           fi

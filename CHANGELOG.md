@@ -82,6 +82,19 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   too. Caught on the first `v6.0.0~beta1-1` release, whose notes
   shipped with 404ing links in both the arm64 and x64 sections until
   directly verified by curling the URL.
+- `.github/workflows/build-deb.yml`: added a second x64 build target,
+  Ubuntu 24.04, alongside the existing Ubuntu 26.04 primary target --
+  best-effort and temporary, for cloud providers that don't yet offer a
+  26.04 image. The build job is now a `strategy.matrix` over both OSes
+  (`max-parallel: 1`, since the release-notes step does a
+  read-modify-write against the same release and can't safely run for
+  both legs concurrently). The 24.04 build's `.deb` filenames get a
+  `-noble` suffix to avoid colliding with the 26.04 build's identically
+  -named packages; the arch-independent opsguide package isn't
+  re-uploaded a second time under a different name, since its content
+  is identical either way. No dependency-list changes were needed
+  between the two OSes -- `rivolution.wiki`'s own `Build-From-Source.md`
+  had already verified the same package list builds cleanly on both.
 
 ## 2026-07-02 (continued, 7)
 

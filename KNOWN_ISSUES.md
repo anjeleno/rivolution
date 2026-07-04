@@ -4,6 +4,30 @@ Practical limitations you'll hit running this fork today, what causes
 them, and what to do about it. For the technical "why hasn't this been
 fixed yet" detail, see [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md).
 
+## A `.deb` built for one Ubuntu release won't install on another
+
+**Symptom:** `sudo apt install ./rivolution_*.deb` fails with a wall of
+`Depends: ... but it is not installable` / `but a different version is
+to be installed` errors, all naming *newer* versions than what's on
+the box (e.g. `libc6 (>= 2.43)` when `2.39` is installed).
+
+**Cause:** `.deb` dependency version floors are generated from whatever
+libraries actually exist on the machine that built the package, not
+just requested at build time. A package built on Ubuntu 26.04 will
+never install cleanly on 24.04 through normal `apt` -- 24.04's archive
+is permanently frozen at older major versions of glibc/Qt6/etc. for its
+whole support lifetime, so the versions it wants simply don't exist
+there. Building from source on 24.04 doesn't hit this at all, since
+that compiles fresh against whatever's actually on that box.
+
+**Workaround:** grab the `.deb` built for your actual Ubuntu release.
+Releases publish an arm64 build, a primary x64 build (Ubuntu 26.04),
+and -- best-effort, temporary, until more cloud providers offer a
+26.04 image -- a second x64 build for Ubuntu 24.04, suffixed `-noble`
+in the filename (e.g. `rivolution_<version>_amd64-noble.deb`). If
+you're not sure which you have, `lsb_release -a` (or
+`cat /etc/os-release`) on the target box tells you.
+
 ## AudioScience hardware (HPI/HPK) unsupported on Ubuntu 26.04
 
 **Symptom:** stations with AudioScience professional audio adapters
