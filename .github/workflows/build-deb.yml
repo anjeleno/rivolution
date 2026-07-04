@@ -78,10 +78,19 @@ jobs:
           VERSION_REV="$(cat versions/PACKAGE_VERSION)-$(grep -oP '(?<=@VERSION@-)[0-9]+(?=\))' debian/changelog.src | head -1)"
           CURRENT_BODY="$(gh release view "$TAG" --json body -q .body)"
 
+          # GitHub silently replaces "~" with "." in uploaded release asset
+          # filenames (confirmed empirically on v6.0.0-beta1-1 -- the actual
+          # built .deb is named with the real "~", but the asset GitHub
+          # stores and serves is not). Compute the download-URL-safe name
+          # separately from the real Debian version string used everywhere
+          # else, so the wget/apt commands below point at a file that
+          # actually exists.
+          ASSET_VERSION_REV="${VERSION_REV//\~/.}"
+
           if ! grep -q '^## x64 build$' <<<"$CURRENT_BODY"; then
             echo "==> Appending x64 section to release notes"
             NEW_SECTION=$(printf '\n\n## x64 build\n\n```\nwget https://github.com/%s/releases/download/%s/rivolution_%s_amd64.deb\n```\n\n```\nsudo apt install ./rivolution_%s_amd64.deb\n```' \
-              "$GITHUB_REPOSITORY" "$TAG" "$VERSION_REV" "$VERSION_REV")
+              "$GITHUB_REPOSITORY" "$TAG" "$ASSET_VERSION_REV" "$ASSET_VERSION_REV")
             gh release edit "$TAG" --notes "${CURRENT_BODY}${NEW_SECTION}"
           else
             echo "==> x64 section already present in release notes, leaving as-is"
