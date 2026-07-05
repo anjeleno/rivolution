@@ -1,0 +1,117 @@
+{{define "page"}}
+<div x-data="{ mode: '{{.Status.Config.Mode}}' }">
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <h2 style="margin:0">Mode</h2>
+</div>
+
+<p style="color: var(--pico-muted-color);">
+    Switches this station between three network topologies: <strong>standalone</strong>
+    (everything local), <strong>server</strong> (also exposes the database and audio
+    store to other Rivendell hosts over the network), and <strong>client</strong>
+    (points at a remote database and audio store instead of hosting either locally).
+    Applying a change restarts <code>rivendell.service</code> and, depending on the
+    mode, <code>mariadb.service</code>/<code>autofs.service</code>.
+</p>
+
+{{if .ApplyError}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
+    <strong>Apply failed:</strong> {{.ApplyError}}
+    {{if .Steps}}
+    <ul style="margin:0.5rem 0 0; padding-left:1.25rem;">
+        {{range .Steps}}<li>{{.}}</li>{{end}}
+    </ul>
+    {{end}}
+</div>
+{{else if .JustApplied}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-ins-color); margin-bottom:1.5rem;">
+    <strong>Applied</strong>
+    <ul style="margin:0.5rem 0 0; padding-left:1.25rem;">
+        {{range .Steps}}<li>{{.}}</li>{{end}}
+    </ul>
+</div>
+{{end}}
+
+<section>
+    <h3>Current status</h3>
+    <div class="grid">
+        <div>
+            <p><strong>Saved mode:</strong> {{.Status.Config.Mode}}</p>
+            <p><strong>rd.conf [mySQL] Hostname:</strong> <code>{{.Status.RdConfMySQLHost}}</code></p>
+            <p><strong>MariaDB:</strong>
+                {{if .Status.MariaDBInstalled}}installed{{else}}<mark>not installed</mark>{{end}},
+                {{if .Status.MariaDBActive}}running{{else}}<mark>not running</mark>{{end}},
+                {{if .Status.MariaDBListensRemote}}listening on all interfaces{{else}}loopback-only{{end}}
+            </p>
+        </div>
+        <div>
+            <p><strong>/var/snd:</strong>
+                {{if .Status.VarSndMounted}}mounted from <code>{{.Status.VarSndMountSource}}</code>{{else}}local directory{{end}}
+            </p>
+            <p><strong>/etc/fstab entry:</strong> {{if .Status.FstabEntryPresent}}present{{else}}<mark>absent</mark>{{end}}</p>
+            <p><strong>NFS server:</strong>
+                {{if .Status.NFSServerInstalled}}installed{{else}}not installed{{end}},
+                exports {{if .Status.ExportsConfigured}}configured{{else}}not configured{{end}}
+            </p>
+            <p><strong>NFS/autofs client:</strong>
+                {{if .Status.NFSClientInstalled}}nfs-common installed{{else}}nfs-common not installed{{end}},
+                {{if .Status.AutofsInstalled}}autofs installed{{else}}autofs not installed{{end}}
+            </p>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<section>
+    <h3>Switch mode</h3>
+    <form method="POST" action="/mode/apply" hx-confirm="Switch install mode? This restarts rivendell.service and possibly mariadb/autofs — live audio will be interrupted.">
+        <fieldset>
+            <label>
+                <input type="radio" name="mode" value="standalone" x-model="mode">
+                Standalone — everything local
+            </label>
+            <label>
+                <input type="radio" name="mode" value="server" x-model="mode">
+                Server — also expose the database and audio store to other Rivendell hosts
+            </label>
+            <label>
+                <input type="radio" name="mode" value="client" x-model="mode">
+                Client — use a remote database and audio store instead of local ones
+            </label>
+        </fieldset>
+
+        <div x-show="mode === 'client'" style="padding:1rem; border:1px solid var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
+            <p style="margin-top:0;"><strong>Remote connection details</strong></p>
+            <div class="grid">
+                <label>
+                    Remote MySQL host
+                    <input type="text" name="remote_mysql_host" value="{{.Status.Config.RemoteMySQLHost}}" placeholder="203.0.113.5">
+                </label>
+                <label>
+                    Remote MySQL user
+                    <input type="text" name="remote_mysql_user" value="{{if .Status.Config.RemoteMySQLUser}}{{.Status.Config.RemoteMySQLUser}}{{else}}rduser{{end}}">
+                </label>
+            </div>
+            <div class="grid">
+                <label>
+                    Remote MySQL password
+                    <input type="password" name="remote_mysql_password" placeholder="unchanged if left blank">
+                </label>
+                <label>
+                    Remote MySQL database
+                    <input type="text" name="remote_mysql_database" value="{{if .Status.Config.RemoteMySQLDatabase}}{{.Status.Config.RemoteMySQLDatabase}}{{else}}Rivendell{{end}}">
+                </label>
+            </div>
+            <label>
+                Remote NFS host (the "server"-mode box exporting its audio store)
+                <input type="text" name="remote_nfs_host" value="{{.Status.Config.RemoteNFSHost}}" placeholder="203.0.113.5">
+            </label>
+        </div>
+
+        <button type="submit" class="outline">Apply</button>
+    </form>
+</section>
+
+</div>
+{{end}}

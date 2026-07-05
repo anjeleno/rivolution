@@ -9,6 +9,29 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-04
 
+- New dashboard page, `/mode`: switches a station between standalone/
+  server/client network topologies in one click, replacing what used to
+  require a full Ansible re-provision. Standalone/server ensure
+  `mariadb-server` is installed and running with the correct
+  bind-address (loopback vs. all-interfaces — the SQL-level grants for
+  both are already created unconditionally by
+  `scripts/rivolution-first-run.sh`, so this is the actual gate on
+  remote reachability, not the grant); server additionally exports
+  `/var/snd` and the staging directories over NFS. Client mounts the
+  remote audio store, persists it via `/etc/fstab` and `autofs`, and
+  points `/etc/rd.conf`'s `[mySQL]` section at a remote host instead of
+  provisioning anything locally. Every privileged step goes through a
+  small, fixed sudoers whitelist (`conf/sudoers.d/rivapi`) — package
+  installs, mount/umount, and a "regenerate whole file, then one
+  whitelisted `install`" pattern for `rd.conf`/`/etc/exports`/
+  `/etc/fstab`/the autofs maps, matching how `icecast.xml`/`radio.liq`
+  already deploy. Never uninstalls anything or drops data when
+  switching away from a mode. New files: `rivapi/store/mode.go`,
+  `rivapi/store/mode_apply.go`, `rivapi/dashboard/handlers_mode.go`,
+  `rivapi/dashboard/templates/mode.html`. **Not yet verified on a real
+  box** — built following this project's existing patterns, but this
+  needs the same real-install testing regimen as everything else in
+  this fork before being trusted in production.
 - `rivapi/store/patchbay.go`, `rivapi/main.go`: the patchbay link
   reconciler now removes live connections that aren't in the saved
   set, not just adds missing ones — previously additive-only, which

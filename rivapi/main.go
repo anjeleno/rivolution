@@ -75,6 +75,8 @@ func main() {
 		r.Post("/patchbay/connect", dash.PatchbayConnect)
 		r.Post("/patchbay/disconnect", dash.PatchbayDisconnect)
 		r.Post("/patchbay/save", dash.PatchbaySave)
+		r.Get("/mode", dash.Mode)
+		r.Post("/mode/apply", dash.ModeApply)
 	})
 
 	// Patchbay link reconciler: PipeWire links don't survive either
