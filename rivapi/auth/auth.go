@@ -73,9 +73,15 @@ type loginResponse struct {
 // SessionCookieName is the HttpOnly cookie carrying the JWT for browser clients.
 const SessionCookieName = "rivapi_session"
 
-// createTicket forwards credentials to rdxport.cgi and returns (signedJWT, expires, error).
+// CreateTicket forwards credentials to rdxport.cgi and returns (signedJWT, expires, error).
 // Shared by LoginHandler (JSON API) and DashboardLoginHandler (browser form).
-func createTicket(cfg *config.Config, tickets *TicketCache, username, password string) (string, time.Time, error) {
+// Exported (not just package-internal) so dashboard.ModeApply can reuse it as
+// a re-authentication check before switching install mode -- the same real
+// Rivendell-account credential that already gates the whole dashboard is the
+// thing re-checked, not a separate app-only secret or the Linux user's own
+// system password (which would need a new PAM dependency and either shadow-
+// group membership or a privileged helper to verify at all).
+func CreateTicket(cfg *config.Config, tickets *TicketCache, username, password string) (string, time.Time, error) {
 	resp, err := http.PostForm(cfg.RdxportURL, url.Values{
 		"COMMAND":    {"31"}, // RDXPORT_COMMAND_CREATETICKET
 		"LOGIN_NAME": {username},
@@ -113,7 +119,7 @@ func LoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 			return
 		}
 
-		signed, expires, err := createTicket(cfg, tickets, req.Username, req.Password)
+		signed, expires, err := CreateTicket(cfg, tickets, req.Username, req.Password)
 		if err != nil {
 			if err.Error() == "invalid credentials" {
 				http.Error(w, "invalid credentials", http.StatusUnauthorized)
@@ -142,7 +148,7 @@ func DashboardLoginHandler(cfg *config.Config, tickets *TicketCache) http.Handle
 			return
 		}
 
-		signed, _, err := createTicket(cfg, tickets, username, password)
+		signed, _, err := CreateTicket(cfg, tickets, username, password)
 		if err != nil {
 			http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
 			return

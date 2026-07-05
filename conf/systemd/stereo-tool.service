@@ -10,12 +10,39 @@
 # Stereo Tool has no native sd_notify support. A readiness probe can be
 # added via ExecStartPost once its TCP/socket interface is confirmed.
 #
+# Must start after rivendell.service, not just pipewire-system/liquidsoap:
+# Stereo Tool's ALSA-JACK bridge (~/.asoundrc's pcm.jack block) hardcodes
+# rivendell_0:playout_0L/R as its capture target and auto-connects to it
+# the moment it opens -- PID-agnostic (it names the external target, not
+# itself), which is what actually makes this connection survive a reboot,
+# not the dashboard's patchbay Save/reconcile feature (Stereo Tool's own
+# JACK client name embeds its PID, so a saved connection can never match
+# after a restart -- see KNOWN_ISSUES.md).
+#
+# After=rivendell.service alone is NOT enough, confirmed 2026-07-04 on a
+# real reboot: rivendell.service's first start attempt commonly fails on a
+# fresh boot because mariadb.service isn't accepting connections yet
+# ("Couldn't open MySQL connection on localhost") -- and a *failed* unit
+# still counts as "reached" for ordering purposes, so systemd let
+# stereo-tool.service start immediately after that failure, well before
+# rivendell.service's automatic retry actually got caed's JACK ports up a
+# few seconds later. Stereo Tool tried and permanently gave up on the
+# connection in that window (its ALSA-JACK plugin only attempts once at
+# open time, confirmed via stereo_tool's own log: "cannot connect
+# rivendell_0:playout_0L to stereo_tool.C.<pid>.<n>:in_000"). Fixed with
+# an ExecStartPre that polls for the actual JACK port to exist -- same
+# real-readiness-check pattern rivendell.service's own ExecStartPost
+# already uses for caed's control port (nc -z 127.0.0.1 5005), applied
+# here to the JACK port stereo_tool actually needs instead of just
+# trusting systemd's unit-level ordering.
+#
 # Install: copy to /etc/systemd/system/stereo-tool.service
 # then: sudo systemctl daemon-reload && sudo systemctl enable stereo-tool.service
 
 [Unit]
 Description=Stereo Tool audio processor
-After=pipewire-system.service liquidsoap.service
+After=pipewire-system.service rivendell.service liquidsoap.service
+Wants=rivendell.service
 PartOf=rivolution-stack.target
 
 [Service]
@@ -23,6 +50,7 @@ Type=simple
 User=rd
 Group=rd
 Environment=XDG_RUNTIME_DIR=/run/pipewire-system
+ExecStartPre=/bin/sh -c 'i=0; while [ $i -lt 60 ]; do pw-link -o 2>/dev/null | grep -q "^rivendell_0:playout_0L$" && exit 0; sleep 1; i=$((i+1)); done; echo "rivendell_0 JACK ports not ready after 60s" >&2; exit 1'
 ExecStart=/home/rd/bin/stereo_tool --silent -p 8079
 Restart=on-failure
 RestartSec=5

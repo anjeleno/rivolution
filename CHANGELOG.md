@@ -7,8 +7,205 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-05
+
+- `rivapi/store/mode_apply.go`: client mode's `/var/snd` `fstab` entry now
+  carries `x-systemd.after=tailscaled.service`. Found via a real reboot
+  that hung for minutes: `tailscaled.service` had already stopped by
+  the time `var-snd.mount` tried to unmount, and a `hard` NFS mount
+  (deliberate, for data safety) never gives up retrying against a now
+  ­unreachable server, so the unmount sat there until systemd's stop
+  job timeout forcibly killed it. Ordering only, not
+  `x-systemd.requires=` -- that would fail the mount outright on any
+  deployment where `tailscaled.service` ends up masked/disabled
+  entirely (a non-Tailscale remote host), where `After=` alone is
+  simply inert. Server mode needed no equivalent change: its exports
+  are local bind mounts, never touching the network at unmount time.
+
+- `rivapi/store/mode_apply.go`, `conf/sudoers.d/rivapi`: Server mode's
+  `/srv/nfs4/...` NFS export tree is now bind-mounted onto the real
+  audio store and staging directories instead of being permanently
+  empty. Found on the first real client<->server test: `/etc/exports`
+  and `createNFSExportDirs` were both correct, and a client mounted the
+  export successfully, but `/srv/nfs4/var/snd` had always been a
+  structurally separate, empty directory from the real `/var/snd` --
+  nothing anywhere bind-mounted (or otherwise connected) the two, so
+  every client saw nothing regardless of how much real audio existed
+  on the server. `rd_xfer`/`music_export`/`music_import`/
+  `traffic_export`/`traffic_import` are upstream Rivendell dropbox-
+  location conventions this project doesn't use itself but continues
+  to support for operators who do -- created empty if they don't
+  already exist, rather than left unexported entirely.
+
+- `rivapi/store/mode_apply.go`: `ApplyMode` now writes `rd.conf`'s
+  `[AudioStore]` `MountSource`/`MountType` fields for client mode
+  (cleared back to empty for standalone/server). Found on the first
+  real client<->server test: the remote audio store was genuinely
+  mounted correctly (fstab entry, live NFS mount, all confirmed), but
+  Rivendell's own `RDAudioStoreValid()` (`lib/rdstatus.cpp`, used by
+  `rdmonitor`/`rdselect`) decides "local vs. remote" purely from
+  whether `[AudioStore] MountSource` is set, and for the remote case
+  confirms the mount by matching `MountSource` against `/etc/mtab`'s
+  source field. With that field left blank, Rivendell expected a plain
+  local directory, found a real NFS mount sitting on top of it
+  instead, and reported the station unhealthy despite the mount
+  working perfectly.
+
+- `rivapi/store/mode_apply.go`: `/mode`'s `apt-get install` calls
+  (mariadb-server, nfs-kernel-server, nfs-common/autofs) now retry for
+  up to 3 minutes on dpkg lock contention instead of failing outright.
+  Found on the first real test of client-mode switching: the install
+  step failed immediately because `unattended-upgrades` held
+  `/var/lib/dpkg/lock-frontend` at that exact moment -- a routine,
+  transient condition on any Ubuntu box, unrelated to anything this
+  dashboard does. Nothing else was touched by the failed attempt (rd.conf,
+  MariaDB, and `/etc/fstab` were all still untouched), so this was a
+  clean, safe failure -- just one worth not surfacing as an error when
+  waiting a few seconds and retrying would have succeeded.
+- `rivapi/store/patchbay.go`: fixed `ReconcileLinks`/`DisconnectUnsaved`
+  tearing down Stereo Tool's own auto-connection on every reconcile
+  cycle. Found via a real reboot-and-watch test: `~/.asoundrc`'s
+  `pcm.jack` auto-connect formed the correct link within a few seconds
+  of every restart, then the bidirectional reconciler removed it again
+  at the next tick, because Stereo Tool's JACK client name embeds its
+  process ID (see 2026-07-04's entry) and the saved `patchbay.json`
+  entry's PID never matches the live one after a restart. Comparisons
+  now go through a new `normalizedLinkKey`/`normalizePortName` pair that
+  collapses Stereo Tool's PID segment before comparing saved links
+  against live ones, so a saved link is recognized as already satisfied
+  (and a live link recognized as already saved) regardless of which PID
+  Stereo Tool happens to have this run. The actual connect/disconnect
+  calls still use the real, current port names -- only the "is this
+  already there" comparison is normalized.
+
 ## 2026-07-04
 
+- `conf/systemd/stereo-tool.service`: fixed Stereo Tool's audio patch not
+  surviving a reboot without manually restarting the whole stack.
+  `~/.asoundrc`'s `pcm.jack` block already auto-connects Stereo Tool's
+  ALSA-JACK bridge to stable target port names on open (PID-agnostic,
+  unlike the dashboard's own patchbay Save/Reconcile feature -- Stereo
+  Tool's JACK client name embeds its own PID, so a saved connection can
+  never match again after a restart, see `BACKLOG.md`) -- but
+  `After=rivendell.service` alone wasn't enough to guarantee the target
+  ports actually existed yet: confirmed via a real reboot that
+  `rivendell.service`'s first start attempt commonly fails when
+  `mariadb.service` isn't accepting connections yet, and a *failed*
+  unit still counts as "reached" for systemd ordering purposes, so
+  Stereo Tool started and gave up on the connection (its ALSA plugin
+  only attempts once, at open time) well before `rivendell.service`'s
+  automatic retry actually got `caed`'s JACK ports up. Fixed with an
+  `ExecStartPre` that polls for the real JACK port to exist, same
+  readiness-check pattern `rivendell.service`'s own `ExecStartPost`
+  already uses for `caed`'s control port.
+- `/patchbay`: new "Disconnect unsaved" button
+  (`store.DisconnectUnsaved`) removes every live connection not in the
+  saved set in one click. Found via real testing: Stereo Tool's ALSA/
+  JACK driver probing multiple device instances while its I/O was
+  being configured left 19 unwanted auto-detected connections behind
+  on a fresh box with nothing saved yet -- `ReconcileLinks` doesn't
+  touch these on its own (deliberately, since nothing has a saved
+  opinion yet), and clicking "Remove" on each one individually doesn't
+  scale. Also fixed the page's own description text, stale since
+  today's earlier 5s-to-30s reconcile-interval change.
+- `conf/sudoers.d/rivapi`: fixed a real, live regression found on a fresh
+  install -- every wildcarded `Cmnd_Alias` argument (the NFS-mount
+  remote host, the per-task systemd unit filenames) failed to parse
+  under Ubuntu 26.04's `sudo-rs` (Ubuntu's Rust reimplementation of
+  sudo, which rejects wildcards in command arguments outright, unlike
+  traditional GNU sudo), silently dropping every `NOPASSWD` rule in the
+  file -- not a lockout (normal password-based `sudo` still worked),
+  but the dashboard's whole point of not prompting for a password
+  broke entirely. Fixed by moving the varying value into small,
+  fixed-path helper scripts (`store/tasks_deploy.go`'s
+  `install-unit.sh`/`remove-unit.sh`/`task-systemctl.sh`,
+  `store/mode_apply.go`'s `mount-var-snd.sh`), whitelisted by bare path
+  with no arguments specified (which grants any arguments) and
+  validated internally in shell -- works identically under both sudo
+  implementations. Verified with `visudo -c` this time, not just by
+  reasoning about it. See `ARCHITECTURE.md`'s new mistake-class
+  write-up.
+- `/mode` now requires re-entering your password before applying a
+  switch, and shows a prominent warning against running it on a
+  machine already live in production. Reuses `auth.CreateTicket`
+  (renamed from the unexported `createTicket`) — the same real
+  Rivendell-account credential that already gates the whole dashboard
+  — rather than a separate app-only secret or the Linux account's own
+  system password (which would need a new PAM dependency and either
+  `shadow`-group membership or a privileged helper to verify at all).
+  Checked before anything is saved or touched; a failed confirmation
+  changes nothing.
+- New dashboard page, `/export`: bundles the broadcast/Icecast/
+  Liquidsoap config, patchbay routing, install mode, and scheduled
+  tasks — plus Stereo Tool's own `~/.stereo_tool.rc` and saved
+  `~/.stereo_tool.presets/*.sts` presets, base64-encoded since they're
+  not JSON-native — into one downloadable/importable JSON file, for
+  migration or disaster recovery. Two of the four dashboard configs
+  were already single-source-of-truth JSON (`broadcast.json`,
+  `patchbay.json`); this just bundles what already existed rather than
+  retrofitting anything. Import restores every file, regenerates
+  `icecast.xml`/`radio.liq` and restarts Icecast/Liquidsoap, and
+  redeploys every scheduled task's systemd units — but deliberately
+  does **not** auto-apply the restored install mode (mounting NFS,
+  restarting MariaDB), since that's a much bigger side effect than
+  restoring a config file; the operator applies it deliberately from
+  `/mode` afterward. New files: `rivapi/store/export.go`,
+  `rivapi/dashboard/handlers_export.go`,
+  `rivapi/dashboard/templates/export.html`. **Not yet verified on a
+  real box**, same caveat as `/mode` and `/tasks`.
+- New dashboard page, `/tasks`: closes the gap tracked in `BACKLOG.md`
+  since the old Ansible `broadcast_advanced` role was removed
+  2026-07-01 (nightly DB backup and log generation, previously
+  hand-maintained crontab entries with no dashboard equivalent). Each
+  task gets its own systemd service+timer pair (visible in
+  `systemctl list-timers`), not a re-implementation of cron. Four task
+  types: database backup (reads connection details from `/etc/rd.conf`
+  at run time via a small fixed helper script, rather than storing a
+  password in the task itself — the exact bug class found in one of
+  the scripts this replaces), log generation, log reconciliation
+  (`rdlogmanager` wrappers), and a custom-command escape hatch for
+  anything else. Task IDs are always server-generated 16-character hex
+  strings, never derived from operator-entered text, before they're
+  ever used in a systemd unit name or file path — the wildcarded
+  sudoers entries this needs (`conf/sudoers.d/rivapi`) only ever need
+  to match rivapi's own generated filenames as a result. New files:
+  `rivapi/store/tasks.go`, `rivapi/store/tasks_deploy.go`,
+  `rivapi/dashboard/handlers_tasks.go`,
+  `rivapi/dashboard/templates/tasks.html`. **Not yet verified on a
+  real box**, same caveat as `/mode` below.
+- New dashboard page, `/mode`: switches a station between standalone/
+  server/client network topologies in one click, replacing what used to
+  require a full Ansible re-provision. Standalone/server ensure
+  `mariadb-server` is installed and running with the correct
+  bind-address (loopback vs. all-interfaces — the SQL-level grants for
+  both are already created unconditionally by
+  `scripts/rivolution-first-run.sh`, so this is the actual gate on
+  remote reachability, not the grant); server additionally exports
+  `/var/snd` and the staging directories over NFS. Client mounts the
+  remote audio store, persists it via `/etc/fstab` and `autofs`, and
+  points `/etc/rd.conf`'s `[mySQL]` section at a remote host instead of
+  provisioning anything locally. Every privileged step goes through a
+  small, fixed sudoers whitelist (`conf/sudoers.d/rivapi`) — package
+  installs, mount/umount, and a "regenerate whole file, then one
+  whitelisted `install`" pattern for `rd.conf`/`/etc/exports`/
+  `/etc/fstab`/the autofs maps, matching how `icecast.xml`/`radio.liq`
+  already deploy. Never uninstalls anything or drops data when
+  switching away from a mode. New files: `rivapi/store/mode.go`,
+  `rivapi/store/mode_apply.go`, `rivapi/dashboard/handlers_mode.go`,
+  `rivapi/dashboard/templates/mode.html`. **Not yet verified on a real
+  box** — built following this project's existing patterns, but this
+  needs the same real-install testing regimen as everything else in
+  this fork before being trusted in production.
+- `rivapi/store/patchbay.go`, `rivapi/main.go`: the patchbay link
+  reconciler now removes live connections that aren't in the saved
+  set, not just adds missing ones — previously additive-only, which
+  let WirePlumber's own default auto-linking connect ports on its own
+  at boot and left them there indefinitely alongside the saved
+  patches, only ever cleared by a manual full stack restart. Reconcile
+  interval widened from 5s to 30s at the same time, since the
+  reconciler is now authoritative and a too-short interval would tear
+  out an ad-hoc test connection before there's time to listen to it.
+  See `KNOWN_ISSUES.md`.
 - `debian/postinst`: the `rivendell`/`pypad` system account creation
   (`groupadd`/`useradd`) now checks `getent` first instead of running
   unconditionally under `set -e`. Found via a real install that failed

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -59,36 +60,114 @@ func SaveDesiredLinks(links []PatchLink, path string) error {
 	return os.Rename(tmp, path)
 }
 
-// ReconcileLinks re-applies any saved link that isn't currently present in
-// the live graph. Ports that don't exist yet (e.g. a client hasn't started)
-// fail individually via Link() and are skipped, not treated as fatal —
-// reconciliation just tries again on the next call.
+// ReconcileLinks forces the live graph to exactly match the saved link set:
+// applies any saved link that isn't currently present, and removes any live
+// link that isn't in the saved set. The removal half matters as much as the
+// addition half — WirePlumber's own default auto-linking policy connects
+// newly-appeared JACK-bridged ports to default sinks/sources on its own
+// initiative (this project ships no override disabling that), and previous
+// additive-only reconciliation left those extra connections in place
+// indefinitely, on top of the saved patches, until an operator noticed and
+// manually restarted the stack. Ports that don't exist yet (e.g. a client
+// hasn't started) fail individually via Link()/Unlink() and are skipped, not
+// treated as fatal — reconciliation just tries again on the next call.
 func ReconcileLinks(path string) error {
 	desired, err := LoadDesiredLinks(path)
 	if err != nil {
 		return fmt.Errorf("load desired links: %w", err)
 	}
 	if len(desired) == 0 {
+		// Nothing has ever been saved (or the saved set is deliberately
+		// empty) -- treat this as "no opinion yet" rather than "tear down
+		// every connection." Once at least one link has been saved, this
+		// function becomes authoritative over the whole graph; until then,
+		// forcing an empty graph on every tick would fight a fresh install's
+		// initial routing (or WirePlumber's own defaults) with nothing to
+		// replace it with.
 		return nil
 	}
 	current, err := ListPatchLinks()
 	if err != nil {
 		return fmt.Errorf("list current links: %w", err)
 	}
+	want := make(map[string]bool, len(desired))
+	for _, l := range desired {
+		want[normalizedLinkKey(l.Output, l.Input)] = true
+	}
 	have := make(map[string]bool, len(current))
 	for _, l := range current {
-		have[linkPairKey(l.Output, l.Input)] = true
+		have[normalizedLinkKey(l.Output, l.Input)] = true
 	}
 	for _, l := range desired {
-		if !have[linkPairKey(l.Output, l.Input)] {
+		if !have[normalizedLinkKey(l.Output, l.Input)] {
 			_ = Link(l.Output, l.Input) // best-effort; port may not exist yet
+		}
+	}
+	for _, l := range current {
+		if !want[normalizedLinkKey(l.Output, l.Input)] {
+			_ = Unlink(l.Output, l.Input) // best-effort; may already be gone
 		}
 	}
 	return nil
 }
 
-func linkPairKey(output, input string) string {
-	return output + "|" + input
+// DisconnectUnsaved removes every live connection that isn't in the saved
+// set, without changing the saved set itself, and returns how many it
+// removed. A one-click cleanup for the common real-world case ReconcileLinks
+// deliberately doesn't handle on its own: a fresh box where nothing has
+// been saved yet, but something else (WirePlumber's default auto-linking,
+// or -- as found 2026-07-04 -- a device like Stereo Tool's ALSA/JACK driver
+// probing multiple device instances while its I/O is being configured)
+// has already produced a pile of unwanted connections. Manually clicking
+// "Remove" on each one doesn't scale; this clears all of them in one call
+// so the operator can then connect and Save just the ones actually wanted.
+func DisconnectUnsaved(path string) (int, error) {
+	desired, err := LoadDesiredLinks(path)
+	if err != nil {
+		return 0, fmt.Errorf("load desired links: %w", err)
+	}
+	want := make(map[string]bool, len(desired))
+	for _, l := range desired {
+		want[normalizedLinkKey(l.Output, l.Input)] = true
+	}
+	current, err := ListPatchLinks()
+	if err != nil {
+		return 0, fmt.Errorf("list current links: %w", err)
+	}
+	removed := 0
+	for _, l := range current {
+		if want[normalizedLinkKey(l.Output, l.Input)] {
+			continue
+		}
+		if err := Unlink(l.Output, l.Input); err == nil {
+			removed++
+		}
+	}
+	return removed, nil
+}
+
+// stereoToolPortPattern matches a port name from Stereo Tool's ALSA-JACK
+// bridge, which bakes its own process ID into its client name (e.g.
+// "stereo_tool.C.4853.2:in_000") -- a fresh PID every time the service
+// restarts, so the exact name never repeats across restarts. Confirmed live
+// 2026-07-05: comparing saved links against live links by exact name meant
+// ReconcileLinks tore down the correct, .asoundrc-formed connection every
+// cycle, since its PID never matched whatever was saved in patchbay.json.
+var stereoToolPortPattern = regexp.MustCompile(`^(stereo_tool\.[CP])\.\d+\.(\d+:.*)$`)
+
+// normalizePortName collapses Stereo Tool's PID segment out of a port name
+// so two names that differ only by PID compare equal. Names that don't
+// match the pattern (everything else) are returned unchanged.
+func normalizePortName(name string) string {
+	return stereoToolPortPattern.ReplaceAllString(name, "$1.*.$2")
+}
+
+// normalizedLinkKey is linkPairKey's identity for reconciliation purposes:
+// it's what decides whether a saved link is "already satisfied" or a live
+// link is "already saved," so it goes through normalizePortName first. The
+// actual Link()/Unlink() calls still use the real, current port names.
+func normalizedLinkKey(output, input string) string {
+	return normalizePortName(output) + "|" + normalizePortName(input)
 }
 
 // pwEnv sets XDG_RUNTIME_DIR for a pw-link invocation. rivapi.service also

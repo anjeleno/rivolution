@@ -17,7 +17,7 @@ Description: Radio Broadcast Automation System
 
 Package: rivolution-importers
 Architecture: any
-Depends: ${misc:Depends}, rivolution (= @VERSION@-2)
+Depends: ${misc:Depends}, rivolution (= @VERSION@-6)
 Description: Library importers for the Rivolution Broadcast Automation System
  This package contains various importer scripts, which can be used to
  import audio from existing legacy automation systems into Rivolution.
@@ -44,14 +44,14 @@ Description: Client libraries for interfacing with Rivolution's C Web API.
 
 Package: rivolution-dev
 Architecture: any
-Depends: ${misc:Depends}, rivolution-webapi (= @VERSION@-2)
+Depends: ${misc:Depends}, rivolution-webapi (= @VERSION@-6)
 Description: Header files and example code for development with Rivolution C API
  This package contains header files and example code for development using
  Rivolution's Web C API.
 
 Package: rivolution-select
 Architecture: any
-Depends: ${misc:Depends}, rivolution (= @VERSION@-2)
+Depends: ${misc:Depends}, rivolution (= @VERSION@-6)
 Description: The RDSelect system selector tool for Rivolution.
  This package contains the RDMonitor/RDSelect tool for Rivolution, which can
  be used to select which amoung multiple Rivolution instances a host should be
@@ -59,7 +59,7 @@ Description: The RDSelect system selector tool for Rivolution.
 
 Package: rivolution-webget
 Architecture: any
-Depends: ${misc:Depends}, rivolution (= @VERSION@-2)
+Depends: ${misc:Depends}, rivolution (= @VERSION@-6)
 Description: The WebGet audio fetcher service for Rivolution
  This package contains the WebGet audio fetching tool for Rivolution.
 

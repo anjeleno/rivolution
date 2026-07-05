@@ -1,0 +1,66 @@
+{{define "page"}}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <h2 style="margin:0">Backup</h2>
+</div>
+
+<p style="color: var(--pico-muted-color);">
+    Bundles everything this dashboard configures — broadcast/Icecast/
+    Liquidsoap settings, patchbay routing, install mode, and scheduled
+    tasks — plus Stereo Tool's own device settings and saved presets, into
+    one file. Useful for migrating to a new box or recovering after a
+    catastrophic failure.
+</p>
+
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
+    <strong>Contains real secrets</strong> — Icecast source/relay/admin
+    passwords, and a remote MySQL password if this station is in client
+    mode. Handle an exported file the same as you would <code>/etc/rd.conf</code>:
+    not something to share or store casually.
+</div>
+
+{{if .ImportError}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
+    <strong>Import failed:</strong> {{.ImportError}}
+    {{if .Steps}}
+    <ul style="margin:0.5rem 0 0; padding-left:1.25rem;">
+        {{range .Steps}}<li>{{.}}</li>{{end}}
+    </ul>
+    {{end}}
+</div>
+{{else if .JustImported}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-ins-color); margin-bottom:1.5rem;">
+    <strong>Imported</strong>
+    <ul style="margin:0.5rem 0 0; padding-left:1.25rem;">
+        {{range .Steps}}<li>{{.}}</li>{{end}}
+    </ul>
+</div>
+{{end}}
+
+<section>
+    <h3>Export</h3>
+    <a href="/export/download" role="button" class="outline">Download configuration bundle</a>
+</section>
+
+<hr>
+
+<section>
+    <h3>Import</h3>
+    <p style="color: var(--pico-muted-color);">
+        Restores every config file this bundle contains, regenerates
+        <code>icecast.xml</code>/<code>radio.liq</code> and restarts
+        Icecast/Liquidsoap, and redeploys every scheduled task. Does
+        <strong>not</strong> automatically apply the restored install mode
+        (mounting NFS, restarting MariaDB, etc.) — visit
+        <a href="/mode">Mode</a> afterward and click Apply if you want that
+        to actually take effect.
+    </p>
+    <form method="POST" action="/export/import" enctype="multipart/form-data"
+          onsubmit="return confirm('Import this bundle? This overwrites the current broadcast/patchbay/mode/tasks config and restarts Icecast/Liquidsoap.');">
+        <label>
+            Configuration bundle
+            <input type="file" name="bundle" accept="application/json" required>
+        </label>
+        <button type="submit" class="outline">Import</button>
+    </form>
+</section>
+{{end}}

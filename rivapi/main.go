@@ -74,16 +74,32 @@ func main() {
 		r.Get("/patchbay", dash.Patchbay)
 		r.Post("/patchbay/connect", dash.PatchbayConnect)
 		r.Post("/patchbay/disconnect", dash.PatchbayDisconnect)
+		r.Post("/patchbay/disconnect-unsaved", dash.PatchbayDisconnectUnsaved)
 		r.Post("/patchbay/save", dash.PatchbaySave)
+		r.Get("/mode", dash.Mode)
+		r.Post("/mode/apply", dash.ModeApply)
+		r.Get("/tasks", dash.Tasks)
+		r.Post("/tasks/add", dash.TasksAdd)
+		r.Post("/tasks/{id}/delete", dash.TasksDelete)
+		r.Post("/tasks/{id}/toggle", dash.TasksToggle)
+		r.Post("/tasks/{id}/run", dash.TasksRunNow)
+		r.Get("/export", dash.Export)
+		r.Get("/export/download", dash.ExportDownload)
+		r.Post("/export/import", dash.ExportImport)
 	})
 
 	// Patchbay link reconciler: PipeWire links don't survive either
 	// endpoint's restart, and WirePlumber's own declarative target-metadata
 	// mechanism doesn't apply to JACK-bridged ports (verified 2026-07-01 —
 	// see docs/specs/0007-pipewire-audio-engine.md), so persistence is done
-	// here instead: poll the saved link set and re-apply anything missing.
+	// here instead: poll the saved link set and force the live graph to
+	// match it exactly (see ReconcileLinks). 30s, not 5s: this is now
+	// authoritative over the whole graph once anything has been saved, so
+	// the interval doubles as how long an unsaved ad-hoc test connection
+	// survives before being torn back out -- long enough to actually listen
+	// and decide, short enough to still self-heal promptly after a reboot.
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
 			if err := store.ReconcileLinks(store.DesiredLinksPath); err != nil {

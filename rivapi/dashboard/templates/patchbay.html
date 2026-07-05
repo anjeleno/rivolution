@@ -8,16 +8,28 @@
                 Save current patch
             </button>
         </form>
+        <form method="post" action="/patchbay/disconnect-unsaved" style="margin:0; display:inline;"
+              onsubmit="return confirm('Disconnect every connection not currently saved? This won\'t touch any saved connection.');">
+            <button type="submit" class="outline secondary"
+                    title="Remove every connection below marked &quot;no&quot; in one click, without touching saved connections">
+                Disconnect unsaved
+            </button>
+        </form>
         <a href="/patchbay" role="button" class="outline secondary">Refresh</a>
     </div>
 </div>
 
 <p style="color: var(--pico-muted-color); margin-bottom:1rem;">
     Saved connections are automatically re-applied in the background
-    (checked every 5s) whenever both ports exist again — no need to
+    (checked every 30s) whenever both ports exist again — no need to
     manually reconnect after a client restart. This talks directly to
     <code>pw-link</code>, not WirePlumber's own policy system, which does
     not apply to JACK-bridged ports (verified 2026-07-01, see spec 0007).
+    A device that probes several instances while its I/O is being
+    configured (e.g. Stereo Tool's ALSA/JACK driver) can leave a pile of
+    unwanted auto-detected connections behind on a box where nothing has
+    been saved yet — "Disconnect unsaved" clears all of them at once so
+    you can connect and save just the ones actually wanted.
 </p>
 
 {{if .Error}}
@@ -25,6 +37,9 @@
 {{end}}
 {{if .JustSaved}}
 <p><ins>Current patch saved — will be re-applied automatically after any restart.</ins></p>
+{{end}}
+{{if .DisconnectedCount}}
+<p><ins>Disconnected {{.DisconnectedCount}} unsaved connection(s).</ins></p>
 {{end}}
 
 <h3>Current connections</h3>
