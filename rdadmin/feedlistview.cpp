@@ -101,7 +101,7 @@ void FeedListView::generateFrontItemReportData()
   if(feed->frontActiveCasts(&front_ids,&err_msg)) {
     QString xml=feed->rssXml(&err_msg,now,&ok,&front_ids);
     d_xslt_engines.
-      push_back(new RDXsltEngine("/usr/share/rivendell/rss-front-item-report.xsl",this));
+      push_back(new RDXsltEngine("/usr/share/rivolution/rss-front-item-report.xsl",this));
     if(d_xslt_engines.back()->transformXml(&output_filename,xml,&err_msg)) {
       RDWebBrowser("file://"+output_filename);
     }
@@ -132,7 +132,7 @@ void FeedListView::generateBackItemReportData()
   if(feed->backActiveCasts(&back_ids,&err_msg)) {
     QString xml=feed->rssXml(&err_msg,now,&ok,&back_ids);
     d_xslt_engines.
-      push_back(new RDXsltEngine("/usr/share/rivendell/rss-back-item-report.xsl",this));
+      push_back(new RDXsltEngine("/usr/share/rivolution/rss-back-item-report.xsl",this));
     if(d_xslt_engines.back()->transformXml(&output_filename,xml,&err_msg)) {
       RDWebBrowser("file://"+output_filename);
     }

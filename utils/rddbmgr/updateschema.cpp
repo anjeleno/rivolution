@@ -9419,7 +9419,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
       return false;
     }
     sql=QString("alter table `RDAIRPLAY` ")+
-      "modify column `SKIN_PATH` varchar(191) default '/usr/share/pixmaps/rivendell/rdairplay_skin.png'";
+      "modify column `SKIN_PATH` varchar(191) default '/usr/share/pixmaps/rivolution/rdairplay_skin.png'";
     if(!RDSqlQuery::apply(sql,err_msg)) {
       return false;
     }
@@ -9530,7 +9530,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
       return false;
     }
     sql=QString("alter table `RDPANEL` ")+
-      "modify column `SKIN_PATH` varchar(191) default '/usr/share/pixmaps/rivendell/rdpanel_skin.png'";
+      "modify column `SKIN_PATH` varchar(191) default '/usr/share/pixmaps/rivolution/rdpanel_skin.png'";
     if(!RDSqlQuery::apply(sql,err_msg)) {
       return false;
     }
@@ -11352,7 +11352,7 @@ bool MainObject::UpdateSchema(int cur_schema,int set_schema,QString *err_msg)
 
   if((cur_schema<355)&&(set_schema>cur_schema)) {
     sql=QString("alter table `RDAIRPLAY` ")+
-      "add column `LOGO_PATH` varchar(191) default '/usr/share/pixmaps/rivendell/rdairplay_logo.png' after `SKIN_PATH`";
+      "add column `LOGO_PATH` varchar(191) default '/usr/share/pixmaps/rivolution/rdairplay_logo.png' after `SKIN_PATH`";
     if(!RDSqlQuery::apply(sql,err_msg)) {
       return false;
     }

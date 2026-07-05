@@ -86,10 +86,10 @@ case "$1" in
       # UID/GID 150/151, still referenced by file ownership below
       # (rdselect_helper, webget.cgi, /var/log/rivendell) even though the
       # actual broadcast services now run as rd.
-      /usr/sbin/groupadd -r -g 150 rivendell
-      /usr/sbin/useradd -o -u 150 -g rivendell -s /bin/false -r -c "Rivendell radio automation system" -d /var/snd rivendell
-      /usr/sbin/groupadd -r -g 151 pypad
-      /usr/sbin/useradd -o -u 151 -g pypad -s /bin/false -r -c "Rivendell PyPAD scripts" -d /dev/null pypad
+      getent group rivendell >/dev/null || /usr/sbin/groupadd -r -g 150 rivendell
+      getent passwd rivendell >/dev/null || /usr/sbin/useradd -o -u 150 -g rivendell -s /bin/false -r -c "Rivendell radio automation system" -d /var/snd rivendell
+      getent group pypad >/dev/null || /usr/sbin/groupadd -r -g 151 pypad
+      getent passwd pypad >/dev/null || /usr/sbin/useradd -o -u 151 -g pypad -s /bin/false -r -c "Rivendell PyPAD scripts" -d /dev/null pypad
 
       # /var/snd was owned rivendell:rivendell 775 -- rd (the account
       # caed/rdimport/rdlibrary actually run as, per the spec 0007/0010

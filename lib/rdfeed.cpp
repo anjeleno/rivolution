@@ -1978,7 +1978,7 @@ bool RDFeed::frontActiveCasts(QList<unsigned> *cast_ids,QString *err_msg)
   cast_ids->clear();
   if(rssFrontXml(&xml,err_msg)) {
     RDXsltEngine *xslt=
-      new RDXsltEngine("/usr/share/rivendell/rss-item-enclosures.xsl",this);
+      new RDXsltEngine("/usr/share/rivolution/rss-item-enclosures.xsl",this);
     if(xslt->transform(&text,xml,err_msg)) {
       QStringList f0=text.split("|",Qt::SkipEmptyParts);
       for(int i=0;i<f0.size();i++) {
@@ -2031,7 +2031,7 @@ bool RDFeed::backActiveCasts(QList<unsigned> *cast_ids,QString *err_msg)
   cast_ids->clear();
   if(rssBackXml(&xml,err_msg)) {
     RDXsltEngine *xslt=
-      new RDXsltEngine("/usr/share/rivendell/rss-item-enclosures.xsl",
+      new RDXsltEngine("/usr/share/rivolution/rss-item-enclosures.xsl",
 		       this);
     if(xslt->transform(&text,xml,err_msg)) {
       QStringList f0=text.split("|",Qt::SkipEmptyParts);

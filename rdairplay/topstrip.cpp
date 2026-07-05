@@ -57,7 +57,7 @@ TopStrip::TopStrip(QWidget *parent)
   //
   QPixmap pix(rda->airplayConf()->logoPath());
   if(pix.isNull()) {
-    pix.load("/usr/share/pixmaps/rivendell/rdairplay_logo.png");
+    pix.load("/usr/share/pixmaps/rivolution/rdairplay_logo.png");
   }
   d_logo=new QLabel(this);
   d_logo->setAlignment(Qt::AlignCenter);
