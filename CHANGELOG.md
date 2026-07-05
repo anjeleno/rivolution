@@ -9,6 +9,24 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-04
 
+- New dashboard page, `/export`: bundles the broadcast/Icecast/
+  Liquidsoap config, patchbay routing, install mode, and scheduled
+  tasks — plus Stereo Tool's own `~/.stereo_tool.rc` and saved
+  `~/.stereo_tool.presets/*.sts` presets, base64-encoded since they're
+  not JSON-native — into one downloadable/importable JSON file, for
+  migration or disaster recovery. Two of the four dashboard configs
+  were already single-source-of-truth JSON (`broadcast.json`,
+  `patchbay.json`); this just bundles what already existed rather than
+  retrofitting anything. Import restores every file, regenerates
+  `icecast.xml`/`radio.liq` and restarts Icecast/Liquidsoap, and
+  redeploys every scheduled task's systemd units — but deliberately
+  does **not** auto-apply the restored install mode (mounting NFS,
+  restarting MariaDB), since that's a much bigger side effect than
+  restoring a config file; the operator applies it deliberately from
+  `/mode` afterward. New files: `rivapi/store/export.go`,
+  `rivapi/dashboard/handlers_export.go`,
+  `rivapi/dashboard/templates/export.html`. **Not yet verified on a
+  real box**, same caveat as `/mode` and `/tasks`.
 - New dashboard page, `/tasks`: closes the gap tracked in `BACKLOG.md`
   since the old Ansible `broadcast_advanced` role was removed
   2026-07-01 (nightly DB backup and log generation, previously

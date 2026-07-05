@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -183,6 +184,16 @@ func sudoRun(args ...string) error {
 
 func sudoSystemctl(args ...string) error {
 	return sudoRun(append([]string{"systemctl"}, args...)...)
+}
+
+// isExitCode reports whether err (possibly wrapped, e.g. by sudoRun's
+// fmt.Errorf("...: %w: ...")) is an *exec.ExitError with the given code.
+// Same check dashboard.isExitCode makes for BroadcastSave's liquidsoap
+// tolerance, duplicated here rather than exported across packages for one
+// two-line helper.
+func isExitCode(err error, code int) bool {
+	var exitErr *exec.ExitError
+	return errors.As(err, &exitErr) && exitErr.ExitCode() == code
 }
 
 func aptInstallMariaDB() error {

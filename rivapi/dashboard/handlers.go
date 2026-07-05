@@ -68,6 +68,7 @@ var (
 	tmplPatchbay         = pageTmpl("patchbay.html")
 	tmplMode             = pageTmpl("mode.html")
 	tmplTasks            = pageTmpl("tasks.html")
+	tmplExport           = pageTmpl("export.html")
 	tmplGroupsList       = template.Must(template.ParseFS(assets, "templates/groups_list.html"))
 	tmplCartsList        = template.Must(template.ParseFS(assets, "templates/carts_list.html"))
 	tmplSystemStatus     = template.Must(template.ParseFS(assets, "templates/system_status.html"))
