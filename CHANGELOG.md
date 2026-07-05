@@ -9,6 +9,18 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-05
 
+- `debian/rules.src`: amd64 builds now compile with `-march=x86-64-v2`
+  instead of whatever the build machine's toolchain defaults to.
+  Every C++ binary this project builds (confirmed via `readelf -n`
+  across the whole package) required x86-64-v3 (AVX2/BMI1/BMI2/FMA/
+  MOVBE/LZCNT) despite no `-march`/`-mtune` ever being set explicitly
+  anywhere in this project's build -- a real crash on genuine
+  pre-Haswell hardware (`rddbmgr: CPU ISA level is lower than
+  required`, `postinst` exit 127), not a virtualization artifact.
+  MariaDB itself was not the cause -- Ubuntu's own `mariadb-server`
+  package already targets the universal `x86-64-baseline`. arm64
+  builds are unaffected (`-march` is an x86-only concept).
+
 - `debian/control.src`: replaced `python3-pymysql` with `python3-mysqldb`
   in `rivolution`'s `Depends`. Every PyPAD script (`apis/pypad/api/
   pypad.py`, shared by all of them) and `rdautocheck`/`rdautoback`

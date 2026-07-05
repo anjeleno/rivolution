@@ -613,3 +613,18 @@ just silently vanishes from the page. A "Saved but not currently
 connected" section would at least make an orphaned save visible
 instead of silent, independent of whether the auto-pin idea above ever
 gets built.
+
+## Per-function AVX2/BMI2 multi-versioning for audio processing code
+
+amd64 builds now compile with a global `-march=x86-64-v2` cap (see
+`ARCHITECTURE.md`'s "x86-64 ISA baseline" section for the full story) --
+a real crash on genuine pre-Haswell hardware forced this, and nothing in
+the affected binaries is known hot, vectorizable code, so the cap costs
+nothing measurable today. Not fixed, and deliberately not attempted
+speculatively: whether any part of the audio processing chain (`caed`,
+`rdaudioconvert`'s resampling) has an actual hot loop that would benefit
+from AVX2/BMI2/FMA specifically. GCC's function multi-versioning
+(`target_clones`) can restore v3-class speed for one specific,
+individually annotated function while leaving the rest of the program at
+the safe v2 baseline -- worth picking up only if real profiling finds an
+actual bottleneck there, not before.
