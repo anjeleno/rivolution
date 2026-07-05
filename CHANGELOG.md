@@ -7,6 +7,22 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-06
+
+- `rivapi/store/mode_apply.go`: `ApplyMode` now writes `rd.conf`'s
+  `[AudioStore]` `MountSource`/`MountType` fields for client mode
+  (cleared back to empty for standalone/server). Found on the first
+  real client<->server test: the remote audio store was genuinely
+  mounted correctly (fstab entry, live NFS mount, all confirmed), but
+  Rivendell's own `RDAudioStoreValid()` (`lib/rdstatus.cpp`, used by
+  `rdmonitor`/`rdselect`) decides "local vs. remote" purely from
+  whether `[AudioStore] MountSource` is set, and for the remote case
+  confirms the mount by matching `MountSource` against `/etc/mtab`'s
+  source field. With that field left blank, Rivendell expected a plain
+  local directory, found a real NFS mount sitting on top of it
+  instead, and reported the station unhealthy despite the mount
+  working perfectly.
+
 ## 2026-07-05
 
 - `rivapi/store/mode_apply.go`: `/mode`'s `apt-get install` calls

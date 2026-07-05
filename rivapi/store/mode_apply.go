@@ -79,6 +79,11 @@ func ApplyMode(cfg ModeConfig) ([]string, error) {
 		}
 		step("/var/snd confirmed as a local directory (not NFS-mounted).")
 
+		if err := writeRdConfAudioStore("", ""); err != nil {
+			return steps, fmt.Errorf("updating rd.conf: %w", err)
+		}
+		step("rd.conf [AudioStore] cleared (local audio store).")
+
 		if cfg.Mode == ModeServer {
 			if err := aptInstallNFSServer(); err != nil {
 				return steps, fmt.Errorf("installing nfs-kernel-server: %w", err)
@@ -151,6 +156,11 @@ func ApplyMode(cfg ModeConfig) ([]string, error) {
 			return steps, fmt.Errorf("updating rd.conf: %w", err)
 		}
 		step("rd.conf [mySQL] pointed at the remote host.")
+
+		if err := writeRdConfAudioStore(cfg.RemoteNFSHost+":/srv/nfs4/var/snd", "nfs4"); err != nil {
+			return steps, fmt.Errorf("updating rd.conf: %w", err)
+		}
+		step("rd.conf [AudioStore] pointed at the remote mount.")
 
 	default:
 		return steps, fmt.Errorf("unknown mode %q", cfg.Mode)
@@ -336,6 +346,56 @@ func writeRdConfMySQL(host, user, password, database string) error {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
 			inSection = trimmed == "[mySQL]"
+			continue
+		}
+		if !inSection {
+			continue
+		}
+		if k, _, ok := strings.Cut(trimmed, "="); ok {
+			if v, known := fields[strings.TrimSpace(k)]; known {
+				lines[i] = k + "=" + v
+			}
+		}
+	}
+
+	staged, err := writeStaged("rd.conf.staged", strings.Join(lines, "\n"))
+	if err != nil {
+		return err
+	}
+	return sudoRun("install", "-o", "root", "-g", "root", "-m", "644", staged, realPath)
+}
+
+// writeRdConfAudioStore rewrites only [AudioStore]'s MountSource/MountType
+// fields, same pattern as writeRdConfMySQL. Rivendell's own health checks
+// (RDAudioStoreValid, lib/rdstatus.cpp -- used by rdmonitor(1)/rdselect(1))
+// decide whether the audio store is "local" or "remote" purely from whether
+// MountSource is empty, and for the remote case, confirm the mount by
+// matching MountSource against /etc/mtab's source field. Confirmed live
+// 2026-07-06: leaving this section blank while /var/snd is actually a real
+// NFS mount (which our own fstab/autofs plumbing sets up independently of
+// rd.conf) makes Rivendell think a local audio store somehow ended up on a
+// separate mount, and RDAudioStoreValid reports the station unhealthy even
+// though the mount itself is completely fine. MountOptions/CaeHostname/
+// XportHostname are left untouched -- MountOptions ships a sane "defaults"
+// in the base rd.conf template, and Cae/XportHostname only matter for
+// split-host topologies this project's client/server modes don't create.
+func writeRdConfAudioStore(mountSource, mountType string) error {
+	const realPath = "/etc/rivendell.d/rd-default.conf"
+	data, err := os.ReadFile(realPath)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", realPath, err)
+	}
+
+	fields := map[string]string{
+		"MountSource": mountSource,
+		"MountType":   mountType,
+	}
+	lines := strings.Split(string(data), "\n")
+	inSection := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			inSection = trimmed == "[AudioStore]"
 			continue
 		}
 		if !inSection {
