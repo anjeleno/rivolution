@@ -7,7 +7,7 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
-## 2026-07-06
+## 2026-07-05
 
 - `rivapi/store/mode_apply.go`: client mode's `/var/snd` `fstab` entry now
   carries `x-systemd.after=tailscaled.service`. Found via a real reboot
@@ -50,8 +50,6 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   local directory, found a real NFS mount sitting on top of it
   instead, and reported the station unhealthy despite the mount
   working perfectly.
-
-## 2026-07-05
 
 - `rivapi/store/mode_apply.go`: `/mode`'s `apt-get install` calls
   (mariadb-server, nfs-kernel-server, nfs-common/autofs) now retry for

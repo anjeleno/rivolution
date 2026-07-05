@@ -376,7 +376,7 @@ func writeRdConfMySQL(host, user, password, database string) error {
 // decide whether the audio store is "local" or "remote" purely from whether
 // MountSource is empty, and for the remote case, confirm the mount by
 // matching MountSource against /etc/mtab's source field. Confirmed live
-// 2026-07-06: leaving this section blank while /var/snd is actually a real
+// 2026-07-05: leaving this section blank while /var/snd is actually a real
 // NFS mount (which our own fstab/autofs plumbing sets up independently of
 // rd.conf) makes Rivendell think a local audio store somehow ended up on a
 // separate mount, and RDAudioStoreValid reports the station unhealthy even
@@ -455,7 +455,7 @@ func createNFSExportDirs() error {
 // exportBindMounts pairs each real, canonical directory with the
 // /srv/nfs4/... path createNFSExportDirs/writeExports already create and
 // export. Bind-mounting the real directory into place is the step that was
-// missing entirely -- confirmed live 2026-07-06: /srv/nfs4/var/snd existed,
+// missing entirely -- confirmed live 2026-07-05: /srv/nfs4/var/snd existed,
 // was correctly exported, and was correctly mounted by a real client, but
 // was a structurally separate, permanently empty directory from the real
 // /var/snd (different inode, same filesystem), so a client mounting it saw
@@ -498,7 +498,7 @@ func bindMountExportDirs() error {
 
 // isMountpoint reports whether target is currently a mount point, checked
 // via mountpoint(1)'s exit status rather than mountSourceOf's /proc/mounts
-// source-string match -- confirmed live 2026-07-06 that a bind mount of a
+// source-string match -- confirmed live 2026-07-05 that a bind mount of a
 // plain directory doesn't preserve the literal source path in /proc/mounts
 // (the kernel records the underlying filesystem/device there instead), so
 // source-matching can't tell a bind mount's origin the way it can for a
@@ -633,7 +633,7 @@ func mountRemoteVarSnd(host string) error {
 // x-systemd.after=tailscaled.service: without it, systemd-fstab-generator
 // has no idea this mount has anything to do with Tailscale (the transport
 // this project's remote hosts happen to be reached over) -- confirmed live
-// 2026-07-06 via a real reboot that hung for minutes: tailscaled.service
+// 2026-07-05 via a real reboot that hung for minutes: tailscaled.service
 // had already stopped by the time var-snd.mount tried to unmount, and a
 // `hard` NFS mount (deliberate, for data safety) never gives up retrying
 // against a now-unreachable server, so the unmount just sat there until
