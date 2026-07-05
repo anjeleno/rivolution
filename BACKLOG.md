@@ -579,20 +579,36 @@ operational gaps until this lands. The removed role's content is still
 in `rivolution-unified-installer`'s git history if needed as a
 reference for what the old scripts actually did.
 
-## Patchbay can't persist connections to clients with PID-embedded JACK names
+## Patchbay can't persist connections to clients with PID-embedded JACK names (Stereo Tool's case fixed; general case still open)
 
 Some ALSA-JACK-bridged software (confirmed with Stereo Tool) names its
 own JACK client after its own process ID (`stereo_tool.C.<pid>.<n>`),
 which changes every restart. The dashboard's patchbay Save/Reconcile
-feature persists by exact name match, so it can never restore a
-connection to a client like this -- not a bug in the reconciler, a
+feature used to persist by exact name match, so it could never restore
+a connection to a client like this -- not a bug in the reconciler, a
 structural limit of name-matching against an identifier that's
-guaranteed to change. Stereo Tool's own case is worked around via
-`~/.asoundrc`'s `pcm.jack` block, which hardcodes the stable *target*
-port names instead of trying to match the unstable *source* name.
+guaranteed to change. Stereo Tool's own auto-*connection* is separately
+worked around via `~/.asoundrc`'s `pcm.jack` block, which hardcodes the
+stable *target* port names instead of trying to match the unstable
+*source* name -- but the bidirectional reconciler was tearing that
+auto-connection back down every ~30 seconds anyway, since it could
+never match the stale PID saved in `patchbay.json`.
 
-**Deferred idea, not yet scoped or built:** a two-tier fix for when a
-future user hits the same quirk with different software/hardware --
+**Fixed for Stereo Tool specifically:** `store/patchbay.go`'s
+`normalizedLinkKey`/`normalizePortName` collapse Stereo Tool's PID
+segment (`stereo_tool\.[CP]\.\d+\.` -> pattern-matched, not
+exact-matched) before comparing saved links against live ones, so a
+saved link is recognized as already satisfied -- and a live link
+recognized as already saved -- regardless of which PID Stereo Tool has
+this run. Deliberately scoped narrowly to Stereo Tool's known pattern
+rather than a general mechanism, since it was the only confirmed real
+case at the time.
+
+**Still open, deliberately not built:** the *general* version of this
+for whenever a second, different piece of software hits the same
+quirk -- Stereo Tool's fix above is hardcoded to its specific naming
+pattern, not reusable as-is for anything else. A real general fix would
+need:
 
 - Detect it: a saved connection that never reconnects while a
   similarly-named live connection keeps appearing (same prefix/suffix,
@@ -603,15 +619,16 @@ future user hits the same quirk with different software/hardware --
   Tool's existing workaround.
 - For native JACK/PipeWire clients with unstable names (no ALSA layer
   to hook into at all): the only real generalization is pattern-based
-  matching inside patchbay's own persistence -- storing a glob/regex
-  instead of an exact name -- which is a materially bigger change to
-  `store/patchbay.go`'s data model, not a quick add.
+  matching inside patchbay's own persistence for an arbitrary detected
+  pattern -- storing a glob/regex instead of an exact name -- which is
+  a materially bigger change to `store/patchbay.go`'s data model than
+  the Stereo-Tool-specific fix above, not a quick add.
 
 Related, smaller gap also not yet built: `/patchbay` currently shows
 nothing at all when a saved connection can't be re-established -- it
 just silently vanishes from the page. A "Saved but not currently
 connected" section would at least make an orphaned save visible
-instead of silent, independent of whether the auto-pin idea above ever
+instead of silent, independent of whether the general fix above ever
 gets built.
 
 ## Per-function AVX2/BMI2 multi-versioning for audio processing code
