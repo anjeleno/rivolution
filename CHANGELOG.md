@@ -9,6 +9,16 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-04
 
+- `rivapi/store/patchbay.go`, `rivapi/main.go`: the patchbay link
+  reconciler now removes live connections that aren't in the saved
+  set, not just adds missing ones — previously additive-only, which
+  let WirePlumber's own default auto-linking connect ports on its own
+  at boot and left them there indefinitely alongside the saved
+  patches, only ever cleared by a manual full stack restart. Reconcile
+  interval widened from 5s to 30s at the same time, since the
+  reconciler is now authoritative and a too-short interval would tear
+  out an ad-hoc test connection before there's time to listen to it.
+  See `KNOWN_ISSUES.md`.
 - `debian/postinst`: the `rivendell`/`pypad` system account creation
   (`groupadd`/`useradd`) now checks `getent` first instead of running
   unconditionally under `set -e`. Found via a real install that failed

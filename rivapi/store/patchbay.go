@@ -59,21 +59,39 @@ func SaveDesiredLinks(links []PatchLink, path string) error {
 	return os.Rename(tmp, path)
 }
 
-// ReconcileLinks re-applies any saved link that isn't currently present in
-// the live graph. Ports that don't exist yet (e.g. a client hasn't started)
-// fail individually via Link() and are skipped, not treated as fatal —
-// reconciliation just tries again on the next call.
+// ReconcileLinks forces the live graph to exactly match the saved link set:
+// applies any saved link that isn't currently present, and removes any live
+// link that isn't in the saved set. The removal half matters as much as the
+// addition half — WirePlumber's own default auto-linking policy connects
+// newly-appeared JACK-bridged ports to default sinks/sources on its own
+// initiative (this project ships no override disabling that), and previous
+// additive-only reconciliation left those extra connections in place
+// indefinitely, on top of the saved patches, until an operator noticed and
+// manually restarted the stack. Ports that don't exist yet (e.g. a client
+// hasn't started) fail individually via Link()/Unlink() and are skipped, not
+// treated as fatal — reconciliation just tries again on the next call.
 func ReconcileLinks(path string) error {
 	desired, err := LoadDesiredLinks(path)
 	if err != nil {
 		return fmt.Errorf("load desired links: %w", err)
 	}
 	if len(desired) == 0 {
+		// Nothing has ever been saved (or the saved set is deliberately
+		// empty) -- treat this as "no opinion yet" rather than "tear down
+		// every connection." Once at least one link has been saved, this
+		// function becomes authoritative over the whole graph; until then,
+		// forcing an empty graph on every tick would fight a fresh install's
+		// initial routing (or WirePlumber's own defaults) with nothing to
+		// replace it with.
 		return nil
 	}
 	current, err := ListPatchLinks()
 	if err != nil {
 		return fmt.Errorf("list current links: %w", err)
+	}
+	want := make(map[string]bool, len(desired))
+	for _, l := range desired {
+		want[linkPairKey(l.Output, l.Input)] = true
 	}
 	have := make(map[string]bool, len(current))
 	for _, l := range current {
@@ -82,6 +100,11 @@ func ReconcileLinks(path string) error {
 	for _, l := range desired {
 		if !have[linkPairKey(l.Output, l.Input)] {
 			_ = Link(l.Output, l.Input) // best-effort; port may not exist yet
+		}
+	}
+	for _, l := range current {
+		if !want[linkPairKey(l.Output, l.Input)] {
+			_ = Unlink(l.Output, l.Input) // best-effort; may already be gone
 		}
 	}
 	return nil

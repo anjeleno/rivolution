@@ -405,3 +405,33 @@ this project ships.
 running on (not over the network) and whitelist your IP from its own
 settings — the access-denied page itself shows the exact IP to add and
 the accepted formats. This only needs to be done once per machine.
+
+## Patchbay saved patches didn't survive a reboot without manually restarting the stack — fixed 2026-07-04, pending real-world confirmation
+
+**Symptom:** after a reboot, `/patchbay` didn't apply the saved
+persistent connections on its own — it came up with far more
+connections than saved, seemingly linking every available output to
+every available input. Going to the System page and clicking "Restart
+Stack" would then correctly reduce the graph down to just the saved
+connections.
+
+**Cause:** the background reconciler that's supposed to keep the live
+PipeWire graph matching the saved connection set only ever *added*
+missing saved connections — it never removed a live connection that
+wasn't part of the saved set. WirePlumber's own default auto-linking
+policy connects newly-appeared JACK-bridged ports to default sinks/
+sources on its own initiative at boot (this project ships no override
+disabling that), and those extra connections then sat there
+indefinitely alongside the saved ones, since nothing ever cleared them
+except a full stack restart giving the reconciler a clean slate to
+build from.
+
+**Fix:** the reconciler is now authoritative over the whole graph
+(once at least one connection set has actually been saved) — it
+removes anything live that isn't in the saved set, not just adds
+what's missing. Runs every 30 seconds rather than 5, both to reduce
+overhead and to give a deliberately-unsaved ad-hoc test connection a
+real window to listen to before it's torn back out.
+
+**Workaround (if still seen after updating):** Restart Stack from the
+System page once after a reboot.

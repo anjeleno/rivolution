@@ -81,9 +81,14 @@ func main() {
 	// endpoint's restart, and WirePlumber's own declarative target-metadata
 	// mechanism doesn't apply to JACK-bridged ports (verified 2026-07-01 —
 	// see docs/specs/0007-pipewire-audio-engine.md), so persistence is done
-	// here instead: poll the saved link set and re-apply anything missing.
+	// here instead: poll the saved link set and force the live graph to
+	// match it exactly (see ReconcileLinks). 30s, not 5s: this is now
+	// authoritative over the whole graph once anything has been saved, so
+	// the interval doubles as how long an unsaved ad-hoc test connection
+	// survives before being torn back out -- long enough to actually listen
+	// and decide, short enough to still self-heal promptly after a reboot.
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
 			if err := store.ReconcileLinks(store.DesiredLinksPath); err != nil {
