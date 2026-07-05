@@ -14,6 +14,14 @@
     mode, <code>mariadb.service</code>/<code>autofs.service</code>.
 </p>
 
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
+    <strong>Do not run this on a machine already live in production.</strong>
+    Switching mode restarts <code>rivendell.service</code> and can take the
+    database and/or audio store offline for the duration — treat this as a
+    provisioning-time or maintenance-window action, not something to click
+    on a station that's currently on air.
+</div>
+
 {{if .ApplyError}}
 <div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
     <strong>Apply failed:</strong> {{.ApplyError}}
@@ -108,6 +116,11 @@
                 <input type="text" name="remote_nfs_host" value="{{.Status.Config.RemoteNFSHost}}" placeholder="203.0.113.5">
             </label>
         </div>
+
+        <label>
+            Confirm your password to apply this change
+            <input type="password" name="confirm_password" autocomplete="current-password" required>
+        </label>
 
         <button type="submit" class="outline">Apply</button>
     </form>

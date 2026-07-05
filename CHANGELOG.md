@@ -9,6 +9,16 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-04
 
+- `/mode` now requires re-entering your password before applying a
+  switch, and shows a prominent warning against running it on a
+  machine already live in production. Reuses `auth.CreateTicket`
+  (renamed from the unexported `createTicket`) — the same real
+  Rivendell-account credential that already gates the whole dashboard
+  — rather than a separate app-only secret or the Linux account's own
+  system password (which would need a new PAM dependency and either
+  `shadow`-group membership or a privileged helper to verify at all).
+  Checked before anything is saved or touched; a failed confirmation
+  changes nothing.
 - New dashboard page, `/export`: bundles the broadcast/Icecast/
   Liquidsoap config, patchbay routing, install mode, and scheduled
   tasks — plus Stereo Tool's own `~/.stereo_tool.rc` and saved

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/anjeleno/rivolution/rivapi/auth"
 	"github.com/anjeleno/rivolution/rivapi/store"
 )
 
@@ -81,6 +82,24 @@ func (h *Handler) ModeApply(w http.ResponseWriter, r *http.Request) {
 	case store.ModeStandalone, store.ModeServer, store.ModeClient:
 	default:
 		render(errors.New("choose a valid mode (standalone, server, or client)"), nil)
+		return
+	}
+
+	// Re-authentication gate: switching mode can take a live station's
+	// database/audio store offline, so require the operator to re-enter
+	// their password immediately before it happens, not just rely on
+	// their existing session cookie -- the same real Rivendell-account
+	// credential that already gates the whole dashboard (auth.CreateTicket,
+	// the same check LoginHandler/DashboardLoginHandler make), not a
+	// separate secret. Checked before anything is saved or touched.
+	username := auth.UsernameFromContext(r.Context())
+	confirmPassword := r.FormValue("confirm_password")
+	if confirmPassword == "" {
+		render(errors.New("re-enter your password to confirm this mode switch"), nil)
+		return
+	}
+	if _, _, err := auth.CreateTicket(h.cfg, h.tickets, username, confirmPassword); err != nil {
+		render(errors.New("password confirmation failed — mode was not changed"), nil)
 		return
 	}
 
