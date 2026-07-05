@@ -9,6 +9,23 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-04
 
+- `conf/sudoers.d/rivapi`: fixed a real, live regression found on a fresh
+  install -- every wildcarded `Cmnd_Alias` argument (the NFS-mount
+  remote host, the per-task systemd unit filenames) failed to parse
+  under Ubuntu 26.04's `sudo-rs` (Ubuntu's Rust reimplementation of
+  sudo, which rejects wildcards in command arguments outright, unlike
+  traditional GNU sudo), silently dropping every `NOPASSWD` rule in the
+  file -- not a lockout (normal password-based `sudo` still worked),
+  but the dashboard's whole point of not prompting for a password
+  broke entirely. Fixed by moving the varying value into small,
+  fixed-path helper scripts (`store/tasks_deploy.go`'s
+  `install-unit.sh`/`remove-unit.sh`/`task-systemctl.sh`,
+  `store/mode_apply.go`'s `mount-var-snd.sh`), whitelisted by bare path
+  with no arguments specified (which grants any arguments) and
+  validated internally in shell -- works identically under both sudo
+  implementations. Verified with `visudo -c` this time, not just by
+  reasoning about it. See `ARCHITECTURE.md`'s new mistake-class
+  write-up.
 - `/mode` now requires re-entering your password before applying a
   switch, and shows a prominent warning against running it on a
   machine already live in production. Reuses `auth.CreateTicket`

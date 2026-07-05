@@ -38,14 +38,16 @@ Cmnd_Alias RIVAPI_INSTALL = \
     /usr/bin/install -o root -g icecast -m 640 /home/rd/etc/icecast/icecast.xml /etc/icecast2/icecast.xml, \
     /usr/bin/install -m 755 /home/rd/dev/rivolution/rivapi/rivapi /usr/bin/rivapi
 
-# Mode page (standalone/server/client switching, spec TBD) -- every command
-# below is a fixed, fully-spelled-out argument list with no shell
-# involved (rivapi calls exec.Command directly, never a shell string), so
-# a wildcard here only ever matches one literal argv position, never
-# expands into a second command. The mount command's wildcard host is the
-# one place operator-entered text reaches a privileged command; rivapi
-# validates it against a strict hostname/IP character allow-list
-# (store/mode_apply.go's validHostOrIP) before ever invoking this.
+# Mode page (standalone/server/client switching). Every command below is a
+# fixed, fully-spelled-out argument list with no shell involved (rivapi
+# calls exec.Command directly, never a shell string) and, as of 2026-07-04,
+# no wildcards at all -- Ubuntu 26.04's sudo-rs (Ubuntu's Rust
+# reimplementation of sudo) rejects wildcards in command arguments outright
+# ("wildcards are not allowed in command arguments"), unlike traditional GNU
+# sudo. The one place operator-entered text (the remote NFS host) needs to
+# reach a privileged command is RIVAPI_CONTROL_SCRIPTS' mount-var-snd.sh
+# below -- whitelisted by bare path (any arguments), with the actual
+# validation moved inside the script itself.
 Cmnd_Alias RIVAPI_MODE_APT = \
     /usr/bin/apt-get install -y mariadb-server mariadb-client, \
     /usr/bin/apt-get install -y nfs-kernel-server, \
@@ -61,8 +63,6 @@ Cmnd_Alias RIVAPI_MODE_NFS_SERVER = \
     /usr/sbin/exportfs -ra
 
 Cmnd_Alias RIVAPI_MODE_NFS_CLIENT = \
-    /usr/bin/mkdir -p /var/snd, \
-    /usr/bin/mount -t nfs4 *:/srv/nfs4/var/snd /var/snd, \
     /usr/bin/umount /var/snd
 
 Cmnd_Alias RIVAPI_MODE_INSTALL = \
@@ -75,26 +75,31 @@ Cmnd_Alias RIVAPI_MODE_INSTALL = \
 
 # Scheduled Tasks page. Task IDs are always server-generated 16-character
 # hex strings (store/tasks.go's NewTaskID/validTaskID), never taken
-# directly from operator-entered text, before they're ever used in one of
-# the wildcarded paths/unit names below -- the wildcard only ever needs to
-# match rivapi's own generated filenames, not arbitrary input.
+# directly from operator-entered text -- but since they still vary per
+# task, the destination unit filename can't be a fixed sudoers argument
+# (and, as of 2026-07-04, sudo-rs won't accept a wildcard one either -- see
+# RIVAPI_MODE_APT's comment above). RIVAPI_CONTROL_SCRIPTS below whitelists
+# each control script by bare path only (no arguments specified, which
+# grants running it with any arguments) -- each script re-validates the
+# task ID shape itself in shell before touching any file, so the
+# specificity sudoers itself can no longer express lives in the script.
 Cmnd_Alias RIVAPI_TASK_HELPERS = \
     /usr/bin/mkdir -p /usr/lib/rivolution/scheduled-tasks, \
     /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/helper-db_backup.sh /usr/lib/rivolution/scheduled-tasks/db-backup.sh, \
     /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/helper-log_gen.sh /usr/lib/rivolution/scheduled-tasks/log-gen.sh, \
     /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/helper-log_reconcile.sh /usr/lib/rivolution/scheduled-tasks/log-reconcile.sh
 
-Cmnd_Alias RIVAPI_TASK_INSTALL = \
-    /usr/bin/install -m 644 /home/rd/etc/rivolution/staging/task-*.service /etc/systemd/system/rivolution-task-*.service, \
-    /usr/bin/install -m 644 /home/rd/etc/rivolution/staging/task-*.timer /etc/systemd/system/rivolution-task-*.timer
+Cmnd_Alias RIVAPI_CONTROL_SCRIPT_DEPLOY = \
+    /usr/bin/mkdir -p /usr/lib/rivolution/control-scripts, \
+    /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/control-install-unit.sh /usr/lib/rivolution/control-scripts/install-unit.sh, \
+    /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/control-remove-unit.sh /usr/lib/rivolution/control-scripts/remove-unit.sh, \
+    /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/control-task-systemctl.sh /usr/lib/rivolution/control-scripts/task-systemctl.sh, \
+    /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/control-mount-var-snd.sh /usr/lib/rivolution/control-scripts/mount-var-snd.sh
 
-Cmnd_Alias RIVAPI_TASK_SYSTEMCTL = \
-    /usr/bin/systemctl enable --now rivolution-task-*.timer, \
-    /usr/bin/systemctl disable --now rivolution-task-*.timer, \
-    /usr/bin/systemctl start rivolution-task-*.service
+Cmnd_Alias RIVAPI_CONTROL_SCRIPTS = \
+    /usr/lib/rivolution/control-scripts/install-unit.sh, \
+    /usr/lib/rivolution/control-scripts/remove-unit.sh, \
+    /usr/lib/rivolution/control-scripts/task-systemctl.sh, \
+    /usr/lib/rivolution/control-scripts/mount-var-snd.sh
 
-Cmnd_Alias RIVAPI_TASK_RM = \
-    /usr/bin/rm -f /etc/systemd/system/rivolution-task-*.service, \
-    /usr/bin/rm -f /etc/systemd/system/rivolution-task-*.timer
-
-rd ALL=(root) NOPASSWD: RIVAPI_SYSTEMCTL, RIVAPI_INSTALL, RIVAPI_MODE_APT, RIVAPI_MODE_NFS_SERVER, RIVAPI_MODE_NFS_CLIENT, RIVAPI_MODE_INSTALL, RIVAPI_TASK_HELPERS, RIVAPI_TASK_INSTALL, RIVAPI_TASK_SYSTEMCTL, RIVAPI_TASK_RM
+rd ALL=(root) NOPASSWD: RIVAPI_SYSTEMCTL, RIVAPI_INSTALL, RIVAPI_MODE_APT, RIVAPI_MODE_NFS_SERVER, RIVAPI_MODE_NFS_CLIENT, RIVAPI_MODE_INSTALL, RIVAPI_TASK_HELPERS, RIVAPI_CONTROL_SCRIPT_DEPLOY, RIVAPI_CONTROL_SCRIPTS
