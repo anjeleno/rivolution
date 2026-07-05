@@ -95,6 +95,11 @@ func ApplyMode(cfg ModeConfig) ([]string, error) {
 			}
 			step("NFS export directories created under /srv/nfs4.")
 
+			if err := bindMountExportDirs(); err != nil {
+				return steps, fmt.Errorf("bind-mounting real content into the export tree: %w", err)
+			}
+			step("Real audio store/staging directories bind-mounted into /srv/nfs4.")
+
 			if err := writeExports(); err != nil {
 				return steps, fmt.Errorf("writing /etc/exports: %w", err)
 			}
@@ -445,6 +450,97 @@ func createNFSExportDirs() error {
 		}
 	}
 	return nil
+}
+
+// exportBindMounts pairs each real, canonical directory with the
+// /srv/nfs4/... path createNFSExportDirs/writeExports already create and
+// export. Bind-mounting the real directory into place is the step that was
+// missing entirely -- confirmed live 2026-07-06: /srv/nfs4/var/snd existed,
+// was correctly exported, and was correctly mounted by a real client, but
+// was a structurally separate, permanently empty directory from the real
+// /var/snd (different inode, same filesystem), so a client mounting it saw
+// nothing regardless of how much real audio existed on the server.
+//
+// rd_xfer/music_export/music_import/traffic_export/traffic_import are
+// upstream Rivendell dropbox-location conventions this project doesn't use
+// itself, but continues to support for operators who do -- created empty if
+// they don't already exist, rather than left unexported.
+var exportBindMounts = [][2]string{
+	{varSndPath, "/srv/nfs4/var/snd"},
+	{"/home/rd/music_export", "/srv/nfs4/home/rd/music_export"},
+	{"/home/rd/music_import", "/srv/nfs4/home/rd/music_import"},
+	{"/home/rd/traffic_export", "/srv/nfs4/home/rd/traffic_export"},
+	{"/home/rd/traffic_import", "/srv/nfs4/home/rd/traffic_import"},
+	{"/home/rd/rd_xfer", "/srv/nfs4/home/rd/rd_xfer"},
+}
+
+func bindMountExportDirs() error {
+	for _, pair := range exportBindMounts {
+		src, dst := pair[0], pair[1]
+		if src != varSndPath {
+			// Under /home/rd, already owned by rd -- no sudo needed to create.
+			if err := os.MkdirAll(src, 0755); err != nil {
+				return fmt.Errorf("ensuring %s exists: %w", src, err)
+			}
+		}
+		mounted, err := isMountpoint(dst)
+		if err != nil {
+			return err
+		}
+		if !mounted {
+			if err := sudoRun("mount", "--bind", src, dst); err != nil {
+				return fmt.Errorf("bind-mounting %s onto %s: %w", src, dst, err)
+			}
+		}
+	}
+	return writeExportFstab()
+}
+
+// isMountpoint reports whether target is currently a mount point, checked
+// via mountpoint(1)'s exit status rather than mountSourceOf's /proc/mounts
+// source-string match -- confirmed live 2026-07-06 that a bind mount of a
+// plain directory doesn't preserve the literal source path in /proc/mounts
+// (the kernel records the underlying filesystem/device there instead), so
+// source-matching can't tell a bind mount's origin the way it can for a
+// real NFS mount.
+func isMountpoint(target string) (bool, error) {
+	err := exec.Command("mountpoint", "-q", target).Run()
+	if err == nil {
+		return true, nil
+	}
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return false, nil // mountpoint(1) exits 1 for "not a mount point"
+	}
+	return false, err
+}
+
+// writeExportFstab persists every exportBindMounts pair so they survive a
+// reboot, same regenerate-then-install pattern as writeFstab/writeExports.
+func writeExportFstab() error {
+	data, err := os.ReadFile(fstabPath)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", fstabPath, err)
+	}
+	lines := strings.Split(string(data), "\n")
+	have := make(map[string]bool, len(lines))
+	for _, l := range lines {
+		have[strings.TrimSpace(l)] = true
+	}
+	for _, pair := range exportBindMounts {
+		wanted := fmt.Sprintf("%s %s none bind 0 0", pair[0], pair[1])
+		if !have[wanted] {
+			lines = append(lines, wanted)
+		}
+	}
+	staged, err := writeStaged("fstab.staged", strings.Join(lines, "\n")+"\n")
+	if err != nil {
+		return err
+	}
+	if err := sudoRun("install", "-m", "644", staged, fstabPath); err != nil {
+		return err
+	}
+	return sudoSystemctl("daemon-reload")
 }
 
 // writeExports regenerates /etc/exports in full: keeps any lines already

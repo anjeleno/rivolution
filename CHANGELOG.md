@@ -9,6 +9,21 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-06
 
+- `rivapi/store/mode_apply.go`, `conf/sudoers.d/rivapi`: Server mode's
+  `/srv/nfs4/...` NFS export tree is now bind-mounted onto the real
+  audio store and staging directories instead of being permanently
+  empty. Found on the first real client<->server test: `/etc/exports`
+  and `createNFSExportDirs` were both correct, and a client mounted the
+  export successfully, but `/srv/nfs4/var/snd` had always been a
+  structurally separate, empty directory from the real `/var/snd` --
+  nothing anywhere bind-mounted (or otherwise connected) the two, so
+  every client saw nothing regardless of how much real audio existed
+  on the server. `rd_xfer`/`music_export`/`music_import`/
+  `traffic_export`/`traffic_import` are upstream Rivendell dropbox-
+  location conventions this project doesn't use itself but continues
+  to support for operators who do -- created empty if they don't
+  already exist, rather than left unexported entirely.
+
 - `rivapi/store/mode_apply.go`: `ApplyMode` now writes `rd.conf`'s
   `[AudioStore]` `MountSource`/`MountType` fields for client mode
   (cleared back to empty for standalone/server). Found on the first

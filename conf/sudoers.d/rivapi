@@ -60,6 +60,12 @@ Cmnd_Alias RIVAPI_MODE_NFS_SERVER = \
     /usr/bin/mkdir -p /srv/nfs4/home/rd/traffic_export, \
     /usr/bin/mkdir -p /srv/nfs4/home/rd/traffic_import, \
     /usr/bin/mkdir -p /srv/nfs4/home/rd/rd_xfer, \
+    /usr/bin/mount --bind /var/snd /srv/nfs4/var/snd, \
+    /usr/bin/mount --bind /home/rd/music_export /srv/nfs4/home/rd/music_export, \
+    /usr/bin/mount --bind /home/rd/music_import /srv/nfs4/home/rd/music_import, \
+    /usr/bin/mount --bind /home/rd/traffic_export /srv/nfs4/home/rd/traffic_export, \
+    /usr/bin/mount --bind /home/rd/traffic_import /srv/nfs4/home/rd/traffic_import, \
+    /usr/bin/mount --bind /home/rd/rd_xfer /srv/nfs4/home/rd/rd_xfer, \
     /usr/sbin/exportfs -ra
 
 Cmnd_Alias RIVAPI_MODE_NFS_CLIENT = \
