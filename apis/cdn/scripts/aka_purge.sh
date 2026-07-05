@@ -284,7 +284,7 @@ WARNING=
   WARNING+=$'\e[0m';
 }
 
-CONF=/usr/share/rivendell/keys/edgegrid.conf
+CONF=/usr/share/rivolution/keys/edgegrid.conf
 
 declare -a AKA_PROPS=$( get_properties "${CONF}" )
 

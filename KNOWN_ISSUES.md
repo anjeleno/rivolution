@@ -4,6 +4,64 @@ Practical limitations you'll hit running this fork today, what causes
 them, and what to do about it. For the technical "why hasn't this been
 fixed yet" detail, see [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md).
 
+## A `.deb` built for one Ubuntu release won't install on another
+
+**Symptom:** `sudo apt install ./rivolution_*.deb` fails with a wall of
+`Depends: ... but it is not installable` / `but a different version is
+to be installed` errors, all naming *newer* versions than what's on
+the box (e.g. `libc6 (>= 2.43)` when `2.39` is installed).
+
+**Cause:** `.deb` dependency version floors are generated from whatever
+libraries actually exist on the machine that built the package, not
+just requested at build time. A package built on Ubuntu 26.04 will
+never install cleanly on 24.04 through normal `apt` -- 24.04's archive
+is permanently frozen at older major versions of glibc/Qt6/etc. for its
+whole support lifetime, so the versions it wants simply don't exist
+there. Building from source on 24.04 doesn't hit this at all, since
+that compiles fresh against whatever's actually on that box.
+
+**Workaround:** grab the `.deb` built for your actual Ubuntu release.
+Releases publish an arm64 build, a primary x64 build (Ubuntu 26.04),
+and -- best-effort, temporary, until more cloud providers offer a
+26.04 image -- a second x64 build for Ubuntu 24.04, suffixed `-noble`
+in the filename (e.g. `rivolution_<version>_amd64-noble.deb`). If
+you're not sure which you have, `lsb_release -a` (or
+`cat /etc/os-release`) on the target box tells you.
+
+## A pre-built `amd64` `.deb` can fail to run at all on some virtualized/older CPUs
+
+**Symptom:** installing an `amd64` `.deb` completes the download and
+unpacking, then `postinst` fails immediately:
+```
+/usr/sbin/rddbmgr: CPU ISA level is lower than required
+dpkg: error processing package rivolution (--configure):
+ old rivolution package postinst maintainer script subprocess failed with exit status 127
+```
+
+**Cause:** the binaries in an `amd64` `.deb` are compiled with whatever
+CPU instruction-set baseline the machine that built them defaults to.
+If that machine's toolchain assumes instructions (e.g. AVX2/BMI2) that
+the *installing* machine's CPU doesn't have, the binary refuses to run
+at all -- this is a glibc dynamic-linker check, not anything
+`rivolution`'s own build configuration requests (no `-march`/`-mtune`
+is set anywhere in this project's build files). Some VPS providers
+present an intentionally conservative/generic virtual CPU model to
+guests for live-migration compatibility, which is more likely to hit
+this than bare-metal or providers that pass through more of the host
+CPU's real feature set.
+
+**Workaround:** build from source directly on the target machine
+instead of installing a pre-built `.deb` -- a native build always
+matches the actual CPU it's running on. If you hit this on a `.deb`
+install, please report which provider/CPU it was on.
+
+**Related:** if a `.deb` install fails for *any* reason (including
+this one) and you retry via `sudo apt install ./the.deb` again without
+first removing the half-configured package, you may additionally see
+`groupadd: group 'rivendell' already exists` -- a separate, now-fixed
+`postinst` bug (see `CHANGELOG.md`) where account creation wasn't
+idempotent against a previous partial run.
+
 ## AudioScience hardware (HPI/HPK) unsupported on Ubuntu 26.04
 
 **Symptom:** stations with AudioScience professional audio adapters
@@ -282,3 +340,68 @@ for the technical detail and what a real fix would require.
 
 **Workaround:** none currently; place markers with the understanding
 that sub-26ms accuracy isn't achievable in the waveform display yet.
+
+## RDAdmin's PyPAD "Add" button does nothing on a fresh install — fixed 2026-07-04, pending real-world confirmation
+
+**Symptom:** in RDAdmin, under a host's PyPAD Instances list, clicking
+"Add" is supposed to open a file picker pre-populated with the
+available PyPAD script templates. On a genuinely fresh install, it
+silently does nothing instead — no dialog, no error.
+
+**Cause:** the script-template directory RDAdmin seeds that dialog
+with was still hardcoded to this project's pre-rebrand path, while the
+actual install location had already been updated. Seeding a native
+Linux file dialog with a directory that doesn't exist fails silently
+rather than falling back to any other default, which is why it only
+ever showed up on a truly clean system — a dev box carrying stale
+files from an older build has both the old and new directories
+present, masking the mismatch completely.
+
+A follow-up sweep for the same pattern found it in several more
+places: the default RDAirplay/RDPanel skin and RDAirplay logo images
+(both the compiled-in default and the database schema default applied
+on a fresh install or downgrade), and the Akamai CDN purge script's key
+file location.
+
+**Fix:** all of the affected install-path constants and schema
+defaults now point at this project's actual install locations.
+
+**Workaround (if still seen after updating):** browse to the templates
+manually — PyPAD scripts install to `/usr/lib/rivolution/pypad`.
+
+## RSS feed generation/reports fail with an `xsltproc` error dialog on a fresh install — fixed 2026-07-04, pending real-world confirmation
+
+**Symptom:** generating a podcast/RSS feed, or a front/back feed item
+report from RDAdmin or RDCastManager, shows an error dialog mentioning
+`xsltproc` instead of producing the feed or report.
+
+**Cause:** the same stale-path pattern as the PyPAD "Add" button
+above, applied to this project's RSS XSL stylesheets — the code
+looked for them at this project's pre-rebrand path, while the actual
+install location had already moved. Unlike the PyPAD case, this one
+fails loudly, since the underlying `xsltproc(1)` call returns a
+nonzero exit status against a missing stylesheet rather than silently
+doing nothing.
+
+**Fix:** the stylesheet paths now point at this project's actual
+install location.
+
+**Workaround (if still seen after updating):** none — this is a hard
+failure with no manual path to work around from the UI.
+
+## Stereo Tool's web UI shows "Access denied" on first visit
+
+**Symptom:** browsing to Stereo Tool's own web UI (port 8079 by
+default) for the first time returns an "Access denied... your IP
+address is not whitelisted" page instead of the tool's interface.
+
+**Cause:** this is Stereo Tool's own upstream default behavior, not
+something this project's install or configuration touches — its
+device/routing settings, including this whitelist, are entirely
+self-managed in its own persisted config file, separate from anything
+this project ships.
+
+**Workaround:** open Stereo Tool's GUI directly on the machine it's
+running on (not over the network) and whitelist your IP from its own
+settings — the access-denied page itself shows the exact IP to add and
+the accepted formats. This only needs to be done once per machine.

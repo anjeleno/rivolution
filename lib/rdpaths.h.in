@@ -26,8 +26,8 @@
 /*
  * Default Skins
  */
-#define RD_DEFAULT_RDAIRPLAY_SKIN "@prefix@/share/pixmaps/rivendell/rdairplay_skin.png"
-#define RD_DEFAULT_RDPANEL_SKIN "@prefix@/share/pixmaps/rivendell/rdpanel_skin.png"
+#define RD_DEFAULT_RDAIRPLAY_SKIN "@prefix@/share/pixmaps/rivolution/rdairplay_skin.png"
+#define RD_DEFAULT_RDPANEL_SKIN "@prefix@/share/pixmaps/rivolution/rdpanel_skin.png"
 
 /*
  * CD Paranoia Includes
@@ -45,13 +45,13 @@ extern "C" {
  * PyPAD
  */
 #define RD_PYPAD_PYTHON_PATH "@PYTHON@"
-//#define RD_PYPAD_SCRIPT_DIR "@libdir@/rivendell/pypad"
-#define RD_PYPAD_SCRIPT_DIR "/usr/lib/rivendell/pypad"
+//#define RD_PYPAD_SCRIPT_DIR "@libdir@/rivolution/pypad"
+#define RD_PYPAD_SCRIPT_DIR "/usr/lib/rivolution/pypad"
 
 /*
  * CDN Plug-ins
  */
-#define RD_CDN_SCRIPT_DIR "/usr/lib/rivendell/cdn"
+#define RD_CDN_SCRIPT_DIR "/usr/lib/rivolution/cdn"
 
 
 #endif  // RDPATHS_H

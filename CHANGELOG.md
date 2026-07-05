@@ -7,6 +7,43 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-04
+
+- `debian/postinst`: the `rivendell`/`pypad` system account creation
+  (`groupadd`/`useradd`) now checks `getent` first instead of running
+  unconditionally under `set -e`. Found via a real install that failed
+  for an unrelated reason (see `KNOWN_ISSUES.md`'s CPU-ISA entry), then
+  failed again on retry with `groupadd: group 'rivendell' already
+  exists` — a self-inflicted failure caused by re-running `postinst`
+  against its own partially-completed prior attempt, not the original
+  problem. See `ARCHITECTURE.md`'s "`postinst` must tolerate
+  re-running against its own partial output."
+- `lib/rdpaths.h.in`: fixed four install-path constants
+  (`RD_PYPAD_SCRIPT_DIR`, `RD_CDN_SCRIPT_DIR`,
+  `RD_DEFAULT_RDAIRPLAY_SKIN`, `RD_DEFAULT_RDPANEL_SKIN`) that still
+  pointed at this project's pre-rebrand paths after the corresponding
+  install rules had already moved to their current locations. Silent
+  on a dev box carrying stale files from an older build (both old and
+  new directories exist there), but caused RDAdmin's PyPAD "Add"
+  button to silently fail to open its template picker on a genuinely
+  fresh install. See `KNOWN_ISSUES.md`.
+- A follow-up forensic sweep for the same stale-path pattern found and
+  fixed twelve more instances: RDAirPlay's top-strip logo
+  (`rdairplay/topstrip.cpp`), the `LOGO_PATH`/`SKIN_PATH` column
+  defaults applied during fresh-install and downgrade schema
+  migrations (`utils/rddbmgr/updateschema.cpp`,
+  `utils/rddbmgr/revertschema.cpp`), the Akamai CDN purge script's key
+  file location (`apis/cdn/scripts/aka_purge.sh`), and the RSS feed
+  XSL stylesheet paths used by feed generation and reporting
+  (`lib/rdfeed.cpp`, `rdadmin/feedlistview.cpp`,
+  `rdcastmanager/rdcastmanager.cpp`). The XSL paths failed loudly (a
+  visible `xsltproc` error dialog); the rest failed silently, same as
+  the PyPAD bug above. RPM packaging (`rivendell.spec.in`) and the
+  unused legacy `build_debs.sh.in`/`configure.ac` tarball-naming path
+  were confirmed to have the same old paths but are dead code not
+  exercised by this project's actual Debian packaging pipeline —
+  deliberately left alone.
+
 ## 2026-07-03
 
 - `lib/rdwavefactory.cpp`, `lib/rdmarkerview.cpp`: fixed the Edit
@@ -82,6 +119,22 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   too. Caught on the first `v6.0.0~beta1-1` release, whose notes
   shipped with 404ing links in both the arm64 and x64 sections until
   directly verified by curling the URL.
+- `.github/workflows/build-deb.yml`: added a second x64 build target,
+  Ubuntu 24.04, alongside the existing Ubuntu 26.04 primary target --
+  best-effort and temporary, for cloud providers that don't yet offer a
+  26.04 image. The build job is now a `strategy.matrix` over both OSes
+  (`max-parallel: 1`, since the release-notes step does a
+  read-modify-write against the same release and can't safely run for
+  both legs concurrently). The 24.04 build's `.deb` filenames get a
+  `-noble` suffix to avoid colliding with the 26.04 build's identically
+  -named packages; the arch-independent opsguide package isn't
+  re-uploaded a second time under a different name, since its content
+  is identical either way. No dependency-list changes were needed
+  between the two OSes -- `rivolution.wiki`'s own `Build-From-Source.md`
+  had already verified the same package list builds cleanly on both.
+  `workflow_dispatch` gained a `target` input (`both`/`26.04`/`24.04`)
+  so a single leg can be tested manually without spending runner time
+  building the other one too.
 
 ## 2026-07-02 (continued, 7)
 
