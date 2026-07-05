@@ -77,6 +77,11 @@ func main() {
 		r.Post("/patchbay/save", dash.PatchbaySave)
 		r.Get("/mode", dash.Mode)
 		r.Post("/mode/apply", dash.ModeApply)
+		r.Get("/tasks", dash.Tasks)
+		r.Post("/tasks/add", dash.TasksAdd)
+		r.Post("/tasks/{id}/delete", dash.TasksDelete)
+		r.Post("/tasks/{id}/toggle", dash.TasksToggle)
+		r.Post("/tasks/{id}/run", dash.TasksRunNow)
 	})
 
 	// Patchbay link reconciler: PipeWire links don't survive either

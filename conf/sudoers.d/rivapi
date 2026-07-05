@@ -73,4 +73,28 @@ Cmnd_Alias RIVAPI_MODE_INSTALL = \
     /usr/bin/install -m 644 /home/rd/etc/rivolution/staging/auto.rd.audiostore.staged /etc/auto.rd.audiostore, \
     /usr/bin/install -m 644 /home/rd/etc/rivolution/staging/auto.master.staged /etc/auto.master
 
-rd ALL=(root) NOPASSWD: RIVAPI_SYSTEMCTL, RIVAPI_INSTALL, RIVAPI_MODE_APT, RIVAPI_MODE_NFS_SERVER, RIVAPI_MODE_NFS_CLIENT, RIVAPI_MODE_INSTALL
+# Scheduled Tasks page. Task IDs are always server-generated 16-character
+# hex strings (store/tasks.go's NewTaskID/validTaskID), never taken
+# directly from operator-entered text, before they're ever used in one of
+# the wildcarded paths/unit names below -- the wildcard only ever needs to
+# match rivapi's own generated filenames, not arbitrary input.
+Cmnd_Alias RIVAPI_TASK_HELPERS = \
+    /usr/bin/mkdir -p /usr/lib/rivolution/scheduled-tasks, \
+    /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/helper-db_backup.sh /usr/lib/rivolution/scheduled-tasks/db-backup.sh, \
+    /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/helper-log_gen.sh /usr/lib/rivolution/scheduled-tasks/log-gen.sh, \
+    /usr/bin/install -m 755 /home/rd/etc/rivolution/staging/helper-log_reconcile.sh /usr/lib/rivolution/scheduled-tasks/log-reconcile.sh
+
+Cmnd_Alias RIVAPI_TASK_INSTALL = \
+    /usr/bin/install -m 644 /home/rd/etc/rivolution/staging/task-*.service /etc/systemd/system/rivolution-task-*.service, \
+    /usr/bin/install -m 644 /home/rd/etc/rivolution/staging/task-*.timer /etc/systemd/system/rivolution-task-*.timer
+
+Cmnd_Alias RIVAPI_TASK_SYSTEMCTL = \
+    /usr/bin/systemctl enable --now rivolution-task-*.timer, \
+    /usr/bin/systemctl disable --now rivolution-task-*.timer, \
+    /usr/bin/systemctl start rivolution-task-*.service
+
+Cmnd_Alias RIVAPI_TASK_RM = \
+    /usr/bin/rm -f /etc/systemd/system/rivolution-task-*.service, \
+    /usr/bin/rm -f /etc/systemd/system/rivolution-task-*.timer
+
+rd ALL=(root) NOPASSWD: RIVAPI_SYSTEMCTL, RIVAPI_INSTALL, RIVAPI_MODE_APT, RIVAPI_MODE_NFS_SERVER, RIVAPI_MODE_NFS_CLIENT, RIVAPI_MODE_INSTALL, RIVAPI_TASK_HELPERS, RIVAPI_TASK_INSTALL, RIVAPI_TASK_SYSTEMCTL, RIVAPI_TASK_RM

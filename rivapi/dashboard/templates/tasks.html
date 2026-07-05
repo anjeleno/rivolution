@@ -1,0 +1,136 @@
+{{define "page"}}
+<div x-data="{ type: 'db_backup' }">
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+    <h2 style="margin:0">Tasks</h2>
+</div>
+
+<p style="color: var(--pico-muted-color);">
+    Periodic jobs, each backed by its own systemd timer (visible via
+    <code>systemctl list-timers</code>) — replaces hand-maintained crontab
+    entries. Database backups read connection details from
+    <code>/etc/rd.conf</code> at run time rather than storing a password in
+    the task itself.
+</p>
+
+{{if .Error}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
+    {{.Error}}
+</div>
+{{end}}
+
+<section>
+    <h3>Configured tasks</h3>
+    {{if not .Tasks}}
+    <p style="color: var(--pico-muted-color);">No tasks configured yet.</p>
+    {{else}}
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Schedule</th>
+                <th>Enabled</th>
+                <th>Last run</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Tasks}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td>{{.Type}}</td>
+                <td><code>{{.Schedule}}</code></td>
+                <td>{{if .Enabled}}<ins>yes</ins>{{else}}no{{end}}</td>
+                <td>
+                    {{if .LastRun.Ran}}
+                        {{if .LastRun.Succeeded}}<ins>ok</ins>{{else}}<mark>failed</mark>{{end}}
+                        — {{.LastRun.When}}
+                    {{else}}never{{end}}
+                </td>
+                <td style="white-space:nowrap;">
+                    <form method="POST" action="/tasks/{{.ID}}/run" style="display:inline;">
+                        <button type="submit" class="outline" style="padding:0.25rem 0.5rem;">Run now</button>
+                    </form>
+                    <form method="POST" action="/tasks/{{.ID}}/toggle" style="display:inline;">
+                        <button type="submit" class="outline secondary" style="padding:0.25rem 0.5rem;">
+                            {{if .Enabled}}Disable{{else}}Enable{{end}}
+                        </button>
+                    </form>
+                    <form method="POST" action="/tasks/{{.ID}}/delete" style="display:inline;"
+                          onsubmit="return confirm('Delete this task and its systemd unit files?');">
+                        <button type="submit" class="outline contrast" style="padding:0.25rem 0.5rem;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{end}}
+</section>
+
+<hr>
+
+<section>
+    <h3>Add task</h3>
+    <form method="POST" action="/tasks/add">
+        <div class="grid">
+            <label>
+                Name
+                <input type="text" name="name" placeholder="Nightly DB backup" required>
+            </label>
+            <label>
+                Type
+                <select name="type" x-model="type">
+                    <option value="db_backup">Database backup</option>
+                    <option value="log_gen">Log generation</option>
+                    <option value="log_reconcile">Log reconciliation</option>
+                    <option value="custom">Custom command</option>
+                </select>
+            </label>
+        </div>
+
+        <label>
+            Schedule (systemd <code>OnCalendar=</code> expression)
+            <input type="text" name="schedule" placeholder="*-*-* 00:05:00 (daily at 00:05)" required>
+        </label>
+
+        <div x-show="type === 'db_backup'" style="padding:1rem; border:1px solid var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
+            <div class="grid">
+                <label>
+                    Backup directory
+                    <input type="text" name="backup_dir" placeholder="/home/rd/imports/.sql">
+                </label>
+                <label>
+                    Retention (number of backups to keep)
+                    <input type="number" name="retention_days" value="14" min="1">
+                </label>
+            </div>
+        </div>
+
+        <div x-show="type === 'log_gen' || type === 'log_reconcile'" style="padding:1rem; border:1px solid var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
+            <div class="grid">
+                <label>
+                    Rivendell service name
+                    <input type="text" name="service_name" placeholder="Production">
+                </label>
+                <label x-show="type === 'log_gen'">
+                    Day offset
+                    <input type="number" name="days_offset" value="1">
+                </label>
+            </div>
+        </div>
+
+        <div x-show="type === 'custom'" style="padding:1rem; border:1px solid var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
+            <label>
+                Command
+                <input type="text" name="custom_command" placeholder="/home/rd/apps/my-script.sh">
+            </label>
+        </div>
+
+        <button type="submit" class="outline">Add task</button>
+    </form>
+</section>
+
+</div>
+{{end}}

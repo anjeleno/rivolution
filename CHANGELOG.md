@@ -9,6 +9,26 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-04
 
+- New dashboard page, `/tasks`: closes the gap tracked in `BACKLOG.md`
+  since the old Ansible `broadcast_advanced` role was removed
+  2026-07-01 (nightly DB backup and log generation, previously
+  hand-maintained crontab entries with no dashboard equivalent). Each
+  task gets its own systemd service+timer pair (visible in
+  `systemctl list-timers`), not a re-implementation of cron. Four task
+  types: database backup (reads connection details from `/etc/rd.conf`
+  at run time via a small fixed helper script, rather than storing a
+  password in the task itself — the exact bug class found in one of
+  the scripts this replaces), log generation, log reconciliation
+  (`rdlogmanager` wrappers), and a custom-command escape hatch for
+  anything else. Task IDs are always server-generated 16-character hex
+  strings, never derived from operator-entered text, before they're
+  ever used in a systemd unit name or file path — the wildcarded
+  sudoers entries this needs (`conf/sudoers.d/rivapi`) only ever need
+  to match rivapi's own generated filenames as a result. New files:
+  `rivapi/store/tasks.go`, `rivapi/store/tasks_deploy.go`,
+  `rivapi/dashboard/handlers_tasks.go`,
+  `rivapi/dashboard/templates/tasks.html`. **Not yet verified on a
+  real box**, same caveat as `/mode` below.
 - New dashboard page, `/mode`: switches a station between standalone/
   server/client network topologies in one click, replacing what used to
   require a full Ansible re-provision. Standalone/server ensure
