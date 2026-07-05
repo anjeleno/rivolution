@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-05
 
+- `debian/control.src`: replaced `python3-pymysql` with `python3-mysqldb`
+  in `rivolution`'s `Depends`. Every PyPAD script (`apis/pypad/api/
+  pypad.py`, shared by all of them) and `rdautocheck`/`rdautoback`
+  import `MySQLdb` directly -- not `pymysql`, a different package with a
+  different import name -- so `python3-pymysql` never actually satisfied
+  anything any script in this repo imports; confirmed via a full-repo
+  search that nothing anywhere imports `pymysql` at all. Found via a
+  real PyPAD instance failing with `ModuleNotFoundError: No module named
+  'MySQLdb'` even after 2026-07-04's unrelated stale-path fix (which
+  only fixed the "Add" button's template picker, not this).
+
 - `rivapi/store/mode_apply.go`: client mode's `/var/snd` `fstab` entry now
   carries `x-systemd.after=tailscaled.service`. Found via a real reboot
   that hung for minutes: `tailscaled.service` had already stopped by
