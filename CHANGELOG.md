@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-05
 
+- `rivapi/store/mode_apply.go`: `/mode`'s `apt-get install` calls
+  (mariadb-server, nfs-kernel-server, nfs-common/autofs) now retry for
+  up to 3 minutes on dpkg lock contention instead of failing outright.
+  Found on the first real test of client-mode switching: the install
+  step failed immediately because `unattended-upgrades` held
+  `/var/lib/dpkg/lock-frontend` at that exact moment -- a routine,
+  transient condition on any Ubuntu box, unrelated to anything this
+  dashboard does. Nothing else was touched by the failed attempt (rd.conf,
+  MariaDB, and `/etc/fstab` were all still untouched), so this was a
+  clean, safe failure -- just one worth not surfacing as an error when
+  waiting a few seconds and retrying would have succeeded.
 - `rivapi/store/patchbay.go`: fixed `ReconcileLinks`/`DisconnectUnsaved`
   tearing down Stereo Tool's own auto-connection on every reconcile
   cycle. Found via a real reboot-and-watch test: `~/.asoundrc`'s

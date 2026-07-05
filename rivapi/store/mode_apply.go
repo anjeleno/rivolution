@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // ApplyMode switches this station between standalone/server/client, per
@@ -200,21 +201,54 @@ func aptInstallMariaDB() error {
 	if packageInstalled("mariadb-server") {
 		return nil
 	}
-	return sudoRun("apt-get", "install", "-y", "mariadb-server", "mariadb-client")
+	return aptGetInstall("mariadb-server", "mariadb-client")
 }
 
 func aptInstallNFSServer() error {
 	if packageInstalled("nfs-kernel-server") {
 		return nil
 	}
-	return sudoRun("apt-get", "install", "-y", "nfs-kernel-server")
+	return aptGetInstall("nfs-kernel-server")
 }
 
 func aptInstallNFSClient() error {
 	if packageInstalled("nfs-common") && packageInstalled("autofs") {
 		return nil
 	}
-	return sudoRun("apt-get", "install", "-y", "nfs-common", "autofs")
+	return aptGetInstall("nfs-common", "autofs")
+}
+
+// dpkgLockWait bounds how long aptGetInstall will keep retrying against a
+// held dpkg lock before giving up and reporting the failure for real.
+const dpkgLockWait = 3 * time.Minute
+
+// aptGetInstall runs `apt-get install -y <pkgs>`, retrying on dpkg lock
+// contention instead of failing on the first attempt. Confirmed live
+// 2026-07-05: a client-mode switch failed outright because
+// unattended-upgrades (which runs on its own schedule, independent of
+// anything this dashboard does) held /var/lib/dpkg/lock-frontend at that
+// exact moment -- a routine, transient condition on any Ubuntu box, not a
+// real failure to surface immediately. Any other failure (bad package name,
+// no network, etc.) still returns right away.
+func aptGetInstall(pkgs ...string) error {
+	args := append([]string{"apt-get", "install", "-y"}, pkgs...)
+	deadline := time.Now().Add(dpkgLockWait)
+	for {
+		err := sudoRun(args...)
+		if err == nil || !isDpkgLockContention(err) || time.Now().After(deadline) {
+			return err
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
+// isDpkgLockContention recognizes apt-get's own message for "another process
+// (most commonly unattended-upgrades) currently holds a dpkg lock file" --
+// apt uses this same wording across lock-frontend, the archives lock, and
+// the main dpkg lock, so matching on it covers all three rather than one
+// specific lock path.
+func isDpkgLockContention(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "Could not get lock")
 }
 
 // setMariaDBBindAddress flips MariaDB's bind-address between loopback
