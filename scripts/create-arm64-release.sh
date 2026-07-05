@@ -84,6 +84,24 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
+# rebuild-deb.sh deliberately leaves its revision bump uncommitted (commit
+# it yourself once happy). Tagging HEAD before that commit exists means the
+# tag points at a commit whose debian/changelog.src still declares the OLD
+# revision -- confirmed live 2026-07-05 on v6.0.0-beta1-6: the arm64 .deb
+# built fine from the uncommitted bump, but CI's from-tag x64 rebuild
+# faithfully reproduced the stale committed version, shipping x64 assets
+# mislabeled a revision behind. Refuse rather than repeat that.
+if ! git diff --quiet -- debian/changelog.src debian/control.src \
+   || ! git diff --cached --quiet -- debian/changelog.src debian/control.src; then
+  echo "error: debian/changelog.src and/or debian/control.src have uncommitted changes." >&2
+  echo "       Commit the revision bump first (it's what rebuild-deb.sh just staged" >&2
+  echo "       for you), then re-run this script -- otherwise the tag will point at" >&2
+  echo "       a commit that still declares the old revision, and any from-tag" >&2
+  echo "       rebuild (e.g. build-deb.yml's x64 CI) will silently ship the wrong" >&2
+  echo "       version string." >&2
+  exit 1
+fi
+
 PREV_TAG="$(git tag --sort=-creatordate | head -1)"
 if [[ -z "$PREV_TAG" ]]; then
   echo "error: no existing tags found to supersede -- this script assumes at least one prior release" >&2
