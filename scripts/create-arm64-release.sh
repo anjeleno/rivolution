@@ -18,10 +18,13 @@
 #     release with all of the above attached
 #
 # Deliberately does NOT try to auto-write the bulleted "what changed" list
-# -- that needs real understanding of each fix, not a mechanical diff. It
-# drafts that section from CHANGELOG.md's entries newer than the previous
-# tag and opens $EDITOR (or just leaves the file for you to edit) before
-# the release is created, so the content always gets a real read-through.
+# -- that needs real understanding of each fix, not a mechanical diff. By
+# default it drafts that section from CHANGELOG.md's entries newer than the
+# previous tag and opens $EDITOR on it before the release is created, so the
+# content always gets a real read-through. Pass --notes-file=PATH instead to
+# skip both the auto-draft and $EDITOR entirely and use PATH's content
+# as-is -- for when the notes are being written by someone/something else
+# ahead of time rather than edited interactively here.
 #
 # The release is created as a draft by default -- review the notes, then
 # either edit them on GitHub directly or re-run with --publish once
@@ -32,12 +35,14 @@
 #   scripts/create-arm64-release.sh --summary "short description of what's new"
 #   scripts/create-arm64-release.sh --summary "..." --publish
 #   scripts/create-arm64-release.sh --summary "..." --dry-run
+#   scripts/create-arm64-release.sh --summary "..." --notes-file=/path/to/notes.md
 
 set -euo pipefail
 
 SUMMARY=""
 PUBLISH=0
 DRY_RUN=0
+NOTES_FILE_ARG=""
 for arg in "$@"; do
   case "$arg" in
     --summary=*)
@@ -49,13 +54,21 @@ for arg in "$@"; do
     --dry-run)
       DRY_RUN=1
       ;;
+    --notes-file=*)
+      NOTES_FILE_ARG="${arg#--notes-file=}"
+      ;;
     *)
       echo "Unknown argument: $arg" >&2
-      echo "Usage: $0 --summary=\"...\" [--publish] [--dry-run]" >&2
+      echo "Usage: $0 --summary=\"...\" [--publish] [--dry-run] [--notes-file=PATH]" >&2
       exit 1
       ;;
   esac
 done
+
+if [[ -n "$NOTES_FILE_ARG" && ! -f "$NOTES_FILE_ARG" ]]; then
+  echo "error: --notes-file=$NOTES_FILE_ARG does not exist" >&2
+  exit 1
+fi
 
 if [[ -z "$SUMMARY" ]]; then
   echo "error: --summary=\"...\" is required (the tag message's short parenthetical)" >&2
@@ -124,54 +137,64 @@ if [[ ${#ASSETS[@]} -eq 0 ]]; then
 fi
 printf '    %s\n' "${ASSETS[@]##*/}"
 
-echo "==> Drafting release notes from CHANGELOG.md entries newer than ${PREV_TAG_DATE}"
-NOTES_FILE="$(mktemp --suffix=-release-notes.md)"
-{
-  echo "Built from the not-yet-merged"
-  echo "[\`${BRANCH}\`](https://github.com/${REPO_SLUG}/tree/${BRANCH})"
-  echo "branch (\`${SHORT_SHA}\`), not \`main\` -- a pre-merge test build so this"
-  echo "branch's changes can be installed and exercised on a real box before"
-  echo "merging, same as every other real-install-tested revision this fork"
-  echo "has gone through. Supersedes [${PREV_TAG}](https://github.com/${REPO_SLUG}/releases/tag/${PREV_TAG})"
-  echo "with the fixes below. Supersedes nothing on \`main\`; if testing finds"
-  echo "something else that needs fixing, expect this release to be replaced"
-  echo "too before the branch actually merges."
-  echo
-  echo "Same codebase as [${PREV_TAG}](https://github.com/${REPO_SLUG}/releases/tag/${PREV_TAG})"
-  echo "plus:"
-  echo
-  echo "<!-- DRAFT from CHANGELOG.md -- rewrite as real release-note prose"
-  echo "     before publishing, same voice as previous releases. Entries"
-  echo "     below are every CHANGELOG.md bullet dated after ${PREV_TAG_DATE};"
-  echo "     trim anything that isn't actually new since ${PREV_TAG}. -->"
-  awk -v cutoff="$PREV_TAG_DATE" '
-    /^## [0-9]{4}-[0-9]{2}-[0-9]{2}/ { d = substr($0, 4); keep = (d > cutoff); next }
-    keep { print }
-  ' CHANGELOG.md
-  echo
-  echo "This is a real test of the ${BRANCH_LABEL} branch -- expect to find more."
-  echo
-  echo "## arm64 build"
-  echo
-  echo '```'
-  echo "wget https://github.com/${REPO_SLUG}/releases/download/${TAG}/rivolution_${DOT_VERSION}_arm64.deb"
-  echo '```'
-  echo
-  echo '```'
-  echo "sudo apt install ./rivolution_${DOT_VERSION}_arm64.deb"
-  echo '```'
-} > "$NOTES_FILE"
+CLEANUP_NOTES_FILE=0
+if [[ -n "$NOTES_FILE_ARG" ]]; then
+  echo "==> Using supplied release notes: $NOTES_FILE_ARG"
+  NOTES_FILE="$NOTES_FILE_ARG"
+else
+  echo "==> Drafting release notes from CHANGELOG.md entries newer than ${PREV_TAG_DATE}"
+  NOTES_FILE="$(mktemp --suffix=-release-notes.md)"
+  CLEANUP_NOTES_FILE=1
+  {
+    echo "Built from the not-yet-merged"
+    echo "[\`${BRANCH}\`](https://github.com/${REPO_SLUG}/tree/${BRANCH})"
+    echo "branch (\`${SHORT_SHA}\`), not \`main\` -- a pre-merge test build so this"
+    echo "branch's changes can be installed and exercised on a real box before"
+    echo "merging, same as every other real-install-tested revision this fork"
+    echo "has gone through. Supersedes [${PREV_TAG}](https://github.com/${REPO_SLUG}/releases/tag/${PREV_TAG})"
+    echo "with the fixes below. Supersedes nothing on \`main\`; if testing finds"
+    echo "something else that needs fixing, expect this release to be replaced"
+    echo "too before the branch actually merges."
+    echo
+    echo "Same codebase as [${PREV_TAG}](https://github.com/${REPO_SLUG}/releases/tag/${PREV_TAG})"
+    echo "plus:"
+    echo
+    echo "<!-- DRAFT from CHANGELOG.md -- rewrite as real release-note prose"
+    echo "     before publishing, same voice as previous releases. Entries"
+    echo "     below are every CHANGELOG.md bullet dated after ${PREV_TAG_DATE};"
+    echo "     trim anything that isn't actually new since ${PREV_TAG}. -->"
+    awk -v cutoff="$PREV_TAG_DATE" '
+      /^## [0-9]{4}-[0-9]{2}-[0-9]{2}/ { d = substr($0, 4); keep = (d > cutoff); next }
+      keep { print }
+    ' CHANGELOG.md
+    echo
+    echo "This is a real test of the ${BRANCH_LABEL} branch -- expect to find more."
+    echo
+    echo "## arm64 build"
+    echo
+    echo '```'
+    echo "wget https://github.com/${REPO_SLUG}/releases/download/${TAG}/rivolution_${DOT_VERSION}_arm64.deb"
+    echo '```'
+    echo
+    echo '```'
+    echo "sudo apt install ./rivolution_${DOT_VERSION}_arm64.deb"
+    echo '```'
+  } > "$NOTES_FILE"
+fi
 
-echo "==> Draft notes written to $NOTES_FILE"
+echo "==> Notes file: $NOTES_FILE"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "==> --dry-run: not tagging, pushing, or creating anything. Notes preview:"
   echo "---"
   cat "$NOTES_FILE"
+  [[ "$CLEANUP_NOTES_FILE" -eq 1 ]] && rm -f "$NOTES_FILE"
   exit 0
 fi
 
-echo "==> Review/edit the draft now (the CHANGELOG-derived section needs rewriting into prose)."
-"${EDITOR:-nano}" "$NOTES_FILE"
+if [[ -z "$NOTES_FILE_ARG" ]]; then
+  echo "==> Review/edit the draft now (the CHANGELOG-derived section needs rewriting into prose)."
+  "${EDITOR:-nano}" "$NOTES_FILE"
+fi
 
 echo "==> Creating annotated tag ${TAG}"
 git tag -a "$TAG" -m "${TAG} -- ${BRANCH_LABEL} pre-merge test build (${SUMMARY})"
@@ -193,7 +216,7 @@ gh release create "$TAG" "${ASSETS[@]}" \
   --notes-file "$NOTES_FILE" \
   $DRAFT_FLAG
 
-rm -f "$NOTES_FILE"
+[[ "$CLEANUP_NOTES_FILE" -eq 1 ]] && rm -f "$NOTES_FILE"
 
 if [[ "$PUBLISH" -eq 0 ]]; then
   echo "==> Created as a draft. Publish once reviewed:"
