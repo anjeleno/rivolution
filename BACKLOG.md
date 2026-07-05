@@ -578,3 +578,38 @@ pass: at minimum, scheduled DB backup and log generation are real
 operational gaps until this lands. The removed role's content is still
 in `rivolution-unified-installer`'s git history if needed as a
 reference for what the old scripts actually did.
+
+## Patchbay can't persist connections to clients with PID-embedded JACK names
+
+Some ALSA-JACK-bridged software (confirmed with Stereo Tool) names its
+own JACK client after its own process ID (`stereo_tool.C.<pid>.<n>`),
+which changes every restart. The dashboard's patchbay Save/Reconcile
+feature persists by exact name match, so it can never restore a
+connection to a client like this -- not a bug in the reconciler, a
+structural limit of name-matching against an identifier that's
+guaranteed to change. Stereo Tool's own case is worked around via
+`~/.asoundrc`'s `pcm.jack` block, which hardcodes the stable *target*
+port names instead of trying to match the unstable *source* name.
+
+**Deferred idea, not yet scoped or built:** a two-tier fix for when a
+future user hits the same quirk with different software/hardware --
+
+- Detect it: a saved connection that never reconnects while a
+  similarly-named live connection keeps appearing (same prefix/suffix,
+  different embedded number) is a real, checkable signal.
+- For ALSA-JACK-bridged clients specifically: a button that
+  generates/updates an `~/.asoundrc` `pcm.jack` block pinning the
+  stable target ports for the detected pattern, same shape as Stereo
+  Tool's existing workaround.
+- For native JACK/PipeWire clients with unstable names (no ALSA layer
+  to hook into at all): the only real generalization is pattern-based
+  matching inside patchbay's own persistence -- storing a glob/regex
+  instead of an exact name -- which is a materially bigger change to
+  `store/patchbay.go`'s data model, not a quick add.
+
+Related, smaller gap also not yet built: `/patchbay` currently shows
+nothing at all when a saved connection can't be re-established -- it
+just silently vanishes from the page. A "Saved but not currently
+connected" section would at least make an orphaned save visible
+instead of silent, independent of whether the auto-pin idea above ever
+gets built.

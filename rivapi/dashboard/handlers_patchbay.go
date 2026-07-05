@@ -1,8 +1,10 @@
 package dashboard
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/anjeleno/rivolution/rivapi/store"
 )
@@ -27,11 +29,12 @@ type patchLinkView struct {
 // instead of a wide grid.
 type patchbayData struct {
 	baseData
-	Outputs   []string
-	Inputs    []string
-	Links     []patchLinkView
-	Error     string
-	JustSaved bool // true right after a successful Save, for a confirmation message
+	Outputs           []string
+	Inputs            []string
+	Links             []patchLinkView
+	Error             string
+	JustSaved         bool // true right after a successful Save, for a confirmation message
+	DisconnectedCount int  // > 0 right after a successful bulk disconnect-unsaved
 }
 
 func linkKey(output, input string) string {
@@ -85,6 +88,9 @@ func (h *Handler) Patchbay(w http.ResponseWriter, r *http.Request) {
 		data.Error = e
 	}
 	data.JustSaved = r.URL.Query().Get("saved") == "1"
+	if n, err := strconv.Atoi(r.URL.Query().Get("disconnected")); err == nil {
+		data.DisconnectedCount = n
+	}
 	if err := tmplPatchbay.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
@@ -105,6 +111,22 @@ func (h *Handler) PatchbaySave(w http.ResponseWriter, r *http.Request) {
 		redirect += "?error=" + url.QueryEscape(err.Error())
 	} else {
 		redirect += "?saved=1"
+	}
+	http.Redirect(w, r, redirect, http.StatusSeeOther)
+}
+
+// PatchbayDisconnectUnsaved handles POST /patchbay/disconnect-unsaved — a
+// bulk cleanup for the common case of a pile of auto-detected connections
+// (WirePlumber's own default auto-linking, or a device like Stereo Tool's
+// ALSA/JACK driver probing several instances while its I/O is configured)
+// that all need removing at once, rather than one "Remove" click per row.
+func (h *Handler) PatchbayDisconnectUnsaved(w http.ResponseWriter, r *http.Request) {
+	redirect := "/patchbay"
+	removed, err := store.DisconnectUnsaved(store.DesiredLinksPath)
+	if err != nil {
+		redirect += "?error=" + url.QueryEscape(err.Error())
+	} else {
+		redirect += "?disconnected=" + url.QueryEscape(fmt.Sprintf("%d", removed))
 	}
 	http.Redirect(w, r, redirect, http.StatusSeeOther)
 }

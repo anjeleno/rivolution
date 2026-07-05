@@ -110,6 +110,41 @@ func ReconcileLinks(path string) error {
 	return nil
 }
 
+// DisconnectUnsaved removes every live connection that isn't in the saved
+// set, without changing the saved set itself, and returns how many it
+// removed. A one-click cleanup for the common real-world case ReconcileLinks
+// deliberately doesn't handle on its own: a fresh box where nothing has
+// been saved yet, but something else (WirePlumber's default auto-linking,
+// or -- as found 2026-07-04 -- a device like Stereo Tool's ALSA/JACK driver
+// probing multiple device instances while its I/O is being configured)
+// has already produced a pile of unwanted connections. Manually clicking
+// "Remove" on each one doesn't scale; this clears all of them in one call
+// so the operator can then connect and Save just the ones actually wanted.
+func DisconnectUnsaved(path string) (int, error) {
+	desired, err := LoadDesiredLinks(path)
+	if err != nil {
+		return 0, fmt.Errorf("load desired links: %w", err)
+	}
+	want := make(map[string]bool, len(desired))
+	for _, l := range desired {
+		want[linkPairKey(l.Output, l.Input)] = true
+	}
+	current, err := ListPatchLinks()
+	if err != nil {
+		return 0, fmt.Errorf("list current links: %w", err)
+	}
+	removed := 0
+	for _, l := range current {
+		if want[linkPairKey(l.Output, l.Input)] {
+			continue
+		}
+		if err := Unlink(l.Output, l.Input); err == nil {
+			removed++
+		}
+	}
+	return removed, nil
+}
+
 func linkPairKey(output, input string) string {
 	return output + "|" + input
 }

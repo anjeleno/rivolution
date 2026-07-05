@@ -9,6 +9,34 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-04
 
+- `conf/systemd/stereo-tool.service`: fixed Stereo Tool's audio patch not
+  surviving a reboot without manually restarting the whole stack.
+  `~/.asoundrc`'s `pcm.jack` block already auto-connects Stereo Tool's
+  ALSA-JACK bridge to stable target port names on open (PID-agnostic,
+  unlike the dashboard's own patchbay Save/Reconcile feature -- Stereo
+  Tool's JACK client name embeds its own PID, so a saved connection can
+  never match again after a restart, see `BACKLOG.md`) -- but
+  `After=rivendell.service` alone wasn't enough to guarantee the target
+  ports actually existed yet: confirmed via a real reboot that
+  `rivendell.service`'s first start attempt commonly fails when
+  `mariadb.service` isn't accepting connections yet, and a *failed*
+  unit still counts as "reached" for systemd ordering purposes, so
+  Stereo Tool started and gave up on the connection (its ALSA plugin
+  only attempts once, at open time) well before `rivendell.service`'s
+  automatic retry actually got `caed`'s JACK ports up. Fixed with an
+  `ExecStartPre` that polls for the real JACK port to exist, same
+  readiness-check pattern `rivendell.service`'s own `ExecStartPost`
+  already uses for `caed`'s control port.
+- `/patchbay`: new "Disconnect unsaved" button
+  (`store.DisconnectUnsaved`) removes every live connection not in the
+  saved set in one click. Found via real testing: Stereo Tool's ALSA/
+  JACK driver probing multiple device instances while its I/O was
+  being configured left 19 unwanted auto-detected connections behind
+  on a fresh box with nothing saved yet -- `ReconcileLinks` doesn't
+  touch these on its own (deliberately, since nothing has a saved
+  opinion yet), and clicking "Remove" on each one individually doesn't
+  scale. Also fixed the page's own description text, stale since
+  today's earlier 5s-to-30s reconcile-interval change.
 - `conf/sudoers.d/rivapi`: fixed a real, live regression found on a fresh
   install -- every wildcarded `Cmnd_Alias` argument (the NFS-mount
   remote host, the per-task systemd unit filenames) failed to parse
