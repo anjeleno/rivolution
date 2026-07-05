@@ -7,6 +7,24 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-05
+
+- `rivapi/store/patchbay.go`: fixed `ReconcileLinks`/`DisconnectUnsaved`
+  tearing down Stereo Tool's own auto-connection on every reconcile
+  cycle. Found via a real reboot-and-watch test: `~/.asoundrc`'s
+  `pcm.jack` auto-connect formed the correct link within a few seconds
+  of every restart, then the bidirectional reconciler removed it again
+  at the next tick, because Stereo Tool's JACK client name embeds its
+  process ID (see 2026-07-04's entry) and the saved `patchbay.json`
+  entry's PID never matches the live one after a restart. Comparisons
+  now go through a new `normalizedLinkKey`/`normalizePortName` pair that
+  collapses Stereo Tool's PID segment before comparing saved links
+  against live ones, so a saved link is recognized as already satisfied
+  (and a live link recognized as already saved) regardless of which PID
+  Stereo Tool happens to have this run. The actual connect/disconnect
+  calls still use the real, current port names -- only the "is this
+  already there" comparison is normalized.
+
 ## 2026-07-04
 
 - `conf/systemd/stereo-tool.service`: fixed Stereo Tool's audio patch not

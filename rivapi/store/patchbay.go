@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -91,19 +92,19 @@ func ReconcileLinks(path string) error {
 	}
 	want := make(map[string]bool, len(desired))
 	for _, l := range desired {
-		want[linkPairKey(l.Output, l.Input)] = true
+		want[normalizedLinkKey(l.Output, l.Input)] = true
 	}
 	have := make(map[string]bool, len(current))
 	for _, l := range current {
-		have[linkPairKey(l.Output, l.Input)] = true
+		have[normalizedLinkKey(l.Output, l.Input)] = true
 	}
 	for _, l := range desired {
-		if !have[linkPairKey(l.Output, l.Input)] {
+		if !have[normalizedLinkKey(l.Output, l.Input)] {
 			_ = Link(l.Output, l.Input) // best-effort; port may not exist yet
 		}
 	}
 	for _, l := range current {
-		if !want[linkPairKey(l.Output, l.Input)] {
+		if !want[normalizedLinkKey(l.Output, l.Input)] {
 			_ = Unlink(l.Output, l.Input) // best-effort; may already be gone
 		}
 	}
@@ -127,7 +128,7 @@ func DisconnectUnsaved(path string) (int, error) {
 	}
 	want := make(map[string]bool, len(desired))
 	for _, l := range desired {
-		want[linkPairKey(l.Output, l.Input)] = true
+		want[normalizedLinkKey(l.Output, l.Input)] = true
 	}
 	current, err := ListPatchLinks()
 	if err != nil {
@@ -135,7 +136,7 @@ func DisconnectUnsaved(path string) (int, error) {
 	}
 	removed := 0
 	for _, l := range current {
-		if want[linkPairKey(l.Output, l.Input)] {
+		if want[normalizedLinkKey(l.Output, l.Input)] {
 			continue
 		}
 		if err := Unlink(l.Output, l.Input); err == nil {
@@ -145,8 +146,28 @@ func DisconnectUnsaved(path string) (int, error) {
 	return removed, nil
 }
 
-func linkPairKey(output, input string) string {
-	return output + "|" + input
+// stereoToolPortPattern matches a port name from Stereo Tool's ALSA-JACK
+// bridge, which bakes its own process ID into its client name (e.g.
+// "stereo_tool.C.4853.2:in_000") -- a fresh PID every time the service
+// restarts, so the exact name never repeats across restarts. Confirmed live
+// 2026-07-05: comparing saved links against live links by exact name meant
+// ReconcileLinks tore down the correct, .asoundrc-formed connection every
+// cycle, since its PID never matched whatever was saved in patchbay.json.
+var stereoToolPortPattern = regexp.MustCompile(`^(stereo_tool\.[CP])\.\d+\.(\d+:.*)$`)
+
+// normalizePortName collapses Stereo Tool's PID segment out of a port name
+// so two names that differ only by PID compare equal. Names that don't
+// match the pattern (everything else) are returned unchanged.
+func normalizePortName(name string) string {
+	return stereoToolPortPattern.ReplaceAllString(name, "$1.*.$2")
+}
+
+// normalizedLinkKey is linkPairKey's identity for reconciliation purposes:
+// it's what decides whether a saved link is "already satisfied" or a live
+// link is "already saved," so it goes through normalizePortName first. The
+// actual Link()/Unlink() calls still use the real, current port names.
+func normalizedLinkKey(output, input string) string {
+	return normalizePortName(output) + "|" + normalizePortName(input)
 }
 
 // pwEnv sets XDG_RUNTIME_DIR for a pw-link invocation. rivapi.service also
