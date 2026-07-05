@@ -9,6 +9,19 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-06
 
+- `rivapi/store/mode_apply.go`: client mode's `/var/snd` `fstab` entry now
+  carries `x-systemd.after=tailscaled.service`. Found via a real reboot
+  that hung for minutes: `tailscaled.service` had already stopped by
+  the time `var-snd.mount` tried to unmount, and a `hard` NFS mount
+  (deliberate, for data safety) never gives up retrying against a now
+  ­unreachable server, so the unmount sat there until systemd's stop
+  job timeout forcibly killed it. Ordering only, not
+  `x-systemd.requires=` -- that would fail the mount outright on any
+  deployment where `tailscaled.service` ends up masked/disabled
+  entirely (a non-Tailscale remote host), where `After=` alone is
+  simply inert. Server mode needed no equivalent change: its exports
+  are local bind mounts, never touching the network at unmount time.
+
 - `rivapi/store/mode_apply.go`, `conf/sudoers.d/rivapi`: Server mode's
   `/srv/nfs4/...` NFS export tree is now bind-mounted onto the real
   audio store and staging directories instead of being permanently

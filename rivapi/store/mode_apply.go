@@ -629,12 +629,30 @@ func mountRemoteVarSnd(host string) error {
 // writeFstab replaces any existing /var/snd line with one reflecting host,
 // preserving every other line untouched. host has already been validated
 // by validHostOrIP in ApplyMode.
+//
+// x-systemd.after=tailscaled.service: without it, systemd-fstab-generator
+// has no idea this mount has anything to do with Tailscale (the transport
+// this project's remote hosts happen to be reached over) -- confirmed live
+// 2026-07-06 via a real reboot that hung for minutes: tailscaled.service
+// had already stopped by the time var-snd.mount tried to unmount, and a
+// `hard` NFS mount (deliberate, for data safety) never gives up retrying
+// against a now-unreachable server, so the unmount just sat there until
+// systemd's stop job timeout forcibly killed it. Shutdown ordering is the
+// reverse of After=, so this makes var-snd.mount unmount *before*
+// tailscaled.service stops instead of after. Deliberately *not*
+// x-systemd.requires=tailscaled.service alongside it: that would be a hard
+// dependency, failing this mount outright on any box where tailscaled ends
+// up masked/disabled (e.g. a deployment that reaches its remote host over a
+// plain LAN with no Tailscale involved at all) -- After= alone is a no-op
+// ordering constraint when tailscaled isn't part of the same shutdown
+// sequence, so this fix helps the Tailscale case without being able to
+// break the non-Tailscale one.
 func writeFstab(host string) error {
 	data, err := os.ReadFile(fstabPath)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", fstabPath, err)
 	}
-	wanted := fmt.Sprintf("%s:/srv/nfs4/var/snd %s nfs4 rw 0 0", host, varSndPath)
+	wanted := fmt.Sprintf("%s:/srv/nfs4/var/snd %s nfs4 rw,x-systemd.after=tailscaled.service 0 0", host, varSndPath)
 	lines := strings.Split(string(data), "\n")
 	replaced := false
 	for i, l := range lines {
