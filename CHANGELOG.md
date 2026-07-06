@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-05
 
+- `debian/rules.src`: the x86-64-v2 cap below now also applies to
+  `LDFLAGS`, not just `CFLAGS`/`CXXFLAGS`. This toolchain's
+  `dpkg-buildflags` enables `-flto=auto` by default; under LTO, real
+  target-specific code generation happens at the link step, not each
+  file's compile step, so a cap that only touches `CFLAGS`/`CXXFLAGS`
+  has no effect on the actual shipped binaries. Confirmed via a real
+  install on genuine pre-Haswell hardware hitting the identical crash
+  the cap below was supposed to fix, and via `readelf -n` showing the
+  shipped `rddbmgr`'s ISA requirement was unchanged by the
+  `CFLAGS`/`CXXFLAGS`-only version of this cap.
+
 - `debian/rules.src`: amd64 builds now compile with `-march=x86-64-v2`
   instead of whatever the build machine's toolchain defaults to.
   Every C++ binary this project builds (confirmed via `readelf -n`

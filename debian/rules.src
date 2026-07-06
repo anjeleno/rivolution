@@ -5,7 +5,14 @@ DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 # x86-64-v2 cap on amd64 builds only -- see ARCHITECTURE.md's "x86-64 ISA
 # baseline" section for the full story/trade-offs. -march is an x86-only
 # concept, so ARCH_CAP stays empty on arm64 (and any other non-amd64
-# target), appending nothing to CFLAGS/CXXFLAGS there.
+# target), appending nothing to CFLAGS/CXXFLAGS/LDFLAGS there.
+#
+# Must go on LDFLAGS too, not just CFLAGS/CXXFLAGS: dpkg-buildflags
+# enables -flto=auto on this toolchain, and under LTO the real
+# target-specific code generation happens at link time, not at each
+# file's compile step -- confirmed live 2026-07-05 when a build with the
+# cap only on CFLAGS/CXXFLAGS still produced an x86-64-v3-requiring
+# rddbmgr (checked directly with readelf -n; the ISA note never changed).
 ifeq ($(DEB_HOST_ARCH),amd64)
 ARCH_CAP := -march=x86-64-v2
 endif
@@ -13,7 +20,7 @@ endif
 build:
 	dh_update_autotools_config
 	dh_autoreconf
-	 CFLAGS="$$(dpkg-buildflags --get CFLAGS) $(ARCH_CAP)" CXXFLAGS="$$(dpkg-buildflags --get CXXFLAGS) $(ARCH_CAP)" ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-available MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
+	 CFLAGS="$$(dpkg-buildflags --get CFLAGS) $(ARCH_CAP)" CXXFLAGS="$$(dpkg-buildflags --get CXXFLAGS) $(ARCH_CAP)" LDFLAGS="$$(dpkg-buildflags --get LDFLAGS) $(ARCH_CAP)" ./configure --prefix=/usr --libdir=/usr/lib --libexecdir=/var/www/rd-bin --sysconfdir=/etc/apache2/conf-available MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
 	make $(DEBUILD_MAKE_ARGS)
 	cd rivapi && go build -o rivapi .
 
