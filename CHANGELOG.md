@@ -7,6 +7,24 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-06
+
+- x64 packages for this revision were built directly on real
+  x86-64-v2-class hardware instead of via the GitHub Actions CI
+  runner. Ubuntu 26.04's package archive is CPU-ISA-tiered (separate
+  `amd64` and `amd64v3` components), and a modern CI runner is served
+  the `v3`-tier build toolchain for its entire toolchain -- including
+  the CRT startup objects linked into every binary -- regardless of
+  any `-march` flag this project's own build passes. The
+  `x86-64-v2` cap added 2026-07-05 remains in place as the intended
+  compatibility target, but cannot by itself override ISA requirements
+  baked into pre-compiled objects supplied by the build machine's own
+  toolchain; building on genuinely v2-tier hardware does. Confirmed
+  via `readelf -n` on the real shipped `rddbmgr` (`x86-64-baseline`
+  only, versus `x86-64-baseline, x86-64-v2, x86-64-v3` on every prior
+  build) and a real install/reboot/library-restore round trip on
+  genuine pre-Haswell hardware.
+
 ## 2026-07-05
 
 - `debian/rules.src`: the x86-64-v2 cap below now also applies to
