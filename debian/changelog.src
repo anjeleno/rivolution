@@ -1,4 +1,4 @@
-rivolution (@VERSION@-9) unstable; urgency=medium
+rivolution (@VERSION@-10) unstable; urgency=medium
 
   * Beta release (see ChangeLog for details)
   * Added mariadb-server to rivolution's Depends -- postinst's database
