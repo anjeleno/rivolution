@@ -631,6 +631,34 @@ connected" section would at least make an orphaned save visible
 instead of silent, independent of whether the general fix above ever
 gets built.
 
+## x64 CI builds can silently ship a higher CPU ISA floor than intended
+
+`build-deb.yml`'s x64 leg runs on a standard GitHub Actions Ubuntu
+26.04 runner. Ubuntu 26.04's package archive is CPU-ISA-tiered (a plain
+`amd64` component and a separate `amd64v3` component), and `apt`
+automatically prefers whichever tier matches the installing machine's
+own detected CPU capability. A modern cloud CI runner supports v3
+easily, so its entire build toolchain -- including the CRT startup
+objects the linker merges into every compiled binary -- gets installed
+from the `v3` tier, regardless of any `-march`/`-mtune` flag this
+project's own build passes (see `ARCHITECTURE.md`'s "x86-64 ISA
+baseline" section for the full mechanism). Building the same source on
+genuinely v2-class hardware instead produces binaries requiring only
+the universal `x86-64-baseline` floor, confirmed via `readelf -n`.
+
+Deliberately not yet fixed at the CI level: whether pinning `apt` to
+the plain `amd64` component inside `build-deb.yml`, before it installs
+build dependencies, would make the runner's own toolchain match a
+v2-class target regardless of the runner's real hardware. Untested --
+picking this up means verifying it actually holds with a real build,
+not just that the pin was applied. Until then, x64 packages that need
+to support pre-Haswell-class hardware are built directly on real
+v2-class hardware instead of through this CI workflow, and the
+resulting asset is manually substituted for whatever `build-deb.yml`
+auto-attaches to the release. This is a manual step with nothing
+enforcing it, and is worth automating once a decision is made either
+way.
+
 ## Per-function AVX2/BMI2 multi-versioning for audio processing code
 
 amd64 builds now compile with a global `-march=x86-64-v2` cap (see
