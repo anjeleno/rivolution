@@ -674,6 +674,29 @@ individually annotated function while leaving the rest of the program at
 the safe v2 baseline -- worth picking up only if real profiling finds an
 actual bottleneck there, not before.
 
+## `postinst`'s fresh-install check can misfire after an earlier failed install attempt, destructively wiping an existing database
+
+`debian/postinst` decides whether to run its destructive first-time
+database setup (`drop database if exists` / `create database` /
+`rddbmgr --create --generate-audio`) versus the safe upgrade path
+(`rddbmgr --modify`) based solely on whether dpkg's `$2` argument to
+`postinst configure` is empty. Per dpkg's own mechanics, that argument
+reflects the last version for which `configure` *completed
+successfully* -- not simply whether some version was previously
+unpacked. If every earlier install attempt failed partway through
+`postinst` (for example, the exec-format/ISA-mismatch failure described
+in `ARCHITECTURE.md`'s x86-64 ISA baseline section), dpkg has never
+recorded a successful configure for the package at all. The next
+attempt that finally succeeds is then indistinguishable, from this
+script's point of view, from a genuinely fresh install -- so it takes
+the destructive branch and wipes whatever database already exists,
+even on what looks from the outside like a routine upgrade.
+
+Not yet fixed. The fresh-install check should be based on whether the
+target database/schema actually exists (or is genuinely empty) rather
+than trusting dpkg's bookkeeping alone, since that bookkeeping can be
+reset by an unrelated failure in an earlier install attempt.
+
 ## Segue markers are frozen into the log at generation time, unlike talk markers
 
 `RDLogModel::LoadLines()` reads `SEGUE_START_POINT`/`SEGUE_END_POINT`
