@@ -274,3 +274,46 @@ fork of `rivolution`. The wiki repo itself stays the live, editable
 source — `docs/wiki/` is a point-in-time mirror, not a synced copy, and
 won't necessarily reflect the latest wiki edit until the next manual
 pass.
+
+## Package distribution: official Debian/Ubuntu archive vs. a PPA vs. a self-hosted apt repo vs. GitHub Releases (current)
+
+Today's distribution method — tag a release, attach built `.deb`s to a
+GitHub Release, users `wget` + `apt install ./file.deb` by hand — works
+and costs nothing extra, but three real alternatives exist, each with a
+different cost/benefit shape. Not picked up; recorded here so the
+tradeoffs don't need re-deriving next time this comes up.
+
+**Official Debian/Ubuntu archive (`main`/`universe`):** almost always
+goes through Debian first — package to Debian's standards, get
+sponsored by a Debian Developer/Maintainer (or become one), pass
+`ftp-master`'s `NEW`-queue review, land in unstable, migrate to
+testing, then Ubuntu syncs eligible packages into `universe` **at its
+next development cycle** — not retroactively into an already-released
+version, so this wouldn't reach 26.04 at all even if accepted today.
+Free, but the real cost is time (realistically months, gated on a
+sponsor relationship and queue backlog) and process, not money.
+
+**A Launchpad PPA:** upload a signed source package to a free Launchpad
+account; Launchpad's own builders compile it per targeted Ubuntu
+release/architecture, and users add it themselves
+(`add-apt-repository ppa:...`). Free, fast (hours once set up, no
+sponsor needed), but it's a third-party repo a user opts into — not
+part of the default archive.
+
+**A self-hosted apt repo** (`reprepro`/`aptly` + static hosting): full
+control, `apt upgrade` picks up new versions automatically once a user
+adds the repo once — and notably, **this is what upstream Rivendell
+itself has always done** (Paravel Systems runs their own repo rather
+than being in Debian/Ubuntu's official archive), so it's an
+already-proven distribution model for exactly this kind of project, not
+a novel one. Real added cost: repo-management tooling, hosting, and a
+GPG signing key to maintain indefinitely, plus a new publish step
+alongside (or replacing) `gh release create`.
+
+**Where this stands:** GitHub Releases remains the right choice for
+now — official archive inclusion is a months-long process that
+wouldn't even reach 26.04, and the PPA/self-hosted-repo benefits (mainly
+hands-off `apt upgrade` across a fleet) don't pay for their added
+maintenance cost yet, with testing currently happening on one or two
+machines rather than many stations. Revisit once there's an actual
+multi-machine deployment that would benefit from unattended upgrades.
