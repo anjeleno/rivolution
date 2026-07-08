@@ -661,7 +661,16 @@ void RDPlayDeck::pointTimerData(int point)
       case RDPlayDeck::Segue:
 	if(play_point_state[point]) {
 	  play_point_state[point]=false;
-	  rda->cae()->stopPlay(play_serial);
+	  //
+	  // "No fade on segue out" (play_point_gain==0) means this element
+	  // is meant to play out undisturbed to its own natural end -- the
+	  // segue-end marker is timing data for what comes next, not a stop
+	  // command for this element. Only auto-stop here when a fade/duck
+	  // was actually requested.
+	  //
+	  if(play_point_gain!=0) {
+	    rda->cae()->stopPlay(play_serial);
+	  }
 	  emit segueEnd(play_id);
 	}
 	else {

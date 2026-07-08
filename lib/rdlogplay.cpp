@@ -2039,9 +2039,19 @@ bool RDLogPlay::StartEvent(int line,RDLogLine::TransType trans_type,
 	       (prev_logline->status()!=RDLogLine::Paused)) {
 	      switch(logLine(lines[i])->cartType()) {
 	      case RDCart::Audio:
-		prev_logline->setStatus(RDLogLine::Finishing);
-		((RDPlayDeck *)prev_logline->playDeck())->
-		  stop(trans_length);
+		//
+		// "No fade on segue out" (segueGain()==0) means the outgoing
+		// element plays out undisturbed to its own natural end --
+		// don't mark it Finishing or schedule a stop against it.
+		// It's cleaned up normally via the ordinary Finished() path
+		// once it actually runs out. See docs/specs/0002-segue-
+		// backtiming.md.
+		//
+		if(prev_logline->segueGain()!=0) {
+		  prev_logline->setStatus(RDLogLine::Finishing);
+		  ((RDPlayDeck *)prev_logline->playDeck())->
+		    stop(trans_length);
+		}
 		break;
 
 	      case RDCart::Macro:
@@ -3013,7 +3023,26 @@ void RDLogPlay::Finished(int id)
   switch(logline->status()) {
   case RDLogLine::Playing:
     CleanupEvent(id);
-    FinishEvent(line);
+    //
+    // FinishEvent() auto-advances to whatever the next not-yet-started
+    // line is -- correct when this line had nothing chained off its own
+    // segue markers, but wrong if the very next line is already
+    // running: that means an earlier segue (e.g. a "no fade on segue
+    // out" element left to play out its own natural length -- see
+    // docs/specs/0002-segue-backtiming.md) already started it, and
+    // GetNextPlayable() would otherwise skip past it and hard-start the
+    // line *after* that instead, killing the already-legitimately-
+    // playing successor via StartEvent()'s unconditional Play-transition
+    // stop-everything behavior.
+    //
+    {
+      RDLogLine *next_logline=logLine(line+1);
+      if((next_logline==NULL)||
+	 ((next_logline->status()!=RDLogLine::Playing)&&
+	  (next_logline->status()!=RDLogLine::Finishing))) {
+	FinishEvent(line);
+      }
+    }
     break;
 
   case RDLogLine::Auditioning:

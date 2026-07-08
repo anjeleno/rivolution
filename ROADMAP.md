@@ -105,6 +105,80 @@ Not yet scoped: where this lives (RDAdmin tool, standalone CLI script,
 RDLibrary feature), exact report format, whether it should also offer
 to act (e.g. flag/disable carts with missing audio) or stay read-only.
 
+## Configurable segue ducking in RDAirplay
+
+Found while investigating the segue back-timing/no-fade truncation fix
+(2026-07-07, see `CHANGELOG.md` and `docs/specs/0002-segue-backtiming.md`).
+While tracing how the outgoing and incoming elements' volumes interact
+during a segue, it became clear there's a real gap: automated,
+fully-scheduled segues never duck at all today, and the only ducking
+mechanism that exists is manual and out of scope for this feature.
+
+**Current state, confirmed against source:**
+
+- `DUCK_UP_GAIN`/`DUCK_DOWN_GAIN` exist only as columns on `LOG_LINES`
+  — a value that belongs to one specific scheduled log line, not to a
+  cart or cut. There is no such column anywhere on `CUTS`. Default is
+  `0` for every line (`lib/rdlog_line.cpp:142`).
+- The **only** thing that ever writes a nonzero value into either
+  column is the voice tracker, by a DJ manually dragging duck handles
+  in the waveform view (`lib/rdtrackerwidget.cpp`). Nothing else in the
+  codebase ever sets them.
+- `RDPlayDeck` reads both values at cue time (`lib/rdplay_deck.cpp:239-240`)
+  and does act on them for real — B's duck-up only engages if
+  `duckUpGain()!=0` (`lib/rdplay_deck.cpp:441`), A's duck-down only
+  engages if `duckDownGain()<0` (`lib/rdplay_deck.cpp:558`). So the code
+  path is live and runs on every segue; it's the *value* that's inert —
+  since ordinary automated log lines are never touched by the voice
+  tracker, this is always "duck by zero," meaning no audible ducking
+  ever happens on a normal, fully-automated segue today.
+- The duck curve durations are hardcoded, not configurable or stored
+  anywhere: `RDPLAYDECK_DUCKDOWN_LENGTH 750` / `RDPLAYDECK_DUCKUP_LENGTH
+  1500` (milliseconds) in `lib/rdplay_deck.h:35-36`.
+- Gain values throughout the codebase are stored as hundredths of a dB
+  (confirmed via `RD_FADE_DEPTH -3000` = -30.00 dB), so 0.5 dB steps are
+  trivial precision-wise — no schema constraint stands in the way of
+  that granularity.
+
+**Requested feature:** a user-editable ducking amount (in 0.5 dB steps)
+that applies automatically during any fully-automated segue transition
+in RDAirplay — completely independent of carts, cuts, and the voice
+tracker, which must remain entirely untouched by this work (no shared
+columns, no shared code path). Likely surfaced as a per-host RDAirplay
+setting in RDAdmin (Manage Hosts → [host] → RDAirplay), not the Go
+dashboard, since this is a live-playout-engine behavior rather than
+library or system configuration — final placement still to be decided.
+
+**Genuinely open questions, deliberately not decided yet:**
+
+- Does the duck apply only to the outgoing element (A dips, B plays at
+  full volume — the leading theory), or to both elements simultaneously?
+- How does this interact with "No fade on segue out" (fixed 2026-07-07,
+  see `docs/specs/0002-segue-backtiming.md`)? That flag now means A
+  plays its tail out completely undisturbed to its own natural end —
+  does a duck amount still apply on top of that (A's tail plays out in
+  full but at a reduced level), or does "no fade" mean hands-off
+  entirely, with no ducking either? These two features clearly
+  interact and need to be designed together, not bolted on separately.
+- How does this interact with segue back-timing's delay math? Back-timing
+  already computes when to fire B relative to A's tail and B's intro
+  length — ducking changes what's audible during that overlap window but
+  presumably shouldn't change the timing math itself; needs to be
+  confirmed rather than assumed.
+- Whether the curve duration should scale with duck depth (a -6 dB duck
+  and a -2 dB duck both need to sound smooth, not just use the same
+  fixed 750/1500ms window regardless of depth) — deliberately deferred
+  until this can actually be heard on real air before deciding whether
+  the curve math needs to change at all.
+- Exact storage location for the new default value (a new config table/
+  column, separate entirely from `LOG_LINES.DUCK_UP_GAIN`/`DOWN_GAIN`).
+
+**Needs a full spec before implementation starts** — this has enough
+interacting variables (back-timing, the no-fade behavior, one-element
+vs. two-element ducking, curve shape) that it warrants a dedicated
+planning pass rather than incremental design in the middle of another
+fix.
+
 ## Full modernization (the "v6" effort)
 
 Longer-term direction, with several major decisions now locked in and
