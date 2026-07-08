@@ -157,6 +157,26 @@ that signal, inside `RDLogPlay`, changes.
   in response to that flag already being set, not how it's edited.
 - Voice tracking's marker-repositioning behavior is untouched.
 
+## Correction (2026-07-07): the "Gate condition" section above was wrong about what "no fade" actually did
+
+The Background section's claim that `play_point_gain==0` meant A "is
+*not* faded, it plays naturally to the stop point" was true as far as
+it went, but "the stop point" was assumed to mean A's own natural end
+— it doesn't. Two call sites unconditionally stop A right at its
+segue-end marker regardless of `segueGain()`:
+`RDPlayDeck::pointTimerData()`'s `Segue` case, and
+`RDLogPlay::StartEvent()`'s `Segue` branch. Only the fade *curve* was
+ever gated on the flag; the stop itself never was. So back-timing, as
+originally implemented per this spec, correctly delayed firing B, but
+A was still being truncated at its own segue-end the whole time,
+independent of that delay — silently defeating the point whenever a
+cut's segue-end sits meaningfully before its actual audio end (e.g. a
+produced element with a trailing reverb tail). Both call sites now also
+skip the stop when `segueGain()==0`, letting A run out via its ordinary
+natural-completion path instead. See `CHANGELOG.md` (2026-07-07) and
+`ARCHITECTURE.md`'s "a flag gating one side-effect of a compound action
+doesn't gate the others" for the full mechanism.
+
 ## Open items for implementation time
 
 - Re-confirm `segueStartData()`'s exact guard conditions immediately

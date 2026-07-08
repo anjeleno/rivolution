@@ -7,6 +7,49 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-07
+
+- Fixed "No fade on segue out" (`segueGain()==0`) being silently
+  ignored by the segue-end stop mechanism. `RDPlayDeck::pointTimerData()`
+  was unconditionally calling `stopPlay()` at every cart's segue-end
+  marker regardless of that flag, and `RDLogPlay::StartEvent()`'s Segue
+  branch was unconditionally marking the outgoing element `Finishing`
+  and scheduling a timed stop against it -- both only ever gated the
+  *fade curve*, never whether a stop happened at all. In practice this
+  meant any cart with "no fade" checked was still hard-stopped (or
+  abruptly cut) right at its segue-end point, clipping any trailing
+  audio (reverb tails, echoes) meant to be preserved past that marker.
+  Combined with segue back-timing (`docs/specs/0002-segue-backtiming.md`),
+  this produced inconsistent, seemingly random walk-in behavior:
+  back-timing's delay math was correct, but the outgoing element kept
+  getting truncated at segue-end regardless, before its tail could
+  actually finish. Both call sites now skip the stop when
+  `segueGain()==0`; the outgoing element instead runs out via its
+  ordinary natural-completion path (`RDLogPlay::Finished()`), the same
+  one already used for any cart with no segue at all.
+- Fixed a regression introduced by the fix above: letting a "no fade"
+  element run out via `RDLogPlay::Finished()` exposed a second,
+  previously-unreachable bug in that same natural-completion path.
+  `Finished()` called `FinishEvent()` unconditionally, which
+  auto-advances to whatever the next not-yet-started line is --
+  correct when nothing else was ever chained off this line's own segue
+  markers, but wrong once an element could legitimately reach real
+  natural completion *after* its successor had already been started by
+  an earlier segue. `GetNextPlayable()` skips already-running lines
+  when searching, so it would find the line *after* the real successor
+  and hard-start it via an unconditional `Play`-transition stop-
+  everything, killing the legitimately-playing successor a few seconds
+  in. `Finished()` now only calls `FinishEvent()` if the very next line
+  isn't already `Playing`/`Finishing`.
+- Fixed RDLibrary's "Talk" column showing nothing unless both intro
+  markers had been explicitly set. `RDLibraryModel` was computing it as
+  `talkEndPoint() - talkStartPoint()` (a length), which produces a
+  meaningless result once either point is left at its unset default --
+  but the column is meant to show the single final intro-marker time
+  (where the vocal actually starts), not a span between two markers.
+  Now displays `talkEndPoint()` directly whenever it's set, independent
+  of whether the first marker has ever been touched.
+
 ## 2026-07-06
 
 - x64 packages for this revision were built directly on real

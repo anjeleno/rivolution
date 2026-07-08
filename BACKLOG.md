@@ -673,3 +673,25 @@ from AVX2/BMI2/FMA specifically. GCC's function multi-versioning
 individually annotated function while leaving the rest of the program at
 the safe v2 baseline -- worth picking up only if real profiling finds an
 actual bottleneck there, not before.
+
+## Segue markers are frozen into the log at generation time, unlike talk markers
+
+`RDLogModel::LoadLines()` reads `SEGUE_START_POINT`/`SEGUE_END_POINT`
+only from `LOG_LINES` -- a snapshot copied in from `CUTS` whenever that
+log line was originally generated or imported. Editing a cart's segue
+markers in the library afterward has no effect on any log that already
+existed, including on a plain unload/reload in the on-air player;
+picking up the edit requires deleting and regenerating that log. Talk
+(intro) markers don't have this problem -- `RDPlayDeck` reloads them
+live from `CUTS` on every cue, regardless of log age. Confirmed via a
+real test (delete + regenerate a log, reload it, edit still not fully
+reflected in some lines) while investigating the segue back-timing
+truncation bug (see `CHANGELOG.md`, 2026-07-07); ruled out as the
+dominant cause there, but the asymmetry itself is real and unfixed.
+Deferred because it wasn't the actual bug in that investigation and a
+fix means deciding whether segue points should also be reloaded live
+(mirroring talk markers) or whether the frozen-snapshot behavior is
+intentional (it would preserve a voice-tracker's per-line marker
+override independent of later library edits) and the real gap is only
+that ordinary library edits have no path to reach an already-built log
+at all.

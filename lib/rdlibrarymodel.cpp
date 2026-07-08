@@ -776,9 +776,9 @@ void RDLibraryModel::updateRow(int row,RDSqlQuery *q)
   d_cart_numbers[row]=q->value(0).toUInt();
   d_texts[row][1]=q->value(12);   // Group
   d_texts[row][2]=RDGetTimeLength(q->value(1).toUInt());  // Total Length
-  if(q->value(16).toUInt()==1) {
-    d_texts[row][3]=              // Talk Length
-      RDGetTimeLength(q->value(28).toUInt()-q->value(27).toUInt());
+  if((q->value(16).toUInt()==1)&&(q->value(28).toInt()>=0)) {
+    d_texts[row][3]=              // Talk (intro) time -- the final marker,
+      RDGetTimeLength(q->value(28).toUInt());  // where the vocal starts
   }
   else {
     d_texts[row][3]="0:00";
@@ -877,8 +877,9 @@ void RDLibraryModel::updateRow(int row,RDSqlQuery *q)
       QString::asprintf(" %03d",RDCut::cutNumber(q->value(24).toString()));
     d_cut_texts[row].back()[2]=  // Length
       RDGetTimeLength(q->value(26).toUInt()-q->value(25).toUInt());
-    d_cut_texts[row].back()[3]=  // Talk Length
-      RDGetTimeLength(q->value(28).toUInt()-q->value(27).toUInt());
+    d_cut_texts[row].back()[3]=  // Talk (intro) time -- the final marker,
+      (q->value(28).toInt()>=0)?RDGetTimeLength(q->value(28).toUInt()):
+      QString("0:00");          // where the vocal starts
     d_cut_texts[row].back()[4]=q->value(29).toString();  // Description
     d_cut_texts[row].back()[16]=QString::asprintf("%d",q->value(32).toUInt());
     d_cut_texts[row].back()[17]=
