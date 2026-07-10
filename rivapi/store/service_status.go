@@ -125,16 +125,35 @@ func unitInfo(unit string) (state, detail string) {
 	return state, detail
 }
 
-// ControlUnit runs `sudo systemctl <action> <unit>`.
+// ControlUnit starts, stops, or restarts unit.
 // action must be "start", "stop", or "restart".
-// unit must be StackTarget or one of ManagedUnits — all other values are rejected
-// to prevent command injection through the HTTP API.
+// unit must be StackTarget, one of ManagedUnits, or a currently-deployed
+// broadcast stream unit — all other values are rejected to prevent
+// command injection through the HTTP API.
 func ControlUnit(unit, action string) error {
 	switch action {
 	case "start", "stop", "restart":
 	default:
 		return fmt.Errorf("unsupported action %q", action)
 	}
+
+	// Stream units aren't in RIVAPI_SYSTEMCTL's fixed per-unit sudoers
+	// grant -- there's no fixed count of them, and sudo-rs rejects
+	// wildcards in command arguments (see conf/sudoers.d/rivapi's
+	// comment) -- so route them through task-systemctl.sh instead,
+	// which is whitelisted by bare script path and does its own action/
+	// ID validation, same as every other scheduled-task control action.
+	if id, ok := streamTaskID(unit); ok {
+		scriptAction := action
+		if action == "stop" || action == "restart" {
+			scriptAction = action + "-service"
+		}
+		if err := sudoRun(controlScriptsDir+"/task-systemctl.sh", scriptAction, id); err != nil {
+			return fmt.Errorf("%s %s: %w", action, unit, err)
+		}
+		return nil
+	}
+
 	if !isAllowedUnit(unit) {
 		return fmt.Errorf("unit %q is not in the managed list", unit)
 	}
@@ -150,6 +169,22 @@ func ControlUnit(unit, action string) error {
 		return fmt.Errorf("systemctl %s %s: %w: %s", action, unit, err, strings.TrimSpace(string(out)))
 	}
 	return nil
+}
+
+// streamTaskID returns the task ID embedded in unit and true, if unit
+// names a currently-deployed broadcast stream's systemd service.
+func streamTaskID(unit string) (string, bool) {
+	streams, err := streamUnitStatuses()
+	if err != nil {
+		return "", false
+	}
+	for _, s := range streams {
+		if s.Unit == unit {
+			id := strings.TrimSuffix(strings.TrimPrefix(unit, "rivolution-task-"), ".service")
+			return id, true
+		}
+	}
+	return "", false
 }
 
 // isAllowedUnit checks unit against ManagedUnits plus every currently

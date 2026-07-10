@@ -31,13 +31,21 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   check. Replaced with one status row per currently-deployed broadcast
   stream, read live from the streams manifest rather than a fixed
   list, since the number of stream services depends on how many mounts
-  are configured on `/broadcast` -- start/stop/restart controls work
-  on these the same as any other managed unit. Also fixes a real bug
-  this surfaced: `DeployFfmpegStreams` was enabling each stream via
-  `task-systemctl.sh`'s `enable` action, which only ever targets a
-  task's `.timer` -- streams have no timer, only a `.service`, so every
-  stream deploy would have failed outright. Added a new `enable-service`
-  action for always-on services with no paired timer.
+  are configured on `/broadcast`. Start/stop/restart on a stream row
+  routes through `task-systemctl.sh` (new `stop-service`/
+  `restart-service` actions) rather than a direct `sudo systemctl`
+  call -- there's no fixed sudoers grant possible for a dynamic,
+  unbounded set of unit names, and `sudo-rs` rejects wildcards in
+  command arguments (see `conf/sudoers.d/rivapi`), so this reuses the
+  same bare-script-path grant the scheduled-tasks feature already
+  relies on. Also fixes a real bug this surfaced: `DeployFfmpegStreams`
+  was enabling each stream via `task-systemctl.sh`'s `enable` action,
+  which only ever targets a task's `.timer` -- streams have no timer,
+  only a `.service`, so every stream deploy would have failed outright.
+  Added a new `enable-service` action for always-on services with no
+  paired timer.
+- `conf/sudoers.d/rivapi`: dropped the now-unused `liquidsoap.service`
+  start/stop/restart grant.
 - `/export`: import/restore copy still described the old
   Icecast/Liquidsoap restart behavior; updated to describe the current
   Icecast-restart-plus-stream-redeploy behavior.

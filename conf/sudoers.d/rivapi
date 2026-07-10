@@ -13,9 +13,6 @@ Cmnd_Alias RIVAPI_SYSTEMCTL = \
     /usr/bin/systemctl start icecast2.service, \
     /usr/bin/systemctl stop icecast2.service, \
     /usr/bin/systemctl restart icecast2.service, \
-    /usr/bin/systemctl start liquidsoap.service, \
-    /usr/bin/systemctl stop liquidsoap.service, \
-    /usr/bin/systemctl restart liquidsoap.service, \
     /usr/bin/systemctl start stereo-tool.service, \
     /usr/bin/systemctl stop stereo-tool.service, \
     /usr/bin/systemctl restart stereo-tool.service, \
