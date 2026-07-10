@@ -740,3 +740,32 @@ pressure just to fix a cosmetic backup filename. `/tasks` database
 backup tasks can set their own file name prefix instead (see
 `CHANGELOG.md`, 2026-07-09) as a workaround that doesn't touch the
 schema.
+
+## Dashboard nav says "Streaming", everything underneath still says "Broadcast"
+
+The `/broadcast` route, its handlers (`handlers_broadcast.go`,
+`BroadcastSave`), the persisted config type (`BroadcastConfig`,
+`LoadBroadcastConfig`/`SaveBroadcastConfig`), the on-disk file it's
+stored in (`/home/rd/etc/rivolution/broadcast.json`), the
+`RIVAPI_BROADCAST_CONFIG` env var, and the export/import bundle's
+`"broadcast"` JSON key all still say "broadcast" -- only the two
+visible nav labels (main nav and the home page's quick-link tile) were
+changed to "Streaming", 2026-07-09.
+
+Deliberately left everything else alone: renaming the Go identifiers,
+handler file names, and routes is a mechanical, low-risk refactor
+whenever someone wants to spend the time on it, but the on-disk config
+file name, env var, and export-bundle JSON key are a different kind of
+change -- every existing install already has a `broadcast.json` on
+disk and possibly saved export bundles keyed `"broadcast"`, so renaming
+those needs an actual migration path (or a back-compat alias), not
+just a search-and-replace, or existing installs silently lose their
+saved config on upgrade. Same reasoning already applied to the
+`liquidsoap.*`/`liq_*` field names kept in `BroadcastConfig` itself
+after the ffmpeg swap (see `CHANGELOG.md`, 2026-07-09).
+
+If this mismatch (nav says one thing, everything else says another)
+ends up being more confusing than the original wording, worth doing
+the full internal rename in one pass -- it's roughly 110 occurrences
+across 18 files by a straight grep, but all mechanical, no persisted
+data involved outside the three places named above.

@@ -49,6 +49,13 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 - `/export`: import/restore copy still described the old
   Icecast/Liquidsoap restart behavior; updated to describe the current
   Icecast-restart-plus-stream-redeploy behavior.
+- Dashboard nav and home page's quick-link now say "Streaming" instead
+  of "Broadcast" -- Rivolution's own job is the broadcast side, so
+  labeling the encode/stream-out page "Broadcast" read as a mismatch.
+  Cosmetic only: the `/broadcast` route, handler/type/file names, and
+  the persisted config (`broadcast.json`, `RIVAPI_BROADCAST_CONFIG`,
+  the export bundle's `"broadcast"` key) are unchanged -- see
+  `BACKLOG.md` for why the rest stays as-is for now.
 
 ## 2026-07-07
 
