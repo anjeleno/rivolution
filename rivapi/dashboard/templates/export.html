@@ -5,7 +5,7 @@
 
 <p style="color: var(--pico-muted-color);">
     Bundles everything this dashboard configures — broadcast/Icecast/
-    Liquidsoap settings, patchbay routing, install mode, and scheduled
+    stream encoding settings, patchbay routing, install mode, and scheduled
     tasks — plus Stereo Tool's own device settings and saved presets, into
     one file. Useful for migrating to a new box or recovering after a
     catastrophic failure.
@@ -47,15 +47,16 @@
     <h3>Import</h3>
     <p style="color: var(--pico-muted-color);">
         Restores every config file this bundle contains, regenerates
-        <code>icecast.xml</code>/<code>radio.liq</code> and restarts
-        Icecast/Liquidsoap, and redeploys every scheduled task. Does
+        <code>icecast.xml</code> and every broadcast stream's systemd
+        service, restarts Icecast, redeploys the streams, and redeploys
+        every scheduled task. Does
         <strong>not</strong> automatically apply the restored install mode
         (mounting NFS, restarting MariaDB, etc.) — visit
         <a href="/mode">Mode</a> afterward and click Apply if you want that
         to actually take effect.
     </p>
     <form method="POST" action="/export/import" enctype="multipart/form-data"
-          onsubmit="return confirm('Import this bundle? This overwrites the current broadcast/patchbay/mode/tasks config and restarts Icecast/Liquidsoap.');">
+          onsubmit="return confirm('Import this bundle? This overwrites the current broadcast/patchbay/mode/tasks config, restarts Icecast, and redeploys every broadcast stream.');">
         <label>
             Configuration bundle
             <input type="file" name="bundle" accept="application/json" required>

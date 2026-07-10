@@ -26,6 +26,21 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   own name (read from `/etc/rd.conf`, currently "Rivendell" -- see
   `BACKLOG.md`) when naming the backup file. Defaults to the old
   behavior if left blank.
+- `/system`: dropped the now-stale fixed `liquidsoap.service` row (see
+  the ffmpeg replacement above) and its JACK-log-scraping warning
+  check. Replaced with one status row per currently-deployed broadcast
+  stream, read live from the streams manifest rather than a fixed
+  list, since the number of stream services depends on how many mounts
+  are configured on `/broadcast` -- start/stop/restart controls work
+  on these the same as any other managed unit. Also fixes a real bug
+  this surfaced: `DeployFfmpegStreams` was enabling each stream via
+  `task-systemctl.sh`'s `enable` action, which only ever targets a
+  task's `.timer` -- streams have no timer, only a `.service`, so every
+  stream deploy would have failed outright. Added a new `enable-service`
+  action for always-on services with no paired timer.
+- `/export`: import/restore copy still described the old
+  Icecast/Liquidsoap restart behavior; updated to describe the current
+  Icecast-restart-plus-stream-redeploy behavior.
 
 ## 2026-07-07
 

@@ -255,7 +255,11 @@ WantedBy=rivolution-stack.target
 	taskCtl := controlScriptsDir + "/task-systemctl.sh"
 	for _, s := range cfg.Streams {
 		id := current[s.Mount]
-		if err := sudoRun(taskCtl, "enable", id); err != nil {
+		// "enable-service", not "enable" -- streams are always-on Type=simple
+		// services with no paired .timer (see this file's top-of-file
+		// comment), and task-systemctl.sh's plain "enable" action only ever
+		// targets a task's .timer.
+		if err := sudoRun(taskCtl, "enable-service", id); err != nil {
 			return fmt.Errorf("enabling stream %q: %w", s.Mount, err)
 		}
 	}
