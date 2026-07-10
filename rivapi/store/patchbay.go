@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -98,9 +99,27 @@ func ReconcileLinks(path string) error {
 	for _, l := range current {
 		have[normalizedLinkKey(l.Output, l.Input)] = true
 	}
+	// Needed to resolve a saved link's port name to whatever the live
+	// equivalent actually is right now, when they differ only by a PID
+	// segment (see resolvePortName) -- e.g. Stereo Tool restarting gives
+	// it a new client name, and a saved link naming its old one would
+	// otherwise fail Link() forever, not just until the PID changes back
+	// (it never does), since normalizedLinkKey only affects the
+	// have-we-already-got-this-connected comparison above, not what
+	// Link() itself is actually called with.
+	outputs, err := ListOutputPorts()
+	if err != nil {
+		return fmt.Errorf("list output ports: %w", err)
+	}
+	inputs, err := ListInputPorts()
+	if err != nil {
+		return fmt.Errorf("list input ports: %w", err)
+	}
 	for _, l := range desired {
 		if !have[normalizedLinkKey(l.Output, l.Input)] {
-			_ = Link(l.Output, l.Input) // best-effort; port may not exist yet
+			out := resolvePortName(l.Output, outputs)
+			in := resolvePortName(l.Input, inputs)
+			_ = Link(out, in) // best-effort; port may not exist yet
 		}
 	}
 	for _, l := range current {
@@ -165,9 +184,37 @@ func normalizePortName(name string) string {
 // normalizedLinkKey is linkPairKey's identity for reconciliation purposes:
 // it's what decides whether a saved link is "already satisfied" or a live
 // link is "already saved," so it goes through normalizePortName first. The
-// actual Link()/Unlink() calls still use the real, current port names.
+// actual Link()/Unlink() calls still use the real, current port names --
+// see resolvePortName, which is what makes that true for a saved name
+// that's since gone stale (e.g. Stereo Tool restarting), not just for
+// this comparison.
 func normalizedLinkKey(output, input string) string {
 	return normalizePortName(output) + "|" + normalizePortName(input)
+}
+
+// resolvePortName returns name unchanged if it's still live (an exact
+// match in live), otherwise looks for a live port whose normalized form
+// matches name's -- i.e. the same port on the same client, just under a
+// new PID (Stereo Tool restarted since this name was saved). Returns
+// name unchanged if nothing matches at all, so Link()/Unlink() still get
+// a value and fail exactly as before for a genuinely-gone port, not a
+// new error class.
+func resolvePortName(name string, live []string) string {
+	for _, p := range live {
+		if p == name {
+			return name
+		}
+	}
+	normalized := normalizePortName(name)
+	if normalized == name {
+		return name // not a Stereo-Tool-shaped name; nothing to resolve
+	}
+	for _, p := range live {
+		if normalizePortName(p) == normalized {
+			return p
+		}
+	}
+	return name
 }
 
 // pwEnv sets XDG_RUNTIME_DIR for a pw-link invocation. rivapi.service also
@@ -187,6 +234,34 @@ func ListOutputPorts() ([]string, error) {
 // ListInputPorts returns every JACK/PipeWire input (sink) port.
 func ListInputPorts() ([]string, error) {
 	return pwLinkPorts("-i")
+}
+
+// ListOutputClients returns every distinct client name with at least one
+// output port (the part of "client:port" before the last colon), sorted,
+// deduplicated. Unlike ListOutputPorts (per-port granularity, what
+// /patchbay's own point-to-point connection dropdowns need),
+// BroadcastConfig.ProgramSource is a per-client concept -- the actual
+// stereo pair of ports is discovered live at deploy time
+// (ffmpeg_generator.go's clientPorts), whatever they happen to be named.
+func ListOutputClients() ([]string, error) {
+	ports, err := ListOutputPorts()
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]bool, len(ports))
+	var clients []string
+	for _, p := range ports {
+		client, _, ok := strings.Cut(p, ":")
+		if !ok {
+			continue
+		}
+		if !seen[client] {
+			seen[client] = true
+			clients = append(clients, client)
+		}
+	}
+	sort.Strings(clients)
+	return clients, nil
 }
 
 func pwLinkPorts(flag string) ([]string, error) {

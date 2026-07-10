@@ -8,7 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
+	"time"
 )
 
 // ffmpeg_generator.go replaces liquidsoap_generator.go: instead of one
@@ -41,6 +43,104 @@ import (
 // streams don't have an operator-visible ID to track by, so this
 // tracks them internally instead, keyed by mount.
 const FfmpegStreamsManifestPath = "/home/rd/etc/rivolution/ffmpeg_streams.json"
+
+// ProgramSourceStereoTool is BroadcastConfig.ProgramSource's sentinel
+// value for "a local Stereo Tool processes the signal" -- as opposed to
+// an ordinary value naming a specific JACK client directly (e.g.
+// "rivendell_0" on a station with no local processing at all). Stereo
+// Tool needs special handling no other source does: its own JACK client
+// name embeds its process ID (see stereoToolOutputPorts), and its own
+// ALSA-JACK bridge can only ever be configured with one fixed target
+// (see syncStereoToolTarget) -- there is no way to hand it N target
+// names for N streams the way a native multi-port JACK client could
+// simply be told to connect to. Neither limitation is specific to this
+// station's setup; every install using Stereo Tool hits both.
+const ProgramSourceStereoTool = "stereo_tool"
+
+// stereoToolOutputPortRe matches Stereo Tool's own JACK client's output
+// (playback) port names, e.g. "stereo_tool.P.12898.3:out_000" -- see
+// patchbay.go's stereoToolPortPattern, which exists for the identical
+// reason (matching this project's one confirmed real case of a JACK
+// client whose own name is never stable across restarts).
+var stereoToolOutputPortRe = regexp.MustCompile(`^stereo_tool\.P\.\d+\.\d+:`)
+
+// stereoToolOutputPorts returns Stereo Tool's currently live output
+// ports, however its current process/client-instance happens to be
+// numbered right now -- a literal "client:port" prefix match (what
+// clientPorts does for every other kind of source) can never work here,
+// since that name changes on every restart and even within one restart
+// while it settles. Sorted for a stable L/R pairing order. Polls briefly
+// (same shape as pollClientPorts): syncStereoToolTarget may have just
+// restarted stereo-tool.service moments earlier, so its ports may not
+// have registered yet.
+func stereoToolOutputPorts() ([]string, error) {
+	deadline := time.Now().Add(streamPortsPollTimeout)
+	for {
+		all, err := ListOutputPorts()
+		if err != nil {
+			return nil, err
+		}
+		var ports []string
+		for _, p := range all {
+			if stereoToolOutputPortRe.MatchString(p) {
+				ports = append(ports, p)
+			}
+		}
+		if len(ports) > 0 || time.Now().After(deadline) {
+			sort.Strings(ports)
+			return ports, nil
+		}
+		time.Sleep(streamPortsPollInterval)
+	}
+}
+
+// primaryStreamMount deterministically picks which configured stream is
+// Stereo Tool's own fixed ALSA-JACK bridge target (see
+// syncStereoToolTarget) -- sorted by mount, so it's derived purely from
+// whatever an operator has actually configured on /broadcast, never a
+// hardcoded mount name. Returns false if no streams are configured yet.
+func primaryStreamMount(cfg BroadcastConfig) (string, bool) {
+	if len(cfg.Streams) == 0 {
+		return "", false
+	}
+	mounts := make([]string, len(cfg.Streams))
+	for i, s := range cfg.Streams {
+		mounts[i] = s.Mount
+	}
+	sort.Strings(mounts)
+	return mounts[0], true
+}
+
+// syncStereoToolTarget points Stereo Tool's ALSA-JACK bridge
+// (AsoundrcPath's pcm.jack playback_ports, confirmed 2026-07-10 to be
+// what it actually reads its target from -- see AsoundrcPath's doc
+// comment) at the current primaryStreamMount's ffmpeg JACK client,
+// restarting stereo-tool.service only when the target actually changed
+// (a fresh station, or the previous anchor stream was removed) -- not
+// on every deploy, since Stereo Tool's own connection is otherwise left
+// alone once established. No-ops entirely if ProgramSource isn't the
+// Stereo Tool sentinel, or no streams are configured yet.
+func syncStereoToolTarget(cfg BroadcastConfig) error {
+	if cfg.ProgramSource != ProgramSourceStereoTool {
+		return nil
+	}
+	mount, ok := primaryStreamMount(cfg)
+	if !ok {
+		return nil
+	}
+	clientID := streamJackClientID(cfg.Liquidsoap.JackInputID, mount)
+	changed, err := PatchAsoundrcTarget(AsoundrcPath, clientID+":input_1", clientID+":input_2")
+	if err != nil {
+		return fmt.Errorf("patching %s: %w", AsoundrcPath, err)
+	}
+	if !changed {
+		return nil
+	}
+	if err := sudoSystemctl("restart", "stereo-tool.service"); err != nil {
+		return fmt.Errorf("restarting stereo-tool.service: %w", err)
+	}
+	return nil
+}
 
 // StreamUnitID deterministically derives a task-shaped 16-hex-char ID
 // from a stream's mount, so redeploying the same set of streams reuses
@@ -97,11 +197,16 @@ func ffmpegPipeline(cfg BroadcastConfig, s StreamConfig) (string, error) {
 
 	switch s.Codec {
 	case "mp3":
+		// Trailing -f mp3: ffmpeg's icecast:// output protocol has no
+		// filename extension to infer a container from, and without an
+		// explicit -f it fails immediately with "Unable to choose an
+		// output format" -- confirmed live 2026-07-10, every codec path
+		// hit this identically until each got its own explicit -f.
 		return fmt.Sprintf(
 			"exec ffmpeg -nostdin -loglevel warning -f jack -i %s "+
 				"-c:a libmp3lame -b:a %dk -content_type audio/mpeg "+
 				"-ice_name %s -ice_genre %s -ice_description %s "+
-				"%s",
+				"-f mp3 %s",
 			shellQuote(clientID), s.Bitrate,
 			shellQuote(name), shellQuote(genre), shellQuote(description),
 			shellQuote(icecastURL(cfg, s)),
@@ -111,7 +216,7 @@ func ffmpegPipeline(cfg BroadcastConfig, s StreamConfig) (string, error) {
 			"exec ffmpeg -nostdin -loglevel warning -f jack -i %s "+
 				"-c:a libvorbis -q:a %s -content_type application/ogg "+
 				"-ice_name %s -ice_genre %s -ice_description %s "+
-				"%s",
+				"-f ogg %s",
 			shellQuote(clientID), ffmpegVorbisQuality(s.Quality),
 			shellQuote(name), shellQuote(genre), shellQuote(description),
 			shellQuote(icecastURL(cfg, s)),
@@ -123,14 +228,17 @@ func ffmpegPipeline(cfg BroadcastConfig, s StreamConfig) (string, error) {
 		// streamable bitstream instead. --profile 2 is plain AAC-LC;
 		// see liquidsoap_generator.go's liqEncoder comment for why
 		// HE-AAC (profiles 5/29) isn't available on this distro's
-		// libfdk-aac2 build.
+		// libfdk-aac2 build. Final stage's trailing -f adts: same
+		// explicit-format requirement as mp3/ogg above -- the input
+		// side is already ADTS (fdkaac's -f 2), so the output side
+		// names the same container.
 		return fmt.Sprintf(
 			"exec ffmpeg -nostdin -loglevel warning -f jack -i %s "+
 				"-f s16le -ar %d -ac 2 - | "+
 				"fdkaac --silent --bitrate %d000 --profile 2 --raw --raw-channels 2 --raw-rate %d -f 2 -o - - | "+
 				"exec ffmpeg -nostdin -loglevel warning -f aac -i - -c:a copy "+
 				"-content_type audio/aacp -ice_name %s -ice_genre %s -ice_description %s "+
-				"%s",
+				"-f adts %s",
 			shellQuote(clientID), rate,
 			s.Bitrate, rate,
 			shellQuote(name), shellQuote(genre), shellQuote(description),
@@ -280,7 +388,165 @@ WantedBy=rivolution-stack.target
 		}
 	}
 
+	if err := syncStereoToolTarget(cfg); err != nil {
+		return fmt.Errorf("syncing stereo tool target: %w", err)
+	}
+
+	if err := syncStreamPatchLinks(cfg, previous, current); err != nil {
+		return fmt.Errorf("syncing stream patch links: %w", err)
+	}
+
 	return saveFfmpegStreamsManifest(current, FfmpegStreamsManifestPath)
+}
+
+const (
+	streamPortsPollTimeout  = 3 * time.Second
+	streamPortsPollInterval = 200 * time.Millisecond
+)
+
+// syncStreamPatchLinks keeps the patchbay's saved connections from
+// cfg.ProgramSource to each broadcast stream in sync with cfg.Streams --
+// but only for a stream with no saved link at all yet. A stream that
+// already has *any* saved link referencing its client (whether this
+// function created it or an operator drew it by hand in /patchbay) is
+// never touched again, so a manual repatch or a deliberate disconnect
+// always sticks. Deliberately keyed on "does a link exist," not "is
+// this mount new in the deploy manifest" -- a stream that was deployed
+// before but never actually got a working connection (e.g. its process
+// kept failing to start) still needs auto-connecting once it finally
+// comes up, even though its mount already appears in `previous`. See
+// BroadcastConfig.ProgramSource's doc comment for why no source is
+// assumed anywhere in this package.
+//
+// Deliberately discovers real port names live (via ListOutputPorts/
+// ListInputPorts) rather than assuming a fixed naming convention on
+// either side -- cfg.ProgramSource might be a PipeWire virtual bus, a
+// native JACK client, or anything else an operator picked, and
+// different clients name their ports differently.
+func syncStreamPatchLinks(cfg BroadcastConfig, previous, current map[string]string) error {
+	desired, err := LoadDesiredLinks(DesiredLinksPath)
+	if err != nil {
+		return fmt.Errorf("loading patchbay links: %w", err)
+	}
+
+	// Removals: a mount that existed before but not now has a genuinely
+	// gone stream client -- any saved link naming it is stale, whether
+	// it was auto-created here or an operator's own change.
+	removedClients := make(map[string]bool)
+	for mount := range previous {
+		if _, stillPresent := current[mount]; !stillPresent {
+			removedClients[streamJackClientID(cfg.Liquidsoap.JackInputID, mount)] = true
+		}
+	}
+	kept := make([]PatchLink, 0, len(desired))
+	for _, l := range desired {
+		stale := false
+		for client := range removedClients {
+			if strings.HasPrefix(l.Input, client+":") {
+				stale = true
+				break
+			}
+		}
+		if !stale {
+			kept = append(kept, l)
+		}
+	}
+	desired = kept
+
+	// Additions: only for a stream with no saved link at all yet, and
+	// only if an operator has actually configured a program source.
+	if cfg.ProgramSource != "" {
+		var sourcePorts []string
+		var err error
+		if cfg.ProgramSource == ProgramSourceStereoTool {
+			// Stereo Tool's own JACK client name embeds its PID, so it
+			// can never be matched by a literal "client:port" prefix the
+			// way any other source can -- discover whatever's currently
+			// live by pattern instead (same PID-agnostic idea already
+			// used for reconciling saved links, see patchbay.go's
+			// normalizePortName).
+			//
+			// The anchor stream (see primaryStreamMount) is included
+			// here too, not skipped -- confirmed live 2026-07-10 that
+			// skipping it was a real bug, not a harmless redundancy:
+			// ReconcileLinks (patchbay.go) treats *any* live connection
+			// not in the saved set as unwanted and tears it down, so
+			// omitting the anchor's own link from `desired` actively
+			// undid syncStereoToolTarget's direct connection every
+			// reconcile cycle instead of just duplicating it.
+			sourcePorts, err = stereoToolOutputPorts()
+		} else {
+			sourcePorts, err = clientPorts(cfg.ProgramSource, ListOutputPorts)
+		}
+		if err != nil {
+			return fmt.Errorf("listing program source ports: %w", err)
+		}
+		for _, s := range cfg.Streams {
+			clientID := streamJackClientID(cfg.Liquidsoap.JackInputID, s.Mount)
+			hasLink := false
+			for _, l := range desired {
+				if strings.HasPrefix(l.Input, clientID+":") {
+					hasLink = true
+					break
+				}
+			}
+			if hasLink {
+				continue
+			}
+			// Poll briefly: the stream's systemd unit was only just
+			// enabled --now moments ago (see sudoRun(taskCtl,
+			// "enable-service", id) above), so its JACK ports may not
+			// have registered yet.
+			inputPorts, err := pollClientPorts(clientID, ListInputPorts)
+			if err != nil {
+				return fmt.Errorf("listing stream %q ports: %w", s.Mount, err)
+			}
+			n := len(sourcePorts)
+			if len(inputPorts) < n {
+				n = len(inputPorts)
+			}
+			for i := 0; i < n; i++ {
+				desired = append(desired, PatchLink{Output: sourcePorts[i], Input: inputPorts[i]})
+			}
+		}
+	}
+
+	return SaveDesiredLinks(desired, DesiredLinksPath)
+}
+
+// clientPorts returns every port belonging to clientID from list
+// (ListOutputPorts or ListInputPorts), sorted for a stable L/R pairing
+// order.
+func clientPorts(clientID string, list func() ([]string, error)) ([]string, error) {
+	all, err := list()
+	if err != nil {
+		return nil, err
+	}
+	prefix := clientID + ":"
+	var ports []string
+	for _, p := range all {
+		if strings.HasPrefix(p, prefix) {
+			ports = append(ports, p)
+		}
+	}
+	sort.Strings(ports)
+	return ports, nil
+}
+
+// pollClientPorts retries clientPorts for up to streamPortsPollTimeout,
+// for a client whose process may have only just started.
+func pollClientPorts(clientID string, list func() ([]string, error)) ([]string, error) {
+	deadline := time.Now().Add(streamPortsPollTimeout)
+	for {
+		ports, err := clientPorts(clientID, list)
+		if err != nil {
+			return nil, err
+		}
+		if len(ports) > 0 || time.Now().After(deadline) {
+			return ports, nil
+		}
+		time.Sleep(streamPortsPollInterval)
+	}
 }
 
 // loadFfmpegStreamsManifest reads the mount->unit-ID map persisted by

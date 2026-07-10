@@ -1,21 +1,43 @@
 # Custom systemd unit for Stereo Tool.
 # Stereo Tool processes the audio signal between Rivendell (caed) and
-# Liquidsoap: caed's JACK output -> Stereo Tool input -> Stereo Tool
-# output -> Liquidsoap's JACK input. It is upstream of Liquidsoap, not
-# downstream.
-# The binary path below matches the default RIVAPI_STEREO_TOOL_PATH config
-# value (/home/rd/bin/stereo_tool). If RIVAPI_STEREO_TOOL_PATH is changed,
-# update ExecStart to match.
+# the broadcast streams: caed's JACK output -> Stereo Tool input ->
+# Stereo Tool output -> one designated broadcast stream's ffmpeg JACK
+# client -> fanned out from there to every other currently-configured
+# stream by the dashboard's patchbay reconciler (see
+# rivapi/store/ffmpeg_generator.go's syncStereoToolTarget/
+# syncStreamPatchLinks). Stereo Tool is upstream of the streams, not
+# downstream. The binary path below matches the default
+# RIVAPI_STEREO_TOOL_PATH config value (/home/rd/bin/stereo_tool). If
+# RIVAPI_STEREO_TOOL_PATH is changed, update ExecStart to match.
 #
 # Stereo Tool has no native sd_notify support. A readiness probe can be
 # added via ExecStartPost once its TCP/socket interface is confirmed.
 #
-# Must start after rivendell.service, not just pipewire-system/liquidsoap:
-# Stereo Tool's ALSA-JACK bridge (~/.asoundrc's pcm.jack block) hardcodes
-# rivendell_0:playout_0L/R as its capture target and auto-connects to it
-# the moment it opens -- PID-agnostic (it names the external target, not
-# itself), which is what actually makes this connection survive a reboot,
-# not the dashboard's patchbay Save/reconcile feature (Stereo Tool's own
+# Stereo Tool's config UI labels its device "jack (ALSA)" -- confirmed
+# 2026-07-10 this is exactly what it says: the installed build resolves
+# this device through ALSA's own `type jack` PCM plugin
+# (libasound_module_pcm_jack.so, package libasound2-plugins), not a
+# native JACK client despite also linking libjack.so.0 and exposing
+# native jack_* symbols directly (that linkage is a transitive
+# dependency of the ALSA plugin itself, pulled in through the same
+# dynamic-linking chain -- present in `ldd`/`strings` output without
+# meaning Stereo Tool's own code calls those functions). The plugin
+# makes the real libjack calls internally, using the port names
+# configured in ~/.asoundrc (conf/alsa/rd.asoundrc's install target),
+# not ~/.stereo_tool.rc's own "Jack ID" fields -- those are kept set as
+# a harmless secondary measure (see rivapi/store/stereo_tool_install.go's
+# patchStereoToolJackIDs) in case a future build or device mode reads
+# them, but they were not what actually mattered here. Input targets
+# rivendell_0:playout_0L/R (Stereo Tool's own hardcoded default when
+# that field is left blank, still valid); output targets whichever
+# stream rivapi's own syncStereoToolTarget currently designates as the
+# anchor, kept current on every /broadcast Save & Deploy.
+#
+# Must start after rivendell.service, not just pipewire-system:
+# Stereo Tool auto-connects to rivendell_0:playout_0L/R the moment it
+# opens -- PID-agnostic (it names the external target, not itself),
+# which is what actually makes this connection survive a reboot, not
+# the dashboard's patchbay Save/reconcile feature (Stereo Tool's own
 # JACK client name embeds its PID, so a saved connection can never match
 # after a restart -- see KNOWN_ISSUES.md).
 #
@@ -27,8 +49,8 @@
 # stereo-tool.service start immediately after that failure, well before
 # rivendell.service's automatic retry actually got caed's JACK ports up a
 # few seconds later. Stereo Tool tried and permanently gave up on the
-# connection in that window (its ALSA-JACK plugin only attempts once at
-# open time, confirmed via stereo_tool's own log: "cannot connect
+# connection in that window (it only attempts once at open time,
+# confirmed via stereo_tool's own log: "cannot connect
 # rivendell_0:playout_0L to stereo_tool.C.<pid>.<n>:in_000"). Fixed with
 # an ExecStartPre that polls for the actual JACK port to exist -- same
 # real-readiness-check pattern rivendell.service's own ExecStartPost
@@ -41,7 +63,7 @@
 
 [Unit]
 Description=Stereo Tool audio processor
-After=pipewire-system.service rivendell.service liquidsoap.service
+After=pipewire-system.service rivendell.service
 Wants=rivendell.service
 PartOf=rivolution-stack.target
 
@@ -54,6 +76,16 @@ ExecStartPre=/bin/sh -c 'i=0; while [ $i -lt 60 ]; do pw-link -o 2>/dev/null | g
 ExecStart=/home/rd/bin/stereo_tool --silent -p 8079
 Restart=on-failure
 RestartSec=5
+# Real-time scheduling: PipeWire's own PAM-based mechanism
+# (/etc/security/limits.d/*-pipewire.conf) doesn't apply to plain
+# systemd services (see pipewire-system.service's own comment on this),
+# so without this Stereo Tool's own audio thread runs at normal
+# priority, which its own JACK/PortAudio integration appears to react
+# to badly under load -- see the "Warning: Cannot set realtime
+# priority" it logs on every start without this.
+LimitRTPRIO=95
+LimitMEMLOCK=256M
+Nice=-19
 
 [Install]
 WantedBy=rivolution-stack.target

@@ -14,9 +14,10 @@ import (
 
 type broadcastPageData struct {
 	baseData
-	Config     store.BroadcastConfig
-	ConfigJS   template.JS // safe for Alpine x-data initialization
-	SaveResult *broadcastSaveResult
+	Config               store.BroadcastConfig
+	ConfigJS             template.JS // safe for Alpine x-data initialization
+	SaveResult           *broadcastSaveResult
+	ProgramSourceOptions []string // live JACK output ports, for the "Program source" dropdown
 }
 
 type broadcastSaveResult struct {
@@ -34,11 +35,19 @@ func (h *Handler) broadcastPageData(r *http.Request, result *broadcastSaveResult
 	if err != nil {
 		return broadcastPageData{}, err
 	}
+	// Best-effort: an empty dropdown (PipeWire briefly unavailable) shouldn't
+	// block loading the rest of the page -- same tolerance patchbayData
+	// doesn't have the luxury of (it's the page ports ARE the point), but
+	// here it's just one field's options. Client names, not individual
+	// ports -- ProgramSource is a per-client concept (see
+	// ListOutputClients), unlike /patchbay's own per-port dropdowns.
+	outputs, _ := store.ListOutputClients()
 	return broadcastPageData{
-		baseData:   h.base(r, "Broadcast", "broadcast"),
-		Config:     cfg,
-		ConfigJS:   template.JS(cfgJSON),
-		SaveResult: result,
+		baseData:             h.base(r, "Broadcast", "broadcast"),
+		Config:               cfg,
+		ConfigJS:             template.JS(cfgJSON),
+		SaveResult:           result,
+		ProgramSourceOptions: outputs,
 	}, nil
 }
 
@@ -179,6 +188,8 @@ func parseBroadcastForm(r *http.Request) (store.BroadcastConfig, error) {
 		LogPath:     strings.TrimSpace(r.FormValue("liq_log_path")),
 		SampleRate:  sampleRate,
 	}
+
+	cfg.ProgramSource = strings.TrimSpace(r.FormValue("program_source"))
 
 	streamsJSON := r.FormValue("streams_json")
 	if streamsJSON != "" {
