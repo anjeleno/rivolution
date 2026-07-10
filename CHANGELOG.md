@@ -9,6 +9,51 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-10
 
+- **Stereo Tool JACK routing, fully resolved** (see `docs/specs/
+  0015-ffmpeg-broadcast-output.md` for the full design). Stereo Tool's
+  device labeled "jack (ALSA)" really does route through ALSA's `type
+  jack` PCM plugin -- confirmed via live behavioral testing after an
+  earlier same-day correction (based on `ldd`/`strings` output alone)
+  wrongly concluded the opposite; see `ARCHITECTURE.md`'s "device
+  label" recurring-mistake writeup. The actual target is `~/.asoundrc`
+  (`conf/alsa/rd.asoundrc`), not `~/.stereo_tool.rc`'s own "Jack ID"
+  fields. A same-day PipeWire virtual-bus fix attempt was tested,
+  found unreliable (Stereo Tool's ALSA-JACK bridge doesn't connect
+  stably to a loopback-module node, only to genuine native JACK
+  clients), and removed. Final design: Stereo Tool's fixed target is
+  whichever configured broadcast stream sorts first by mount --
+  dynamic, never a hardcoded mount name (`primaryStreamMount`,
+  `syncStereoToolTarget`, `rivapi/store/ffmpeg_generator.go`) -- and
+  the patchbay reconciler fans its live output out to every other
+  configured stream via a new `BroadcastConfig.ProgramSource` sentinel
+  value, `"stereo_tool"`. Also fixed a real gap in `ReconcileLinks`
+  itself (`rivapi/store/patchbay.go`'s new `resolvePortName`): a saved
+  link naming a since-restarted Stereo Tool's stale PID could never
+  actually reconnect before this, since only the "already satisfied"
+  comparison was PID-agnostic, not the connection attempt itself.
+  Verified end-to-end: a full stack restart (including a genuine VM
+  crash and recovery) reconnects every link automatically, zero manual
+  reconnection, every time.
+- `ffmpeg` was never installed and was never added to `debian/
+  control.src`'s `Depends` either -- every broadcast stream was failing
+  with exit 127 (command not found) regardless of the routing fix
+  above. Fixed (added `ffmpeg`, dropped the now-stale `liquidsoap`
+  entry).
+- `ffmpegPipeline`'s generated command had no explicit `-f mp3`/`-f
+  ogg`/`-f adts` before its `icecast://` output URL -- ffmpeg can't
+  infer a container format from that URL alone, so every stream failed
+  instantly with "Unable to choose an output format" once `ffmpeg` was
+  actually installed. Fixed.
+- `BroadcastConfig.ProgramSource`'s `/broadcast` dropdown offered
+  individual ports (`client:port` strings) but the backend expected a
+  bare client name, so nothing an operator picked could ever resolve.
+  Fixed with a new `store.ListOutputClients()` (client names only,
+  `rivapi/store/patchbay.go`).
+- `pipewire-system.service`, `wireplumber-system.service`, and
+  `stereo-tool.service` gained real-time scheduling
+  (`LimitRTPRIO=95`, `LimitMEMLOCK=256M`, `Nice=-19`) -- PipeWire's own
+  PAM-based grant (`/etc/security/limits.d/`) doesn't apply to plain
+  systemd services.
 - `/tasks`: the "Add task" form's schedule field required a raw
   systemd `OnCalendar=` expression with no guidance. Replaced with a
   Frequency dropdown (Hourly/Daily/Weekly/Monthly) plus the matching
@@ -86,55 +131,7 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   ffmpeg replacement above) -- every failed connect attempt tore its
   client down and retried with a fresh index, leaking JACK client
   registrations forever. Root cause and fix superseded same day, see
-  2026-07-10 entry below for what actually shipped.
-
-## 2026-07-10
-
-- **Stereo Tool JACK routing, fully resolved** (see `docs/specs/
-  0015-ffmpeg-broadcast-output.md` for the full design). Stereo Tool's
-  device labeled "jack (ALSA)" really does route through ALSA's `type
-  jack` PCM plugin -- confirmed via live behavioral testing after an
-  earlier same-day correction (based on `ldd`/`strings` output alone)
-  wrongly concluded the opposite; see `ARCHITECTURE.md`'s "device
-  label" recurring-mistake writeup. The actual target is `~/.asoundrc`
-  (`conf/alsa/rd.asoundrc`), not `~/.stereo_tool.rc`'s own "Jack ID"
-  fields. A same-day PipeWire virtual-bus fix attempt was tested,
-  found unreliable (Stereo Tool's ALSA-JACK bridge doesn't connect
-  stably to a loopback-module node, only to genuine native JACK
-  clients), and removed. Final design: Stereo Tool's fixed target is
-  whichever configured broadcast stream sorts first by mount --
-  dynamic, never a hardcoded mount name (`primaryStreamMount`,
-  `syncStereoToolTarget`, `rivapi/store/ffmpeg_generator.go`) -- and
-  the patchbay reconciler fans its live output out to every other
-  configured stream via a new `BroadcastConfig.ProgramSource` sentinel
-  value, `"stereo_tool"`. Also fixed a real gap in `ReconcileLinks`
-  itself (`rivapi/store/patchbay.go`'s new `resolvePortName`): a saved
-  link naming a since-restarted Stereo Tool's stale PID could never
-  actually reconnect before this, since only the "already satisfied"
-  comparison was PID-agnostic, not the connection attempt itself.
-  Verified end-to-end: a full stack restart (including a genuine VM
-  crash and recovery) reconnects every link automatically, zero manual
-  reconnection, every time.
-- `ffmpeg` was never installed and was never added to `debian/
-  control.src`'s `Depends` either -- every broadcast stream was failing
-  with exit 127 (command not found) regardless of the routing fix
-  above. Fixed (added `ffmpeg`, dropped the now-stale `liquidsoap`
-  entry).
-- `ffmpegPipeline`'s generated command had no explicit `-f mp3`/`-f
-  ogg`/`-f adts` before its `icecast://` output URL -- ffmpeg can't
-  infer a container format from that URL alone, so every stream failed
-  instantly with "Unable to choose an output format" once `ffmpeg` was
-  actually installed. Fixed.
-- `BroadcastConfig.ProgramSource`'s `/broadcast` dropdown offered
-  individual ports (`client:port` strings) but the backend expected a
-  bare client name, so nothing an operator picked could ever resolve.
-  Fixed with a new `store.ListOutputClients()` (client names only,
-  `rivapi/store/patchbay.go`).
-- `pipewire-system.service`, `wireplumber-system.service`, and
-  `stereo-tool.service` gained real-time scheduling
-  (`LimitRTPRIO=95`, `LimitMEMLOCK=256M`, `Nice=-19`) -- PipeWire's own
-  PAM-based grant (`/etc/security/limits.d/`) doesn't apply to plain
-  systemd services.
+  the 2026-07-10 entry above for what actually shipped.
 
 ## 2026-07-07
 
