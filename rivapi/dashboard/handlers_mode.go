@@ -88,17 +88,18 @@ func (h *Handler) ModeApply(w http.ResponseWriter, r *http.Request) {
 	// Re-authentication gate: switching mode can take a live station's
 	// database/audio store offline, so require the operator to re-enter
 	// their password immediately before it happens, not just rely on
-	// their existing session cookie -- the same real Rivendell-account
-	// credential that already gates the whole dashboard (auth.CreateTicket,
-	// the same check LoginHandler/DashboardLoginHandler make), not a
-	// separate secret. Checked before anything is saved or touched.
-	username := auth.UsernameFromContext(r.Context())
+	// their existing session cookie -- the same dashboard credential
+	// that already gates the whole dashboard (DashboardLoginHandler
+	// checks the identical thing), not a separate secret. As of
+	// 2026-07-09 this is checkDashboardPassword, not a real Rivendell
+	// account -- see that function's comment in auth/auth.go for why.
+	// Checked before anything is saved or touched.
 	confirmPassword := r.FormValue("confirm_password")
 	if confirmPassword == "" {
 		render(errors.New("re-enter your password to confirm this mode switch"), nil)
 		return
 	}
-	if _, _, err := auth.CreateTicket(h.cfg, h.tickets, username, confirmPassword); err != nil {
+	if !auth.CheckDashboardPassword(h.cfg, confirmPassword) {
 		render(errors.New("password confirmation failed — mode was not changed"), nil)
 		return
 	}

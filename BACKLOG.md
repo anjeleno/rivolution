@@ -740,3 +740,42 @@ pressure just to fix a cosmetic backup filename. `/tasks` database
 backup tasks can set their own file name prefix instead (see
 `CHANGELOG.md`, 2026-07-09) as a workaround that doesn't touch the
 schema.
+
+## `rdxport.cgi`'s CREATETICKET accepts any password for a user with no password set
+
+Confirmed by direct testing 2026-07-09: `RDXPORT_COMMAND_CREATETICKET`
+returns a valid ticket for the `admin` Rivendell account regardless of
+what password is submitted -- an obviously wrong password gets a
+`200`/valid `<ticketInfo>` response, same as the real one would. This
+is a real authentication bypass in Rivendell's own C++ web API, not
+anything specific to this fork's own code, and it's still live: any
+client that calls `rdxport.cgi` directly (or through code that still
+forwards a user-submitted password to it) is affected.
+
+`rivapi`'s dashboard and JSON API logins, and `/mode`'s
+re-authentication gate, no longer depend on this for access control
+(see `CHANGELOG.md`, 2026-07-09, and `auth.CheckDashboardPassword`'s
+own comment in `rivapi/auth/auth.go`) -- they check a fixed dashboard
+credential (`/etc/rd.conf`'s `[dashboard] JwtSecret`) directly instead,
+and only call `CreateTicket` afterward, with that same value as the
+ticket password, purely to obtain a real ticket for features that need
+one. That closes the actual access-control hole those specific
+callers had, but it works around the underlying bug rather than fixing
+it -- `rdxport.cgi` itself still accepts any password for this
+account, and anything else that talks to it directly (RDAirplay, other
+`web/rdxport/` clients, a future integration) is still exposed.
+
+Root cause not fully traced. The likely mechanism, not yet confirmed
+against the actual stored value: `lib/rduser.cpp`'s
+`RDUser::authenticated()` builds its password-match SQL clause as
+`` `PASSWORD`='<base64 of the submitted password>' ``, matching how
+`RDUser::setPassword()` stores passwords (plain base64, not a real
+hash) -- but `scripts/rd_create_db` seeds the default `admin` row via
+a raw SQL `INSERT` using MySQL's own `PASSWORD()` function on an empty
+string (`RDA_PASSWORD=` is blank by default), a completely different
+encoding than `RDUser`'s own convention. If those two paths produce
+values that don't reliably fail to match through Qt/MySQL's string
+comparison the way an actually-wrong password should, that would
+explain the symptom -- but this needs an actual `SELECT PASSWORD,
+HEX(PASSWORD) FROM USERS WHERE LOGIN_NAME='admin'` against a real
+install to confirm before treating it as the fix, not just the theory.
