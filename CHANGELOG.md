@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-10
 
+- `apis/pypad/scripts/pypad_icecast2.exemplar`: the shipped template
+  covered only a single Icecast2 mountpoint, but the underlying script
+  (`pypad_icecast2.py`) already supports multiple via numbered
+  `[IcecastN]` sections -- each mountpoint needs its own full section
+  (`configparser` rejects a duplicate key within one section outright),
+  which wasn't previously documented anywhere. The template now ships
+  four pre-populated `[Icecast1]`-`[Icecast4]` sections out of the box,
+  each with its own placeholder values, so an operator adding a new
+  PyPAD Icecast2 instance in RDAdmin no longer has to guess the
+  multi-mountpoint section layout or discover the one-section-per-mount
+  requirement the hard way.
 - **Stereo Tool JACK routing, fully resolved** (see `docs/specs/
   0015-ffmpeg-broadcast-output.md` for the full design). Stereo Tool's
   device labeled "jack (ALSA)" really does route through ALSA's `type
