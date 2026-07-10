@@ -364,6 +364,20 @@ func (h *Handler) StereoToolInstall(w http.ResponseWriter, r *http.Request) {
 		} else {
 			result.Message = "Version " + version + " installed from " + url
 		}
+
+		// Point Stereo Tool's own JACK auto-connect at the permanent
+		// rivolution-stereo-tool-bus instead of leaving it to fall
+		// through to a dead default (see stereo_tool_install.go's
+		// ConfigureStereoToolJack) -- best-effort: a fresh install still
+		// has a real, working binary even if this step fails (e.g. the
+		// bus isn't deployed yet on this box), so it's surfaced as a
+		// warning appended to the success message, not a failure.
+		if err := store.ConfigureStereoToolJack(
+			h.cfg.StereoToolPath, store.StereoToolConfigPath, h.cfg.StereoToolWebPort,
+			"rivolution-stereo-tool-bus:playback_FL", "rivolution-stereo-tool-bus:playback_FR",
+		); err != nil {
+			result.Message += " (JACK auto-connect not configured: " + err.Error() + ")"
+		}
 	}
 
 	if err := tmplStereoToolResult.ExecuteTemplate(w, "stereo_tool_result.html", result); err != nil {

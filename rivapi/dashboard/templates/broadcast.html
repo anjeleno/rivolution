@@ -96,7 +96,7 @@
             <div class="grid">
                 <label>
                     Source password
-                    <small>Liquidsoap connects with this</small>
+                    <small>Each stream's ffmpeg process connects with this</small>
                     <input type="text" name="icecast_source_password" x-model="icecast.source_password">
                 </label>
                 <label>
@@ -135,9 +135,9 @@
 
     <hr>
 
-    <!-- Liquidsoap settings -->
+    <!-- Stream engine (ffmpeg) settings -->
     <details>
-        <summary><strong>Liquidsoap</strong></summary>
+        <summary><strong>Stream encoding</strong></summary>
         <div style="padding:1rem 0;">
             <div class="grid">
                 <label>
@@ -151,9 +151,9 @@
             </div>
             <div class="grid">
                 <label>
-                    JACK input ID
+                    JACK client base name
                     <input type="text" name="liq_jack_input_id" x-model="liquidsoap.jack_input_id">
-                    <small>Passed to <code>input.jack(id=…)</code>.</small>
+                    <small>Each stream gets its own JACK client, named this plus its mount.</small>
                 </label>
                 <label>
                     Sample rate (Hz)
@@ -163,6 +163,32 @@
             <label>
                 Log path
                 <input type="text" name="liq_log_path" x-model="liquidsoap.log_path">
+            </label>
+            <label>
+                Program source
+                <select name="program_source">
+                    <option value=""{{if eq .Config.ProgramSource ""}} selected{{end}}>— not set —</option>
+                    <option value="stereo_tool"{{if eq .Config.ProgramSource "stereo_tool"}} selected{{end}}>Stereo Tool (local processing)</option>
+                    {{range .ProgramSourceOptions}}
+                    <option value="{{.}}"{{if eq . $.Config.ProgramSource}} selected{{end}}>{{.}}</option>
+                    {{end}}
+                </select>
+                <small>
+                    What feeds every stream below. Pick "Stereo Tool" if
+                    this station processes locally with it -- rivapi keeps
+                    Stereo Tool's own JACK target pointed at one of the
+                    streams automatically and fans its output out to the
+                    rest, since Stereo Tool itself can only ever be given
+                    one fixed target. Otherwise pick the JACK client whose
+                    output should feed the streams directly (e.g. Rivendell
+                    itself, on a station with no local processing). Pick
+                    the client, not a specific channel; its full stereo
+                    pair connects automatically. Connects automatically to
+                    any newly added stream; a stream already connected is
+                    never repatched automatically, even if you change this --
+                    use <a href="/patchbay">Patchbay</a> to repoint an
+                    existing stream by hand.
+                </small>
             </label>
         </div>
     </details>

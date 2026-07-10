@@ -521,11 +521,14 @@ as Phase 2 once Phase 1 is verified end-to-end.
   (which is session-scoped and unavailable before login).
 - `conf/systemd/rivolution-stack.target`: added `Wants=` for both new
   services so they start with the stack.
-- `conf/systemd/rivendell.service.d/rivolution.conf` and
-  `conf/systemd/liquidsoap.service`: both add
+- `conf/systemd/rivendell.service.d/rivolution.conf` adds
   `Environment=XDG_RUNTIME_DIR=/run/pipewire-system` so caed's JACK calls
-  and Liquidsoap's `input.jack()` both find the system PipeWire socket via
-  `pipewire-jack`.
+  find the system PipeWire socket via `pipewire-jack`. (Historical: at
+  the time this was written, `conf/systemd/liquidsoap.service` set the
+  same variable for Liquidsoap's `input.jack()` -- Liquidsoap has since
+  been replaced by per-stream ffmpeg processes, see `docs/specs/
+  0015-ffmpeg-broadcast-output.md`; each stream's own systemd unit sets
+  the same variable now, see `rivapi/store/ffmpeg_generator.go`.)
 - Dashboard `service_status.go`: added PipeWire and WirePlumber to the
   managed unit list so their status is visible on the System page.
 
@@ -550,8 +553,10 @@ sudo cp rdservice/rdservice /usr/sbin/rdservice
 sudo apt install pipewire-jack
 ```
 
-3. Configure the JACK client library system-wide so caed and Liquidsoap
-   use PipeWire's JACK implementation rather than a native JACK server:
+3. Configure the JACK client library system-wide so caed (and every
+   other JACK-bridged client, e.g. Stereo Tool -- see `docs/specs/
+   0015-ffmpeg-broadcast-output.md`) uses PipeWire's JACK implementation
+   rather than a native JACK server:
 
 ```
 sudo cp /usr/share/doc/pipewire/examples/ld.so.conf.d/pipewire-jack-x86_64-linux-gnu.conf /etc/ld.so.conf.d/
@@ -573,10 +578,11 @@ sudo ldconfig
      `active (running)`
    - `rivendell.service` shows `active (running)` with caed, ripcd,
      rdcatchd listed as child processes running as `rd` (not root)
-   - `liquidsoap.service` shows `active (running)` with no JACK error
-     in `/home/rd/Log/liquidsoap.log`
+   - each configured broadcast stream's own systemd unit (see
+     `docs/specs/0015-ffmpeg-broadcast-output.md`) shows `active
+     (running)` with no JACK connection error in its own log
    - `pw-dump` (as `rd` with `XDG_RUNTIME_DIR=/run/pipewire-system`)
-     shows caed and Liquidsoap as nodes in the graph
+     shows caed and the stream ffmpeg processes as nodes in the graph
 
 ### Phase 1 known gap
 
@@ -606,9 +612,10 @@ at this stage.
   metadata mechanism (`find-defined-target.lua`) hooks into.
 
   **Verified empirically 2026-07-01 that this does *not* apply to
-  Phase 1's actual deployed architecture** (`caed`/Liquidsoap/Stereo
-  Tool as JACK clients bridged through `pipewire-jack`, not native
-  `pw_stream` clients). Three independent findings, from a properly
+  Phase 1's actual deployed architecture** (`caed`, the stream ffmpeg
+  processes, and Stereo Tool all as JACK clients bridged through
+  `pipewire-jack`, not native `pw_stream` clients). Three independent
+  findings, from a properly
   instrumented test (correct endpoint restarted, `PIPEWIRE_DEBUG=3` on
   `wireplumber-system.service`, checked the actual resulting graph via
   `pw-link`, not just log silence):
@@ -639,8 +646,9 @@ at this stage.
   re-applying anything missing via direct `pw-link` calls. This is
   deliberately *not* a WirePlumber policy — it's a pragmatic
   poll-and-reapply layer that works today, to be retired in favor of
-  real WirePlumber policy once Phase 2 lands and `caed`/Liquidsoap/
-  Stereo Tool are native PipeWire clients rather than JACK-bridged
-  ones. The Routing UI section's persistence design above remains the
+  real WirePlumber policy once Phase 2 lands and `caed`, the stream
+  processes, and Stereo Tool are native PipeWire clients rather than
+  JACK-bridged ones. The Routing UI section's persistence design above
+  remains the
   Phase 2 target; this note exists so that gap isn't rediscovered by
   someone trying to make Phase 1 do something it structurally can't.

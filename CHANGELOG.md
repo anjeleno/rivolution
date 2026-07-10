@@ -41,6 +41,90 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   access-control decision no longer depends on it. See `BACKLOG.md` for
   the underlying `rdxport.cgi`/Rivendell issue, which this works around
   but does not fix.
+- `/system`: dropped the now-stale fixed `liquidsoap.service` row (see
+  the ffmpeg replacement above) and its JACK-log-scraping warning
+  check. Replaced with one status row per currently-deployed broadcast
+  stream, read live from the streams manifest rather than a fixed
+  list, since the number of stream services depends on how many mounts
+  are configured on `/broadcast`. Start/stop/restart on a stream row
+  routes through `task-systemctl.sh` (new `stop-service`/
+  `restart-service` actions) rather than a direct `sudo systemctl`
+  call -- there's no fixed sudoers grant possible for a dynamic,
+  unbounded set of unit names, and `sudo-rs` rejects wildcards in
+  command arguments (see `conf/sudoers.d/rivapi`), so this reuses the
+  same bare-script-path grant the scheduled-tasks feature already
+  relies on. Also fixes a real bug this surfaced: `DeployFfmpegStreams`
+  was enabling each stream via `task-systemctl.sh`'s `enable` action,
+  which only ever targets a task's `.timer` -- streams have no timer,
+  only a `.service`, so every stream deploy would have failed outright.
+  Added a new `enable-service` action for always-on services with no
+  paired timer.
+- `conf/sudoers.d/rivapi`: dropped the now-unused `liquidsoap.service`
+  start/stop/restart grant.
+- `/export`: import/restore copy still described the old
+  Icecast/Liquidsoap restart behavior; updated to describe the current
+  Icecast-restart-plus-stream-redeploy behavior.
+- Dashboard nav and home page's quick-link now say "Streaming" instead
+  of "Broadcast" -- Rivolution's own job is the broadcast side, so
+  labeling the encode/stream-out page "Broadcast" read as a mismatch.
+  Cosmetic only: the `/broadcast` route, handler/type/file names, and
+  the persisted config (`broadcast.json`, `RIVAPI_BROADCAST_CONFIG`,
+  the export bundle's `"broadcast"` key) are unchanged -- see
+  `BACKLOG.md` for why the rest stays as-is for now.
+- Stereo Tool's own JACK auto-connect was defaulting its output to a
+  target that stopped existing once Liquidsoap was replaced (see the
+  ffmpeg replacement above) -- every failed connect attempt tore its
+  client down and retried with a fresh index, leaking JACK client
+  registrations forever. Root cause and fix superseded same day, see
+  2026-07-10 entry below for what actually shipped.
+
+## 2026-07-10
+
+- **Stereo Tool JACK routing, fully resolved** (see `docs/specs/
+  0015-ffmpeg-broadcast-output.md` for the full design). Stereo Tool's
+  device labeled "jack (ALSA)" really does route through ALSA's `type
+  jack` PCM plugin -- confirmed via live behavioral testing after an
+  earlier same-day correction (based on `ldd`/`strings` output alone)
+  wrongly concluded the opposite; see `ARCHITECTURE.md`'s "device
+  label" recurring-mistake writeup. The actual target is `~/.asoundrc`
+  (`conf/alsa/rd.asoundrc`), not `~/.stereo_tool.rc`'s own "Jack ID"
+  fields. A same-day PipeWire virtual-bus fix attempt was tested,
+  found unreliable (Stereo Tool's ALSA-JACK bridge doesn't connect
+  stably to a loopback-module node, only to genuine native JACK
+  clients), and removed. Final design: Stereo Tool's fixed target is
+  whichever configured broadcast stream sorts first by mount --
+  dynamic, never a hardcoded mount name (`primaryStreamMount`,
+  `syncStereoToolTarget`, `rivapi/store/ffmpeg_generator.go`) -- and
+  the patchbay reconciler fans its live output out to every other
+  configured stream via a new `BroadcastConfig.ProgramSource` sentinel
+  value, `"stereo_tool"`. Also fixed a real gap in `ReconcileLinks`
+  itself (`rivapi/store/patchbay.go`'s new `resolvePortName`): a saved
+  link naming a since-restarted Stereo Tool's stale PID could never
+  actually reconnect before this, since only the "already satisfied"
+  comparison was PID-agnostic, not the connection attempt itself.
+  Verified end-to-end: a full stack restart (including a genuine VM
+  crash and recovery) reconnects every link automatically, zero manual
+  reconnection, every time.
+- `ffmpeg` was never installed and was never added to `debian/
+  control.src`'s `Depends` either -- every broadcast stream was failing
+  with exit 127 (command not found) regardless of the routing fix
+  above. Fixed (added `ffmpeg`, dropped the now-stale `liquidsoap`
+  entry).
+- `ffmpegPipeline`'s generated command had no explicit `-f mp3`/`-f
+  ogg`/`-f adts` before its `icecast://` output URL -- ffmpeg can't
+  infer a container format from that URL alone, so every stream failed
+  instantly with "Unable to choose an output format" once `ffmpeg` was
+  actually installed. Fixed.
+- `BroadcastConfig.ProgramSource`'s `/broadcast` dropdown offered
+  individual ports (`client:port` strings) but the backend expected a
+  bare client name, so nothing an operator picked could ever resolve.
+  Fixed with a new `store.ListOutputClients()` (client names only,
+  `rivapi/store/patchbay.go`).
+- `pipewire-system.service`, `wireplumber-system.service`, and
+  `stereo-tool.service` gained real-time scheduling
+  (`LimitRTPRIO=95`, `LimitMEMLOCK=256M`, `Nice=-19`) -- PipeWire's own
+  PAM-based grant (`/etc/security/limits.d/`) doesn't apply to plain
+  systemd services.
 
 ## 2026-07-07
 

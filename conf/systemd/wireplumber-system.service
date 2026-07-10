@@ -24,6 +24,9 @@ Environment=GIO_USE_VFS=local
 ExecStart=/usr/bin/wireplumber
 Restart=on-failure
 RestartSec=2
+LimitRTPRIO=95
+LimitMEMLOCK=256M
+Nice=-19
 
 [Install]
 WantedBy=pipewire-system.service

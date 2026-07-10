@@ -402,9 +402,10 @@ sudo ldconfig
 
 This section covers what `rivapi` (the Go dashboard/API, see
 [`docs/specs/0005-go-api-foundation.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0005-go-api-foundation.md))
-and the broadcast pipeline (Icecast, Liquidsoap, Stereo Tool, PipeWire —
-see [`docs/specs/0007-pipewire-audio-engine.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0007-pipewire-audio-engine.md)
-and [`docs/specs/0008-broadcast-tool-suite-integration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0008-broadcast-tool-suite-integration.md))
+and the broadcast pipeline (Icecast, ffmpeg, Stereo Tool, PipeWire —
+see [`docs/specs/0007-pipewire-audio-engine.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0007-pipewire-audio-engine.md),
+[`docs/specs/0008-broadcast-tool-suite-integration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0008-broadcast-tool-suite-integration.md),
+and [`docs/specs/0015-ffmpeg-broadcast-output.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0015-ffmpeg-broadcast-output.md))
 need at runtime. None of this links into the Rivolution C++ binaries
 themselves — it's a separate layer, verified working end-to-end on a
 real Ubuntu 26.04 install.
@@ -422,7 +423,7 @@ comfortably past the floor.
 #### Broadcast stack packages
 
 ```bash
-sudo apt install icecast2 liquidsoap fdkaac
+sudo apt install icecast2 ffmpeg fdkaac
 ```
 
 `fdkaac` is needed for AAC stream output. Its actual command-line
@@ -438,8 +439,9 @@ why the HE-AAC/SBR codec options currently fall back to plain AAC-LC
 sudo apt install pipewire-jack
 ```
 
-This lets `caed`, Liquidsoap, and Stereo Tool (all JACK clients) reach
-the system-scope PipeWire instance rather than real hardware/`jackd`.
+This lets `caed`, each broadcast stream's `ffmpeg` process, and Stereo
+Tool (all JACK clients) reach the system-scope PipeWire instance rather
+than real hardware/`jackd`.
 **One critical extra step, not optional:** if `libjack-jackd2-dev` is
 also installed (it's in the required build dependencies above, needed
 for `cae/driver_jack.cpp` to compile), its real runtime library

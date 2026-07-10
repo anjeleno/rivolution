@@ -10,6 +10,21 @@
 #
 # Install: sudo cp conf/systemd/pipewire-system.service /etc/systemd/system/
 # then: sudo systemctl daemon-reload && sudo systemctl enable --now pipewire-system.service
+#
+# Real-time scheduling: PipeWire's own upstream mechanism for this is a
+# PAM-based grant (/etc/security/limits.d/*-pipewire.conf, gating
+# rtprio/nice/memlock to the @pipewire group) -- confirmed 2026-07-10 this
+# does *not* apply here regardless of group membership, since a plain
+# systemd service with User=/Group= never goes through PAM at all (that
+# mechanism only fires for a real PAM-authenticated session, e.g. an
+# interactive login or a unit with PAMName= set). Without this, PipeWire's
+# own audio thread runs at normal scheduling priority, competing with
+# everything else on the box for CPU time -- fine under light load, but a
+# real source of missed deadlines (xruns) under heavier load, which
+# downstream JACK clients can react to in surprising ways (see
+# stereo-tool.service's own header comment). Grant the same ceiling
+# directly via systemd instead, which every service using it (including
+# stereo-tool.service) inherits independently of PAM.
 
 [Unit]
 Description=PipeWire Multimedia Service (system)
@@ -25,6 +40,9 @@ Environment=XDG_RUNTIME_DIR=/run/pipewire-system
 ExecStart=/usr/bin/pipewire
 Restart=on-failure
 RestartSec=2
+LimitRTPRIO=95
+LimitMEMLOCK=256M
+Nice=-19
 
 [Install]
 WantedBy=multi-user.target

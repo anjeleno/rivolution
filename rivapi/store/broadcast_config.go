@@ -14,6 +14,20 @@ type BroadcastConfig struct {
 	Icecast    IcecastCfg      `json:"icecast"`
 	Liquidsoap LiquidsoapCfg   `json:"liquidsoap"`
 	Streams    []StreamConfig  `json:"streams"`
+
+	// ProgramSource is what feeds every broadcast stream: either
+	// ProgramSourceStereoTool (see its own doc comment -- a station that
+	// processes locally with Stereo Tool), or a plain JACK client name
+	// for anything else, e.g. "rivendell_0" on a station with no local
+	// processing at all (processing done at the TOC or transmitter
+	// instead). Deliberately not assumed anywhere else in this package --
+	// every install's actual audio topology is different, so this is the
+	// one place it's named, and only because an operator set it. Empty
+	// means "not configured yet": DeployFfmpegStreams makes no
+	// auto-connection until this is set. See ListOutputPorts/
+	// ListOutputClients (patchbay.go) for how the dashboard's dropdown is
+	// populated.
+	ProgramSource string `json:"program_source"`
 }
 
 // StationDefaults are shared station identity fields. Any StreamConfig field

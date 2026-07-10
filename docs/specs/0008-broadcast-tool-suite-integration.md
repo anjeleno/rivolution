@@ -2,6 +2,19 @@
 
 **Date:** 2026-06-21
 
+**Superseded in part, 2026-07-10:** Liquidsoap (the output-encoding/
+Icecast-source-connection layer described throughout this spec) has
+been replaced by a per-stream `ffmpeg` process; see `docs/specs/
+0015-ffmpeg-broadcast-output.md`. The Icecast-specific design below
+(config model, generator, sudoers install rule, dashboard UI) remains
+accurate and in production use. The Liquidsoap-specific design below
+(`LiquidsoapConfig`, `liquidsoap_generator.go`, the Liquidsoap systemd
+unit) is historical — kept here as a record of Phase 1 as originally
+implemented, not as current behavior. The `fdkaac` command-line
+reference below is still accurate and still in active use, just
+invoked from `ffmpeg_generator.go` now instead of
+`liquidsoap_generator.go`.
+
 ## Goal
 
 Centrally manage the configuration of the external broadcast tools
@@ -326,6 +339,9 @@ the new one (standard systemd drop-in pattern for overriding
 
 ### Save & Deploy flow
 
+Historical (Phase 1 as originally implemented; see the superseded
+notice at the top of this spec):
+
 1. Dashboard POSTs the full form to `POST /broadcast/save`
 2. rivapi validates, marshals to `BroadcastConfig`, writes
    `broadcast.json`
@@ -336,6 +352,12 @@ the new one (standard systemd drop-in pattern for overriding
    allowlist from spec 0010)
 6. Returns the updated `/broadcast` page fragment with a success
    banner or an inline error if any step failed
+
+Current: steps 1-3 and 6 are unchanged. Step 4-5 are replaced by
+`DeployFfmpegStreams` (`rivapi/store/ffmpeg_generator.go`) writing and
+enabling one systemd unit per configured stream, plus the Stereo Tool
+target/patchbay sync described in `docs/specs/
+0015-ffmpeg-broadcast-output.md`.
 
 ### AAC+ dependency
 
@@ -379,6 +401,8 @@ active (re-queries via `QueryStackStatus`).
 
 ### New files
 
+Historical (Phase 1 as originally implemented):
+
 ```
 rivapi/store/broadcast_config.go    — BroadcastConfig type, load/save
 rivapi/store/icecast_generator.go   — icecast.xml generation
@@ -388,6 +412,12 @@ rivapi/dashboard/templates/broadcast.html
 conf/sudoers.d/rivapi               — updated with icecast.xml install rule
 conf/systemd/liquidsoap.service.d/rivolution.conf — updated with ExecStart override
 ```
+
+Current: `rivapi/store/liquidsoap_generator.go` and
+`conf/systemd/liquidsoap.service.d/rivolution.conf` no longer exist —
+replaced by `rivapi/store/ffmpeg_generator.go` and per-stream systemd
+units (see `docs/specs/0015-ffmpeg-broadcast-output.md`). The other
+files in this list are unchanged.
 
 Config file at runtime: `/home/rd/etc/rivolution/broadcast.json`
 Generated staging files: `/home/rd/etc/icecast/icecast.xml`,
@@ -406,7 +436,9 @@ Per tool, each of these must be confirmed after implementation:
 - **Icecast**: write config via dashboard → `icecast2` restarts and
   serves the configured mounts; confirm `sources` count matches stream
   count; confirm all passwords take effect.
-- **Liquidsoap**: write config → `liquidsoap` restarts and connects to
+- **Stream encoders** (originally Liquidsoap, now per-stream `ffmpeg`
+  processes — see `docs/specs/0015-ffmpeg-broadcast-output.md`): write
+  config → each stream's systemd unit restarts and connects to
   Icecast; confirm each mount appears live in Icecast's status page;
   confirm AAC+ mounts have correct content-type (`audio/aacp`).
 - **Round-trip**: load the dashboard after a rivapi restart and confirm

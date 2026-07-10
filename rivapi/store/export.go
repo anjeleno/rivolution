@@ -123,26 +123,15 @@ func ApplyImportBundle(b ExportBundle, broadcastConfigPath string) ([]string, er
 	}
 	step("icecast.xml regenerated.")
 
-	if err := GenerateLiquidsoapScript(b.Broadcast); err != nil {
-		return steps, fmt.Errorf("generating radio.liq: %w", err)
-	}
-	step("radio.liq regenerated.")
-
 	if err := sudoSystemctl("restart", "icecast2.service"); err != nil {
 		return steps, fmt.Errorf("restarting icecast2: %w", err)
 	}
 	step("icecast2 restarted.")
 
-	if err := sudoSystemctl("restart", "liquidsoap.service"); err != nil {
-		// Same tolerance as BroadcastSave: liquidsoap may not be installed
-		// yet on a box mid-restore, that's not a fatal error here either.
-		if !isExitCode(err, 5) {
-			return steps, fmt.Errorf("restarting liquidsoap: %w", err)
-		}
-		step("liquidsoap not installed yet — radio.liq is ready for when it is.")
-	} else {
-		step("liquidsoap restarted.")
+	if err := DeployFfmpegStreams(b.Broadcast); err != nil {
+		return steps, fmt.Errorf("deploying stream services: %w", err)
 	}
+	step(fmt.Sprintf("%d stream service(s) deployed and started.", len(b.Broadcast.Streams)))
 
 	if err := SaveDesiredLinks(b.Patchbay, DesiredLinksPath); err != nil {
 		return steps, fmt.Errorf("restoring patchbay config: %w", err)

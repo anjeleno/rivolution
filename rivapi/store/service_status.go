@@ -3,11 +3,9 @@ package store
 import (
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"os/exec"
+	"sort"
 	"strings"
-	"time"
 )
 
 // StackUnit describes one managed service in the broadcast stack.
@@ -30,27 +28,61 @@ const StackTarget = "rivolution-stack.target"
 
 // ManagedUnits is the ordered list of individual services the dashboard controls.
 // Units not yet installed return state "unknown" and are displayed accordingly.
+// The broadcast streams themselves aren't listed here -- there's no fixed
+// count (it depends on how many mounts are configured on /broadcast), so
+// QueryStackStatus appends one row per currently-deployed stream unit
+// dynamically instead. See streamUnitStatuses.
 var ManagedUnits = []StackUnit{
 	{"pipewire-system.service", "PipeWire", false},
 	{"wireplumber-system.service", "WirePlumber", false},
 	{"rivendell.service", "Rivolution", true},
 	{"icecast2.service", "Icecast", false},
-	{"liquidsoap.service", "Liquidsoap", false},
 	{"stereo-tool.service", "Stereo Tool", false},
 	{"tailscaled.service", "Tailscale", false},
 }
 
-// QueryStackStatus returns the current state of every managed unit.
+// QueryStackStatus returns the current state of every managed unit, plus
+// one row per currently-deployed broadcast stream (see streamUnitStatuses).
 // systemctl show does not require privilege; called directly.
 func QueryStackStatus() ([]ServiceStatus, error) {
 	result := make([]ServiceStatus, len(ManagedUnits))
 	for i, u := range ManagedUnits {
 		state, detail := unitInfo(u.Unit)
-		var warn string
-		if u.Unit == "liquidsoap.service" {
-			warn = liquidsoapWarn()
-		}
-		result[i] = ServiceStatus{u, state, detail, warn}
+		result[i] = ServiceStatus{u, state, detail, ""}
+	}
+	streams, err := streamUnitStatuses()
+	if err != nil {
+		return nil, err
+	}
+	return append(result, streams...), nil
+}
+
+// streamUnitStatuses returns one ServiceStatus per stream unit recorded in
+// FfmpegStreamsManifestPath (the mounts currently configured on
+// /broadcast), sorted by mount for stable display order. Each is
+// AudioPath: true -- restarting one interrupts that stream's live audio,
+// same reasoning as rivendell.service above. Returns an empty slice, not
+// an error, if no streams have been deployed yet.
+func streamUnitStatuses() ([]ServiceStatus, error) {
+	manifest, err := loadFfmpegStreamsManifest(FfmpegStreamsManifestPath)
+	if err != nil {
+		return nil, err
+	}
+	mounts := make([]string, 0, len(manifest))
+	for mount := range manifest {
+		mounts = append(mounts, mount)
+	}
+	sort.Strings(mounts)
+
+	result := make([]ServiceStatus, 0, len(mounts))
+	for _, mount := range mounts {
+		unit := TaskUnitName(manifest[mount]) + ".service"
+		state, detail := unitInfo(unit)
+		result = append(result, ServiceStatus{
+			StackUnit: StackUnit{Unit: unit, DisplayName: "Stream " + mount, AudioPath: true},
+			State:     state,
+			Detail:    detail,
+		})
 	}
 	return result, nil
 }
@@ -93,62 +125,35 @@ func unitInfo(unit string) (state, detail string) {
 	return state, detail
 }
 
-// liquidsoapWarn checks the Liquidsoap log for a JACK connection failure
-// within the last 10 minutes. When JACK / PipeWire is not yet running,
-// Liquidsoap logs this error on every start but systemd still marks the
-// unit active (the process stays alive with a dead clock thread).
-// The warning clears automatically once PipeWire is running and
-// Liquidsoap stops logging the error.
-func liquidsoapWarn() string {
-	const logPath = "/home/rd/Log/liquidsoap.log"
-	const jackErr = "Could not open JACK device"
-
-	f, err := os.Open(logPath)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-
-	info, err := f.Stat()
-	if err != nil {
-		return ""
-	}
-	// Read at most the last 8 KB — enough for several minutes of log lines.
-	offset := info.Size() - 8192
-	if offset < 0 {
-		offset = 0
-	}
-	if _, err = f.Seek(offset, io.SeekStart); err != nil {
-		return ""
-	}
-	data, _ := io.ReadAll(f)
-
-	cutoff := time.Now().Add(-10 * time.Minute)
-	for _, line := range strings.Split(string(data), "\n") {
-		if len(line) < 19 {
-			continue
-		}
-		t, err := time.ParseInLocation("2006/01/02 15:04:05", line[:19], time.Local)
-		if err != nil {
-			continue
-		}
-		if t.After(cutoff) && strings.Contains(line, jackErr) {
-			return "JACK device not available — Liquidsoap is running but not streaming (expected until PipeWire bridge is set up)"
-		}
-	}
-	return ""
-}
-
-// ControlUnit runs `sudo systemctl <action> <unit>`.
+// ControlUnit starts, stops, or restarts unit.
 // action must be "start", "stop", or "restart".
-// unit must be StackTarget or one of ManagedUnits — all other values are rejected
-// to prevent command injection through the HTTP API.
+// unit must be StackTarget, one of ManagedUnits, or a currently-deployed
+// broadcast stream unit — all other values are rejected to prevent
+// command injection through the HTTP API.
 func ControlUnit(unit, action string) error {
 	switch action {
 	case "start", "stop", "restart":
 	default:
 		return fmt.Errorf("unsupported action %q", action)
 	}
+
+	// Stream units aren't in RIVAPI_SYSTEMCTL's fixed per-unit sudoers
+	// grant -- there's no fixed count of them, and sudo-rs rejects
+	// wildcards in command arguments (see conf/sudoers.d/rivapi's
+	// comment) -- so route them through task-systemctl.sh instead,
+	// which is whitelisted by bare script path and does its own action/
+	// ID validation, same as every other scheduled-task control action.
+	if id, ok := streamTaskID(unit); ok {
+		scriptAction := action
+		if action == "stop" || action == "restart" {
+			scriptAction = action + "-service"
+		}
+		if err := sudoRun(controlScriptsDir+"/task-systemctl.sh", scriptAction, id); err != nil {
+			return fmt.Errorf("%s %s: %w", action, unit, err)
+		}
+		return nil
+	}
+
 	if !isAllowedUnit(unit) {
 		return fmt.Errorf("unit %q is not in the managed list", unit)
 	}
@@ -166,12 +171,42 @@ func ControlUnit(unit, action string) error {
 	return nil
 }
 
+// streamTaskID returns the task ID embedded in unit and true, if unit
+// names a currently-deployed broadcast stream's systemd service.
+func streamTaskID(unit string) (string, bool) {
+	streams, err := streamUnitStatuses()
+	if err != nil {
+		return "", false
+	}
+	for _, s := range streams {
+		if s.Unit == unit {
+			id := strings.TrimSuffix(strings.TrimPrefix(unit, "rivolution-task-"), ".service")
+			return id, true
+		}
+	}
+	return "", false
+}
+
+// isAllowedUnit checks unit against ManagedUnits plus every currently
+// deployed stream unit (read fresh from the manifest, since the set of
+// stream units isn't fixed at compile time -- see streamUnitStatuses)
+// before ControlUnit will act on it, so the HTTP API can't be used to
+// run systemctl against an arbitrary unit name.
 func isAllowedUnit(unit string) bool {
 	if unit == StackTarget {
 		return true
 	}
 	for _, u := range ManagedUnits {
 		if u.Unit == unit {
+			return true
+		}
+	}
+	streams, err := streamUnitStatuses()
+	if err != nil {
+		return false
+	}
+	for _, s := range streams {
+		if s.Unit == unit {
 			return true
 		}
 	}
