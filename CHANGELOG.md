@@ -7,6 +7,26 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-09
+
+- `/tasks`: first real-box run of the log generation task surfaced the
+  bug its "not yet verified on a real box" caveat was written for --
+  `rivapi/store/tasks_deploy.go`'s log_gen helper script called
+  `rdlogmanager -t` (merge the Traffic log into an existing log), never
+  `-g` (generate one), so every run failed with "log does not exist"
+  since there was never a log to merge into. Fixed to call `-g`, and
+  split traffic-log merging out into its own new task type, `log_merge`
+  (`log-merge.sh`, same `-t` invocation as before) -- generating a log
+  and merging the Traffic log into it are two separate `rdlogmanager`
+  modes with different preconditions, and were already two separate
+  steps in the hand-maintained cron scripts this feature replaces, so
+  they stay separate here too rather than one task trying to do both.
+- `/tasks`: database backup tasks can now set an optional file name
+  prefix (`FilePrefix`/`file_prefix`), used instead of the database's
+  own name (read from `/etc/rd.conf`, currently "Rivendell" -- see
+  `BACKLOG.md`) when naming the backup file. Defaults to the old
+  behavior if left blank.
+
 ## 2026-07-07
 
 - Fixed "No fade on segue out" (`segueGain()==0`) being silently

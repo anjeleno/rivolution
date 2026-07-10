@@ -72,6 +72,7 @@ func (h *Handler) TasksAdd(w http.ResponseWriter, r *http.Request) {
 		Schedule:      strings.TrimSpace(r.FormValue("schedule")),
 		BackupDir:     strings.TrimSpace(r.FormValue("backup_dir")),
 		RetentionDays: atoiDefault(r.FormValue("retention_days"), 14),
+		FilePrefix:    strings.TrimSpace(r.FormValue("file_prefix")),
 		ServiceName:   strings.TrimSpace(r.FormValue("service_name")),
 		DaysOffset:    atoiDefault(r.FormValue("days_offset"), 1),
 		CustomCommand: r.FormValue("custom_command"),

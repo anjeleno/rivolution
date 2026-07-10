@@ -18,6 +18,7 @@ type TaskType string
 const (
 	TaskDBBackup     TaskType = "db_backup"
 	TaskLogGen       TaskType = "log_gen"
+	TaskLogMerge     TaskType = "log_merge"
 	TaskLogReconcile TaskType = "log_reconcile"
 	TaskCustom       TaskType = "custom"
 )
@@ -41,8 +42,12 @@ type ScheduledTask struct {
 	// db_backup fields.
 	BackupDir     string `json:"backup_dir,omitempty"`
 	RetentionDays int    `json:"retention_days,omitempty"`
+	// FilePrefix names the backup file (<prefix>_<date>.sql.gz). Optional —
+	// falls back to the database's own name from /etc/rd.conf (which is
+	// "Rivendell", not "Rivolution" -- see BACKLOG.md) if left blank.
+	FilePrefix string `json:"file_prefix,omitempty"`
 
-	// log_gen / log_reconcile fields.
+	// log_gen / log_merge / log_reconcile fields.
 	ServiceName string `json:"service_name,omitempty"`
 	DaysOffset  int    `json:"days_offset,omitempty"`
 
