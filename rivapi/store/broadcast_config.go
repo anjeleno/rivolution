@@ -49,14 +49,21 @@ type StreamConfig struct {
 	Mount   string `json:"mount"`
 	Codec   string `json:"codec"`
 	Bitrate int    `json:"bitrate"`
-	// Quality is Liquidsoap's %vorbis VBR quality knob, range -0.2 (lowest)
+	// Quality is ffmpeg's libvorbis VBR quality knob, range -0.2 (lowest)
 	// to 1.0 (highest), default 0.3. Only used when Codec is "ogg" — Vorbis
-	// has no bitrate= parameter in this Liquidsoap version.
-	Quality     float64 `json:"quality"`
-	Name        string  `json:"name"`
-	Genre       string  `json:"genre"`
-	Description string  `json:"description"`
-	URL         string  `json:"url"`
+	// has no bitrate= parameter; it's VBR quality-based.
+	Quality float64 `json:"quality"`
+	// Mp3Quality is ffmpeg's libmp3lame -compression_level: LAME's internal
+	// encoding-algorithm quality setting, 0 (best/slowest) to 9
+	// (fastest/worst) — independent of Bitrate, which only sets the target
+	// bitrate itself. Only used when Codec is "mp3". Zero value (Go's
+	// default, and also LAME's own best setting) applies automatically to
+	// every stream that predates this field, not just newly-created ones.
+	Mp3Quality  int    `json:"mp3_quality"`
+	Name        string `json:"name"`
+	Genre       string `json:"genre"`
+	Description string `json:"description"`
+	URL         string `json:"url"`
 }
 
 // IcecastCfg holds every field rendered into icecast.xml.

@@ -9,6 +9,22 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-10
 
+- MP3 streams' `ffmpegPipeline` set only `-b:a` (target bitrate) with no
+  `-compression_level` -- LAME's own internal encoding-algorithm quality
+  setting (0 best/slowest to 9 fastest/worst), independent of bitrate,
+  was left at libmp3lame's unspecified default rather than the best
+  setting. Added `StreamConfig.Mp3Quality` (JSON `mp3_quality`,
+  `rivapi/store/broadcast_config.go`), wired into the generated ffmpeg
+  command (`rivapi/store/ffmpeg_generator.go`) and exposed as a slider
+  on `/broadcast` next to each MP3 stream's bitrate. Applies
+  automatically to every stream that predates this field, not just new
+  ones -- Go's zero value for an unset field is `0`, which is also
+  LAME's own best-quality setting, so no config migration was needed.
+- `scripts/rebuild-deb.sh`: added a concrete `--version=` example
+  (moving off `6.0.0~beta1` to a release candidate) to the script's own
+  usage comment, including why the leading `~` matters for Debian
+  version ordering and the git tag naming convention (`~` substituted
+  with `-`) needed to trigger the x64 GitHub Actions build afterward.
 - `apis/pypad/scripts/pypad_icecast2.exemplar`: the shipped template
   covered only a single Icecast2 mountpoint, but the underlying script
   (`pypad_icecast2.py`) already supports multiple via numbered

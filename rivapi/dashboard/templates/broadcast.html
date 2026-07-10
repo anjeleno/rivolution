@@ -224,6 +224,11 @@
                     Quality (<span x-text="s.quality"></span> — -0.2 lowest, 1.0 highest, 0.3 is a reasonable default)
                     <input type="range" :value="s.quality" @input="s.quality = +$event.target.value" min="-0.2" max="1.0" step="0.1">
                 </label>
+                <label x-show="s.codec === 'mp3'">
+                    Encoder quality (<span x-text="s.mp3_quality || 0"></span> — 0 best/slowest, 9 fastest/worst)
+                    <input type="range" :value="s.mp3_quality || 0" @input="s.mp3_quality = +$event.target.value" min="0" max="9" step="1">
+                    <small>Independent of bitrate above — this is LAME's internal encoding-algorithm setting, not the target bitrate.</small>
+                </label>
                 <div style="padding-top:1.5rem;">
                     <button type="button" @click="streams.splice(i, 1)"
                             class="outline secondary" style="width:auto; margin:0;">Remove</button>
@@ -302,6 +307,7 @@ function broadcastConfig(initial) {
                 codec: 'mp3',
                 bitrate: 128,
                 quality: 0.3,
+                mp3_quality: 0,
                 name: '', genre: '', description: '', url: ''
             });
         },

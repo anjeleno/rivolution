@@ -204,10 +204,10 @@ func ffmpegPipeline(cfg BroadcastConfig, s StreamConfig) (string, error) {
 		// hit this identically until each got its own explicit -f.
 		return fmt.Sprintf(
 			"exec ffmpeg -nostdin -loglevel warning -f jack -i %s "+
-				"-c:a libmp3lame -b:a %dk -content_type audio/mpeg "+
+				"-c:a libmp3lame -b:a %dk -compression_level %d -content_type audio/mpeg "+
 				"-ice_name %s -ice_genre %s -ice_description %s "+
 				"-f mp3 %s",
-			shellQuote(clientID), s.Bitrate,
+			shellQuote(clientID), s.Bitrate, s.Mp3Quality,
 			shellQuote(name), shellQuote(genre), shellQuote(description),
 			shellQuote(icecastURL(cfg, s)),
 		), nil

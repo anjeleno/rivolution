@@ -36,6 +36,27 @@
 # to 1 -- a version change always restarts revision numbering, since
 # "6.0.0-8" would falsely imply seven prior 6.0.0 revisions. Mutually
 # exclusive with --no-bump.
+#
+# Example: moving from "6.0.0~beta1" to a first release-candidate build
+# (equals sign, no space -- a bare "--version 6.0.0~rc1" is two separate
+# unrecognized arguments, not one):
+#
+#   scripts/rebuild-deb.sh --version=6.0.0~rc1
+#
+# Keep the leading "~" for any pre-release tag (beta/rc/int/etc) -- it's
+# not cosmetic. Debian version ordering treats "~" as sorting before
+# nothing at all, so "6.0.0~rc1" sorts *before* the eventual final
+# "6.0.0" release, exactly as a release candidate should. Drop the "~"
+# (e.g. "6.0.0rc1") and dpkg reads it backwards: an upgrade from that
+# build to the real "6.0.0" release would look like a downgrade and
+# could refuse to apply.
+#
+# The Debian revision reset means the resulting package is versioned
+# "6.0.0~rc1-1", and the git tag to push afterward (to trigger the x64
+# GitHub Actions build in .github/workflows/build-deb.yml) is
+# "v6.0.0-rc1-1" -- git tag names can't contain "~", so by convention
+# it's substituted with "-" there (matches the existing tag history,
+# e.g. "v6.0.0-beta1-11" for the "6.0.0~beta1-11" package).
 
 set -euo pipefail
 
