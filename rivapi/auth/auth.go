@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -74,13 +75,10 @@ type loginResponse struct {
 const SessionCookieName = "rivapi_session"
 
 // CreateTicket forwards credentials to rdxport.cgi and returns (signedJWT, expires, error).
-// Shared by LoginHandler (JSON API) and DashboardLoginHandler (browser form).
-// Exported (not just package-internal) so dashboard.ModeApply can reuse it as
-// a re-authentication check before switching install mode -- the same real
-// Rivendell-account credential that already gates the whole dashboard is the
-// thing re-checked, not a separate app-only secret or the Linux user's own
-// system password (which would need a new PAM dependency and either shadow-
-// group membership or a privileged helper to verify at all).
+// Used by LoginHandler (JSON API clients presenting real Rivendell
+// credentials). No longer used by DashboardLoginHandler or the /mode
+// re-authentication check -- both switched to CheckDashboardPassword
+// on 2026-07-09; see that function's comment for why.
 func CreateTicket(cfg *config.Config, tickets *TicketCache, username, password string) (string, time.Time, error) {
 	resp, err := http.PostForm(cfg.RdxportURL, url.Values{
 		"COMMAND":    {"31"}, // RDXPORT_COMMAND_CREATETICKET
@@ -110,7 +108,46 @@ func CreateTicket(cfg *config.Config, tickets *TicketCache, username, password s
 	return signed, expires, nil
 }
 
+// DashboardUsername is the only account the dashboard's own login gate
+// accepts. Deliberately fixed, not looked up anywhere -- see
+// CheckDashboardPassword's comment for why there's exactly one account
+// here rather than a user table.
+const DashboardUsername = "admin"
+
+// CheckDashboardPassword reports whether password is the dashboard's
+// own credential, checked in constant time.
+//
+// The dashboard's login gate is deliberately independent of both
+// Rivendell's own user database and the Linux system account -- not
+// PAM (which would need a new dependency and either shadow-group
+// membership or a privileged helper just to check a password) and,
+// as of 2026-07-09, also not rdxport.cgi's CREATETICKET command,
+// after real testing found it returns a valid ticket for the "admin"
+// Rivendell account regardless of what password is submitted. That's
+// a genuine bug in Rivendell's own C++ authentication path (or in how
+// the default admin row's PASSWORD column gets seeded), not anything
+// under this package's control, and not something to route the
+// dashboard's own login gate through while it's unresolved. See
+// docs/handoff/2026-07-09.md for the investigation.
+//
+// Both DashboardLoginHandler and LoginHandler still call CreateTicket
+// afterward, passing cfg.JWTSecret as the rdxport password rather than
+// whatever the caller submitted -- rdxport.cgi's check isn't providing
+// real protection either way right now, so there's no added risk in
+// still using it purely to obtain a genuine ticket for anything
+// downstream that needs one (api/carts.go's ListCarts/GetCart, etc.).
+// The actual access-control decision already happened here, not there.
+func CheckDashboardPassword(cfg *config.Config, password string) bool {
+	if cfg.JWTSecret == "" {
+		return false // an unconfigured secret must never mean "no password required"
+	}
+	return subtle.ConstantTimeCompare([]byte(password), []byte(cfg.JWTSecret)) == 1
+}
+
 // LoginHandler handles POST /api/v1/auth/login (JSON API clients).
+// Same gate as DashboardLoginHandler -- see CheckDashboardPassword's
+// comment. API clients authenticate with the same dashboard credential,
+// not a separate Rivendell account.
 func LoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req loginRequest
@@ -118,15 +155,19 @@ func LoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 			http.Error(w, "username and password required", http.StatusBadRequest)
 			return
 		}
-
-		signed, expires, err := CreateTicket(cfg, tickets, req.Username, req.Password)
-		if err != nil {
-			if err.Error() == "invalid credentials" {
-				http.Error(w, "invalid credentials", http.StatusUnauthorized)
-			} else {
-				http.Error(w, err.Error(), http.StatusBadGateway)
-			}
+		if req.Username != DashboardUsername || !CheckDashboardPassword(cfg, req.Password) {
+			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
+		}
+
+		expires := time.Now().Add(24 * time.Hour)
+		signed, _, err := CreateTicket(cfg, tickets, req.Username, cfg.JWTSecret)
+		if err != nil {
+			signed, err = IssueToken(cfg, req.Username, expires)
+			if err != nil {
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -139,19 +180,40 @@ func LoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 
 // DashboardLoginHandler handles POST /login (browser form submission).
 // Sets an HttpOnly cookie instead of returning JSON, then redirects to /.
+//
+// CheckDashboardPassword is the real gate -- rdxport.cgi's own
+// CREATETICKET check isn't a meaningful security boundary right now
+// (see that function's comment), so it can't be trusted to lock the
+// front door on its own. But since it isn't providing any real
+// protection either way, there's no additional risk in still calling
+// it afterward, once the real gate has already passed, purely to
+// obtain a genuine rdxport ticket -- api/carts.go's ListCarts/GetCart
+// and anything else that needs one still work this way. If rdxport is
+// unreachable or still broken, ticket acquisition fails gracefully and
+// login still succeeds (those features degrade, dashboard access
+// doesn't) -- the password check already happened and doesn't depend
+// on rdxport.cgi at all.
 func DashboardLoginHandler(cfg *config.Config, tickets *TicketCache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
-		if username == "" || password == "" {
+		if username != DashboardUsername || !CheckDashboardPassword(cfg, password) {
 			http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
 			return
 		}
 
-		signed, _, err := CreateTicket(cfg, tickets, username, password)
+		expires := time.Now().Add(24 * time.Hour)
+		signed, _, err := CreateTicket(cfg, tickets, username, cfg.JWTSecret)
 		if err != nil {
-			http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
-			return
+			// rdxport ticket acquisition failed -- fine, the real gate
+			// already passed. Issue the session on its own so dashboard
+			// access still works; ticket-dependent features (cart/group
+			// browsing) just won't until rdxport is reachable again.
+			signed, err = IssueToken(cfg, username, expires)
+			if err != nil {
+				http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
+				return
+			}
 		}
 
 		secure := cfg.CookieSecure

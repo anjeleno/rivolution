@@ -26,6 +26,21 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   own name (read from `/etc/rd.conf`, currently "Rivendell" -- see
   `BACKLOG.md`) when naming the backup file. Defaults to the old
   behavior if left blank.
+- **Security fix**: the dashboard's login (`/login` and the JSON API's
+  `/api/v1/auth/login`) and `/mode`'s re-authentication gate no longer
+  validate credentials via `rdxport.cgi`'s `CREATETICKET` command --
+  real testing found it returns a valid ticket for the `admin`
+  Rivendell account regardless of what password is submitted, meaning
+  every one of those gates accepted any password at all. Both now
+  check the password directly (constant-time comparison) against the
+  dashboard's own `JwtSecret` (`/etc/rd.conf`'s `[dashboard]` section),
+  independent of Rivendell's user database or the Linux system account.
+  `rdxport.cgi` is still called afterward, with the `JwtSecret` passed
+  through as the ticket password, purely to obtain a real ticket for
+  features that need one (`/api/v1/carts`, `/api/v1/groups`) -- the
+  access-control decision no longer depends on it. See `BACKLOG.md` for
+  the underlying `rdxport.cgi`/Rivendell issue, which this works around
+  but does not fix.
 
 ## 2026-07-07
 
