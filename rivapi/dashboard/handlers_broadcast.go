@@ -92,15 +92,6 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	}
 	result.Steps = append(result.Steps, "icecast.xml written to /etc/icecast2/icecast.xml.")
 
-	// Generate radio.liq.
-	if err := store.GenerateLiquidsoapScript(cfg); err != nil {
-		result.Error = "generating radio.liq: " + err.Error()
-		data, _ := h.broadcastPageData(r, result)
-		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
-		return
-	}
-	result.Steps = append(result.Steps, "radio.liq written to "+store.LiquidsoapScriptPath+".")
-
 	// Restart icecast2.
 	if out, err := exec.Command("sudo", "systemctl", "restart", "icecast2.service").CombinedOutput(); err != nil {
 		result.Error = "restarting icecast2: " + err.Error() + ": " + strings.TrimSpace(string(out))
@@ -110,22 +101,19 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	}
 	result.Steps = append(result.Steps, "icecast2 restarted.")
 
-	// Restart liquidsoap only if it's installed (not yet mandatory on all boxes).
-	if out, err := exec.Command("sudo", "systemctl", "restart", "liquidsoap.service").CombinedOutput(); err != nil {
-		outStr := strings.TrimSpace(string(out))
-		// Exit code 5 = unit not loaded; treat as a warning, not a fatal error.
-		if isExitCode(err, 5) {
-			result.Steps = append(result.Steps, "liquidsoap not installed yet — radio.liq is ready for when it is.")
-		} else {
-			result.Error = "restarting liquidsoap: " + err.Error() + ": " + outStr
-			data, _ := h.broadcastPageData(r, result)
-			_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
-			return
-		}
-	} else {
-		time.Sleep(400 * time.Millisecond)
-		result.Steps = append(result.Steps, "liquidsoap restarted.")
+	// Deploy one always-on systemd service per stream (ffmpeg: JACK
+	// capture -> encode -> Icecast push), replacing the single
+	// radio.liq/liquidsoap.service this used to be. See
+	// rivapi/store/ffmpeg_generator.go and docs/handoff/2026-07-09.md
+	// for why Liquidsoap was replaced.
+	if err := store.DeployFfmpegStreams(cfg); err != nil {
+		result.Error = "deploying stream services: " + err.Error()
+		data, _ := h.broadcastPageData(r, result)
+		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
+		return
 	}
+	time.Sleep(400 * time.Millisecond)
+	result.Steps = append(result.Steps, fmt.Sprintf("%d stream service(s) deployed and started.", len(cfg.Streams)))
 
 	result.Success = true
 	data, err := h.broadcastPageData(r, result)
@@ -206,12 +194,4 @@ func parseInt(s string) (int, error) {
 	var n int
 	_, err := fmt.Sscanf(strings.TrimSpace(s), "%d", &n)
 	return n, err
-}
-
-func isExitCode(err error, code int) bool {
-	type exitCoder interface{ ExitCode() int }
-	if ec, ok := err.(exitCoder); ok {
-		return ec.ExitCode() == code
-	}
-	return false
 }

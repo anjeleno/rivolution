@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,4 +96,14 @@ func GenerateIcecastXML(cfg BroadcastConfig) error {
 		return wrapOutput("install icecast.xml", err, out)
 	}
 	return nil
+}
+
+// wrapOutput wraps a command error with its combined output for error
+// messages. Shared by any generator here that shells out to install its
+// generated config via sudo.
+func wrapOutput(op string, err error, out []byte) error {
+	if len(out) > 0 {
+		return fmt.Errorf("%s: %w: %s", op, err, bytes.TrimSpace(out))
+	}
+	return fmt.Errorf("%s: %w", op, err)
 }

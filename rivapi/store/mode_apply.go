@@ -202,16 +202,6 @@ func sudoSystemctl(args ...string) error {
 	return sudoRun(append([]string{"systemctl"}, args...)...)
 }
 
-// isExitCode reports whether err (possibly wrapped, e.g. by sudoRun's
-// fmt.Errorf("...: %w: ...")) is an *exec.ExitError with the given code.
-// Same check dashboard.isExitCode makes for BroadcastSave's liquidsoap
-// tolerance, duplicated here rather than exported across packages for one
-// two-line helper.
-func isExitCode(err error, code int) bool {
-	var exitErr *exec.ExitError
-	return errors.As(err, &exitErr) && exitErr.ExitCode() == code
-}
-
 func aptInstallMariaDB() error {
 	if packageInstalled("mariadb-server") {
 		return nil
@@ -309,7 +299,7 @@ func setMariaDBBindAddress(target string) error {
 // stagingDir holds files this process generates locally (owned by rd) before
 // a fixed `sudo install` command atomically deploys them to their real
 // system location -- the same "regenerate whole file, then one whitelisted
-// install" pattern GenerateIcecastXML/GenerateLiquidsoapScript already use,
+// install" pattern GenerateIcecastXML/DeployFfmpegStreams already use,
 // applied here to rd.conf/exports/fstab/autofs maps.
 const stagingDir = "/home/rd/etc/rivolution/staging"
 
