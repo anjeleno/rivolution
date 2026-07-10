@@ -84,6 +84,7 @@
                 <select name="type" x-model="type">
                     <option value="db_backup">Database backup</option>
                     <option value="log_gen">Log generation</option>
+                    <option value="log_merge">Merge traffic log</option>
                     <option value="log_reconcile">Log reconciliation</option>
                     <option value="custom">Custom command</option>
                 </select>
@@ -105,16 +106,20 @@
                     Retention (number of backups to keep)
                     <input type="number" name="retention_days" value="14" min="1">
                 </label>
+                <label>
+                    Backup file name prefix (optional)
+                    <input type="text" name="file_prefix" placeholder="defaults to the database's own name">
+                </label>
             </div>
         </div>
 
-        <div x-show="type === 'log_gen' || type === 'log_reconcile'" style="padding:1rem; border:1px solid var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
+        <div x-show="type === 'log_gen' || type === 'log_merge' || type === 'log_reconcile'" style="padding:1rem; border:1px solid var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
             <div class="grid">
                 <label>
                     Rivendell service name
                     <input type="text" name="service_name" placeholder="Production">
                 </label>
-                <label x-show="type === 'log_gen'">
+                <label x-show="type === 'log_gen' || type === 'log_merge'">
                     Day offset
                     <input type="number" name="days_offset" value="1">
                 </label>

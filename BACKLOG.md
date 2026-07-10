@@ -718,3 +718,25 @@ intentional (it would preserve a voice-tracker's per-line marker
 override independent of later library edits) and the real gap is only
 that ordinary library edits have no path to reach an already-built log
 at all.
+
+## The MySQL database itself is still named "Rivendell", not "Rivolution"
+
+The rebrand only ever touched the branding/package layer -- binaries,
+service names, dashboard UI. The actual schema name is hardcoded as
+`Rivendell` in roughly a dozen places in the inherited
+`scripts/rd_create_db` and shipped as the default in
+`conf/rd.conf-sample`'s `[mySQL] Database=` line, so every install's
+live database is genuinely named `Rivendell`, not just displayed that
+way somewhere.
+
+Noticed 2026-07-09 when a database backup task named its output file
+from `/etc/rd.conf`'s `Database=` value, producing a
+`Rivendell_<date>.sql.gz` file on a Rivolution box. Deliberately left
+alone rather than renamed: touching the live schema name is a bigger,
+riskier change than anything else in the rebrand (every `USE
+Rivendell;` in that script, plus a migration path for databases that
+already exist on real installs) and wasn't worth doing under time
+pressure just to fix a cosmetic backup filename. `/tasks` database
+backup tasks can set their own file name prefix instead (see
+`CHANGELOG.md`, 2026-07-09) as a workaround that doesn't touch the
+schema.
