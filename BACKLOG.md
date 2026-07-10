@@ -486,21 +486,25 @@ build compiled with SBR encoding enabled, or switching the
 low-bitrate-efficient stream option to a different codec (e.g. Opus,
 which isn't patent-restricted and is already linked into Liquidsoap).
 
-## Audio processing chain routing (caed -> Stereo Tool -> Liquidsoap) is hardcoded
+## Audio processing chain routing (caed -> Stereo Tool -> broadcast streams) is hardcoded
 
 The signal chain needs caed's JACK output routed into Stereo Tool, and
-Stereo Tool's output routed into Liquidsoap. Stereo Tool only reaches
-JACK via an ALSA-JACK bridge plugin (its "jack (ALSA)" I/O option) —
-not as a native JACK client — and that plugin's default port mapping
-(`/usr/share/alsa/alsa.conf.d/50-jack.conf`) is hardcoded to
-`system:capture_1/2`/`system:playback_1/2`, real jackd+ALSA hardware
-port names that don't exist under system-scope PipeWire.
+Stereo Tool's output routed into the broadcast streams. Stereo Tool
+reaches JACK through ALSA's `type jack` PCM plugin, exactly as its own
+config UI's "jack (ALSA)" device label says (confirmed via live
+behavioral testing, not just reading `ldd`/`strings` output — see
+ARCHITECTURE.md's "device label" recurring-mistake writeup for why
+static linkage evidence alone couldn't settle this and briefly pointed
+the wrong way). The actual target is configured in `~/.asoundrc`
+(`conf/alsa/rd.asoundrc`), not `~/.stereo_tool.rc`'s own "Jack ID"
+fields.
 
-**Current mitigation:** `conf/alsa/rd.asoundrc` overrides the `pcm.jack`
-definition with a hardcoded mapping to `rivendell_0:playout_0L/R` (input)
-and `liquidsoap:in_0/1` (output). Works, but is fixed at exactly one
-routing — no way to reassign which caed stream feeds Stereo Tool, or add
-additional processing/monitoring taps, without hand-editing this file.
+**Original mitigation:** `conf/alsa/rd.asoundrc` mapped a hardcoded
+`pcm.jack` definition to `rivendell_0:playout_0L/R` (input) and
+`liquidsoap:in_0/1` (output) — the `liquidsoap` target stopped existing
+once Liquidsoap was replaced by per-stream ffmpeg processes, which is
+what "Stereo Tool keeps leaking JACK clients" turned out to be. See
+Update 2026-07-10 below for the fix that's actually shipped.
 
 **Update 2026-07-01:** an MVP patchbay page now exists (`/patchbay`,
 `rivapi/store/patchbay.go`, `handlers_patchbay.go`), and has been used
@@ -534,6 +538,56 @@ Also still open: no live/auto-refresh (reload the page to see changes
 made outside the dashboard), and no client-grouped visual graph (still
 plain text rows, not virtual patch cables) — a nicer visual pass is
 wanted eventually but not scoped yet.
+
+**Update 2026-07-10 (shipped, see `docs/specs/0015-ffmpeg-broadcast-output.md`
+for the full design):** the `liquidsoap:in_0/1` target described above
+stopped existing once Liquidsoap was replaced by per-stream ffmpeg
+processes; every failed auto-connect attempt tore Stereo Tool's client
+down and retried with a fresh index, forever. An earlier fix attempt
+(same day) built a permanent PipeWire virtual bus
+(`libpipewire-module-loopback`) as Stereo Tool's target, on the theory
+that it needed something permanent and stream-count-independent.
+Confirmed live this was itself unreliable — Stereo Tool's ALSA-JACK
+bridge connects stably to a genuine native JACK client but not to a
+loopback-module node — and was removed. Fixed generically without any
+intermediary process at all:
+
+- Stereo Tool's fixed `~/.asoundrc` target is whichever configured
+  broadcast stream sorts first by mount — fully dynamic
+  (`primaryStreamMount`), re-evaluated on every deploy, never a
+  hardcoded mount name. `syncStereoToolTarget`
+  (`rivapi/store/ffmpeg_generator.go`) patches `~/.asoundrc` and
+  restarts `stereo-tool.service` only when that target actually
+  changes.
+- The fan-out from Stereo Tool's live output to every *other*
+  configured stream — and to the anchor stream too, which must stay in
+  the saved set rather than being skipped as redundant, since
+  `ReconcileLinks`' removal half tears down anything absent from it —
+  uses the same operator-set `BroadcastConfig.ProgramSource` field
+  (now with a `"stereo_tool"` sentinel value alongside plain JACK
+  client names), auto-connected once per stream on first deploy
+  (`syncStreamPatchLinks`), never touched again after that, so a manual
+  `/patchbay` override always sticks.
+- `ReconcileLinks` itself needed a real fix, not just Stereo Tool's own
+  side: a saved link naming a since-restarted Stereo Tool's stale PID
+  could never actually reconnect, since only the "is this already
+  satisfied" comparison was PID-agnostic, not the actual `Link()` call.
+  `resolvePortName` (`rivapi/store/patchbay.go`) resolves a stale saved
+  name to whatever's currently live with the same normalized identity
+  first.
+- Verified end-to-end: a full stack restart (including a genuine VM
+  crash and recovery) reconnects every link automatically with zero
+  manual reconnection, on a fresh PID every time.
+
+Known gap, not yet generalized: a station with its own saved Stereo
+Tool presets (`~/.stereo_tool.presets/*.sts`) can have a loaded preset's
+own copy of the device section override the base `.rc`/`.asoundrc` fix
+— the immediate case was resolved by hand through Stereo Tool's own web
+UI.
+
+Phase 2 (`caed`/Stereo Tool/streams as fully native PipeWire clients,
+no per-app auto-connect guessing or ALSA bridging anywhere) remains the
+real final fix and is still unscoped.
 
 ## Groups and Carts nav links hidden — not yet meaningful in the new dashboard
 
