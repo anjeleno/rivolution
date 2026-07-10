@@ -7,6 +7,16 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-10
+
+- `/tasks`: the "Add task" form's schedule field required a raw
+  systemd `OnCalendar=` expression with no guidance. Replaced with a
+  Frequency dropdown (Hourly/Daily/Weekly/Monthly) plus the matching
+  human inputs (time of day, day of month, day-of-week checkboxes) that
+  build the expression automatically, with a live preview of the
+  resulting value and an "Advanced" option for entering a raw
+  expression directly when a preset can't express what's needed.
+
 ## 2026-07-09
 
 - `/tasks`: first real-box run of the log generation task surfaced the
