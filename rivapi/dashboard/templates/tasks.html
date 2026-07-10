@@ -91,10 +91,76 @@
             </label>
         </div>
 
-        <label>
-            Schedule (systemd <code>OnCalendar=</code> expression)
-            <input type="text" name="schedule" placeholder="*-*-* 00:05:00 (daily at 00:05)" required>
-        </label>
+        <div x-data="{
+            freq: 'daily',
+            time: '00:05',
+            minute: 0,
+            dayOfMonth: 1,
+            days: ['Mon'],
+            dayList: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+            toggleDay(d) {
+                this.days = this.days.includes(d) ? this.days.filter(x => x !== d) : [...this.days, d];
+            },
+            computeSchedule() {
+                const hhmm = (this.time || '00:00') + ':00';
+                if (this.freq === 'hourly') return '*-*-* *:' + String(this.minute).padStart(2, '0') + ':00';
+                if (this.freq === 'daily') return '*-*-* ' + hhmm;
+                if (this.freq === 'weekly') return (this.days.length ? this.days.join(',') : '*') + ' *-*-* ' + hhmm;
+                if (this.freq === 'monthly') return '*-*-' + String(this.dayOfMonth).padStart(2, '0') + ' ' + hhmm;
+                return this.advancedValue;
+            },
+            advancedValue: ''
+        }">
+            <label>
+                Frequency
+                <select x-model="freq">
+                    <option value="hourly">Hourly</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="advanced">Advanced (raw systemd expression)</option>
+                </select>
+            </label>
+
+            <div class="grid" x-show="freq !== 'advanced'">
+                <label x-show="freq === 'hourly'">
+                    Minute past the hour
+                    <input type="number" min="0" max="59" x-model.number="minute">
+                </label>
+                <label x-show="freq === 'daily' || freq === 'weekly' || freq === 'monthly'">
+                    Time of day
+                    <input type="time" x-model="time">
+                </label>
+                <label x-show="freq === 'monthly'">
+                    Day of month
+                    <input type="number" min="1" max="31" x-model.number="dayOfMonth">
+                </label>
+            </div>
+
+            <div x-show="freq === 'weekly'" style="margin-bottom:1rem;">
+                <span style="display:block; margin-bottom:0.25rem;">Days of the week (none checked = every day)</span>
+                <template x-for="d in dayList" :key="d">
+                    <label style="display:inline-flex; align-items:center; gap:0.25rem; margin-right:1rem; font-weight:normal;">
+                        <input type="checkbox" :checked="days.includes(d)" @change="toggleDay(d)">
+                        <span x-text="d"></span>
+                    </label>
+                </template>
+            </div>
+
+            <label x-show="freq === 'monthly'" style="color: var(--pico-muted-color); font-size:0.85em; margin-top:-0.75rem;">
+                Months without this day (e.g. day 31 in February) are skipped that month.
+            </label>
+
+            <label x-show="freq === 'advanced'">
+                Raw systemd <code>OnCalendar=</code> expression
+                <input type="text" x-model="advancedValue" placeholder="*-*-* 00:05:00 (daily at 00:05)">
+            </label>
+
+            <input type="hidden" name="schedule" :value="computeSchedule()">
+            <p style="color: var(--pico-muted-color); margin-top:-0.5rem;">
+                Runs: <code x-text="computeSchedule()"></code>
+            </p>
+        </div>
 
         <div x-show="type === 'db_backup'" style="padding:1rem; border:1px solid var(--pico-muted-border-color); border-radius:var(--pico-border-radius); margin-bottom:1rem;">
             <div class="grid">
