@@ -26,6 +26,11 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   is logged with its real `strerror()` text and reported as a generic
   internal error instead. Applied at all ~19 write-failure sites across
   every conversion stage.
+- `apis/pypad/scripts/pypad_icecast2.exemplar` shipped its four
+  `[IcecastN]` mountpoint sections active by default, with placeholder
+  hostname/credential values. Rewrote it so every section (header and
+  all keys) ships commented out; enabling a mountpoint now requires
+  explicitly uncommenting and editing it.
 
 ## 2026-07-10
 
