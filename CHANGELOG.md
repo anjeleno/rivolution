@@ -36,6 +36,12 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   worker, unlike Add/Edit/Delete in the Dropbox list, which have always
   sent an `RDNotification::DropboxType` that `ripcd` turns into a live
   `SIGUSR1` reload. Reset now sends the same notification.
+- RDMonitor's application-menu shortcut was never added to
+  `xdg/rivendell-rivendell.menu`'s `Include` list, so the desktop menu
+  fell back to filing it under a generic "Other" category alongside
+  unrelated software instead of grouping it with the rest of the
+  Rivendell tools. Added it under the existing "Utilities" submenu,
+  next to the other secondary/monitoring tools already there.
 
 ## 2026-07-10
 
