@@ -42,6 +42,14 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   unrelated software instead of grouping it with the rest of the
   Rivendell tools. Added it under the existing "Utilities" submenu,
   next to the other secondary/monitoring tools already there.
+- Moved `BroadcastConfig.ProgramSource` (what feeds every broadcast
+  stream) from `/broadcast` to `/patchbay`. It's a routing decision,
+  not a stream-encoding setting, and belonged next to the rest of a
+  station's patching -- being on `/broadcast` cost real time tracking
+  down a routing question that wasn't visible from the page an
+  operator would actually look on. Saving it on `/patchbay` only
+  updates the stored value; it still takes effect the next time
+  `/broadcast`'s "Save & Deploy" runs, same as before.
 
 ## 2026-07-10
 

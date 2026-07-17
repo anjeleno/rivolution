@@ -76,6 +76,7 @@ func main() {
 		r.Post("/patchbay/disconnect", dash.PatchbayDisconnect)
 		r.Post("/patchbay/disconnect-unsaved", dash.PatchbayDisconnectUnsaved)
 		r.Post("/patchbay/save", dash.PatchbaySave)
+		r.Post("/patchbay/program-source", dash.PatchbayProgramSource)
 		r.Get("/mode", dash.Mode)
 		r.Post("/mode/apply", dash.ModeApply)
 		r.Get("/tasks", dash.Tasks)

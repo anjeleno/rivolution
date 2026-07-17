@@ -42,6 +42,38 @@
 <p><ins>Disconnected {{.DisconnectedCount}} unsaved connection(s).</ins></p>
 {{end}}
 
+<h3>Program source</h3>
+<p style="color: var(--pico-muted-color); margin-bottom:1rem;">
+    What feeds every broadcast stream. Pick "Stereo Tool" if this station
+    processes locally with it — rivapi keeps Stereo Tool's own JACK target
+    pointed at one of the streams automatically and fans its output out to
+    the rest, since Stereo Tool itself can only ever be given one fixed
+    target. Otherwise pick the JACK client whose output should feed the
+    streams directly (e.g. Rivendell itself, on a station with no local
+    processing). Pick the client, not a specific channel; its full stereo
+    pair connects automatically to any newly added stream — a stream
+    already connected is never repatched automatically, even if you change
+    this; reconnect it by hand below instead. Saving here only updates the
+    stored setting — it takes effect the next time streams are (re)deployed
+    from <a href="/broadcast">Broadcast</a>.
+</p>
+{{if .ProgramSourceSaved}}
+<p><ins>Program source saved.</ins></p>
+{{end}}
+<form method="post" action="/patchbay/program-source" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1.5rem;">
+    <label style="min-width:16rem; margin:0;">
+        Feeds every stream
+        <select name="program_source">
+            <option value=""{{if eq .ProgramSource ""}} selected{{end}}>— not set —</option>
+            <option value="stereo_tool"{{if eq .ProgramSource "stereo_tool"}} selected{{end}}>Stereo Tool (local processing)</option>
+            {{range .ProgramSourceOptions}}
+            <option value="{{.}}"{{if eq . $.ProgramSource}} selected{{end}}>{{.}}</option>
+            {{end}}
+        </select>
+    </label>
+    <button type="submit" style="margin:0;">Save program source</button>
+</form>
+
 <h3>Current connections</h3>
 {{if not .Links}}
 <p style="color: var(--pico-muted-color);">Nothing connected.</p>
