@@ -31,6 +31,11 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   hostname/credential values. Rewrote it so every section (header and
   all keys) ships commented out; enabling a mountpoint now requires
   explicitly uncommenting and editing it.
+- RDAdmin's "Reset Dropbox" button cleared the already-imported-files
+  cache but never told `rdservice` to actually reload that Dropbox's
+  worker, unlike Add/Edit/Delete in the Dropbox list, which have always
+  sent an `RDNotification::DropboxType` that `ripcd` turns into a live
+  `SIGUSR1` reload. Reset now sends the same notification.
 
 ## 2026-07-10
 

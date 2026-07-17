@@ -25,6 +25,7 @@
 #include <rdcart_dialog.h>
 #include <rddb.h>
 #include <rdescape_string.h>
+#include <rdnotification.h>
 
 #include "globals.h"
 #include "edit_dropbox.h"
@@ -646,6 +647,13 @@ void EditDropbox::resetData()
     QString::asprintf("`DROPBOX_ID`=%d",box_dropbox->id());
   RDSqlQuery *q=new RDSqlQuery(sql);
   delete q;
+
+  RDNotification *notify=new RDNotification(RDNotification::DropboxType,
+					    RDNotification::ModifyAction,
+					    box_dropbox->stationName());
+  rda->ripc()->sendNotification(*notify);
+  delete notify;
+
   QMessageBox::information(this,"RDAdmin - "+tr("Reset Dropbox"),
 			   tr("The dropbox has been reset."));
 }
