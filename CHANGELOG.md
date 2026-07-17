@@ -7,6 +7,26 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-17
+
+- `DefaultBroadcastConfig()` still seeded new dashboard configs with
+  Liquidsoap-era defaults (`JackInputID: "liquidsoap"`, a
+  `liquidsoap.log` path) even though the ffmpeg-based broadcast pipeline
+  replaced Liquidsoap entirely. Every fresh install hit this. Updated
+  the two default values to `ffmpeg`/`ffmpeg.log`; the `Liquidsoap`
+  struct and field names themselves are unchanged on purpose, to avoid
+  a config migration for existing installs' saved JSON.
+- `RDAudioConvert::convert()` reported every conversion write failure as
+  "No space left on device" regardless of the real cause -- disk-full,
+  a read-only filesystem, an I/O error, and a quota limit all produced
+  the identical, often-wrong message. Added `WriteErrorCode()`, which
+  classifies the failure from the real `errno` (captured immediately
+  after the failing write, before any cleanup call gets a chance to
+  clobber it): genuine `ENOSPC` still reports as before, anything else
+  is logged with its real `strerror()` text and reported as a generic
+  internal error instead. Applied at all ~19 write-failure sites across
+  every conversion stage.
+
 ## 2026-07-10
 
 - MP3 streams' `ffmpegPipeline` set only `-b:a` (target bitrate) with no
