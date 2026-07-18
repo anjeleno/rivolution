@@ -50,6 +50,15 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   operator would actually look on. Saving it on `/patchbay` only
   updates the stored value; it still takes effect the next time
   `/broadcast`'s "Save & Deploy" runs, same as before.
+- `rivolution-stack.target` still hardcoded `Wants=liquidsoap.service`
+  long after Liquidsoap was fully replaced by the ffmpeg-based
+  broadcast stream services -- every stack restart (including the
+  `/system` page's "Restart Stack" button) silently tried to resurrect
+  a unit whose binary no longer existed, restart-looping indefinitely
+  since the package was purged. Removed the dependency, deleted the
+  now-fully-dead `liquidsoap.service` unit and its drop-in from the
+  package build, and added a one-time cleanup to `postinst` so an
+  upgrade removes any already-installed leftover copy.
 
 ## 2026-07-10
 
