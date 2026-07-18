@@ -14,10 +14,9 @@ import (
 
 type broadcastPageData struct {
 	baseData
-	Config               store.BroadcastConfig
-	ConfigJS             template.JS // safe for Alpine x-data initialization
-	SaveResult           *broadcastSaveResult
-	ProgramSourceOptions []string // live JACK output ports, for the "Program source" dropdown
+	Config     store.BroadcastConfig
+	ConfigJS   template.JS // safe for Alpine x-data initialization
+	SaveResult *broadcastSaveResult
 }
 
 type broadcastSaveResult struct {
@@ -35,19 +34,11 @@ func (h *Handler) broadcastPageData(r *http.Request, result *broadcastSaveResult
 	if err != nil {
 		return broadcastPageData{}, err
 	}
-	// Best-effort: an empty dropdown (PipeWire briefly unavailable) shouldn't
-	// block loading the rest of the page -- same tolerance patchbayData
-	// doesn't have the luxury of (it's the page ports ARE the point), but
-	// here it's just one field's options. Client names, not individual
-	// ports -- ProgramSource is a per-client concept (see
-	// ListOutputClients), unlike /patchbay's own per-port dropdowns.
-	outputs, _ := store.ListOutputClients()
 	return broadcastPageData{
-		baseData:             h.base(r, "Broadcast", "broadcast"),
-		Config:               cfg,
-		ConfigJS:             template.JS(cfgJSON),
-		SaveResult:           result,
-		ProgramSourceOptions: outputs,
+		baseData:   h.base(r, "Broadcast", "broadcast"),
+		Config:     cfg,
+		ConfigJS:   template.JS(cfgJSON),
+		SaveResult: result,
 	}, nil
 }
 
@@ -81,6 +72,17 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 		data, _ := h.broadcastPageData(r, result)
 		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
 		return
+	}
+
+	// ProgramSource lives on /patchbay now (spec: the "what feeds every
+	// stream" decision belongs next to routing, not stream encoding), so
+	// this form no longer submits it. parseBroadcastForm builds cfg from
+	// scratch, so without this it would silently blank out whatever
+	// /patchbay last set on every unrelated /broadcast save. Best-effort:
+	// if there's no existing config yet (first-ever save), ProgramSource
+	// just stays empty, same as today's "not configured yet" meaning.
+	if existing, err := store.LoadBroadcastConfig(h.cfg.BroadcastConfigPath); err == nil {
+		cfg.ProgramSource = existing.ProgramSource
 	}
 
 	// Save JSON config first so the state is durable even if deploy steps fail.
@@ -188,8 +190,6 @@ func parseBroadcastForm(r *http.Request) (store.BroadcastConfig, error) {
 		LogPath:     strings.TrimSpace(r.FormValue("liq_log_path")),
 		SampleRate:  sampleRate,
 	}
-
-	cfg.ProgramSource = strings.TrimSpace(r.FormValue("program_source"))
 
 	streamsJSON := r.FormValue("streams_json")
 	if streamsJSON != "" {

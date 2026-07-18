@@ -144,8 +144,8 @@ func DefaultBroadcastConfig() BroadcastConfig {
 		Liquidsoap: LiquidsoapCfg{
 			IcecastHost: "localhost",
 			IcecastPort: 8000,
-			JackInputID: "liquidsoap",
-			LogPath:     "/home/rd/Log/liquidsoap.log",
+			JackInputID: "ffmpeg",
+			LogPath:     "/home/rd/Log/ffmpeg.log",
 			SampleRate:  48000,
 		},
 		Streams: []StreamConfig{

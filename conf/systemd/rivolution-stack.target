@@ -16,7 +16,6 @@ Wants=pipewire-system.service
 Wants=wireplumber-system.service
 Wants=rivendell.service
 Wants=icecast2.service
-Wants=liquidsoap.service
 Wants=stereo-tool.service
 Wants=tailscaled.service
 

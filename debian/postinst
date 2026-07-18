@@ -192,16 +192,23 @@ LIMITS
       #
       mkdir -p /etc/systemd/system/rivendell.service.d
       mkdir -p /etc/systemd/system/icecast2.service.d
-      mkdir -p /etc/systemd/system/liquidsoap.service.d
       cp /usr/share/rivolution/systemd/rivolution-stack.target /etc/systemd/system/
       cp /usr/share/rivolution/systemd/pipewire-system.service /etc/systemd/system/
       cp /usr/share/rivolution/systemd/wireplumber-system.service /etc/systemd/system/
-      cp /usr/share/rivolution/systemd/liquidsoap.service /etc/systemd/system/
       cp /usr/share/rivolution/systemd/stereo-tool.service /etc/systemd/system/
       cp /usr/share/rivolution/systemd/rivapi.service /etc/systemd/system/
       cp /usr/share/rivolution/systemd/rivendell.service.d/rivolution.conf /etc/systemd/system/rivendell.service.d/
       cp /usr/share/rivolution/systemd/icecast2.service.d/rivolution.conf /etc/systemd/system/icecast2.service.d/
-      cp /usr/share/rivolution/systemd/liquidsoap.service.d/rivolution.conf /etc/systemd/system/liquidsoap.service.d/
+
+      # liquidsoap.service is fully decommissioned (replaced by the
+      # ffmpeg-based rivolution-task-* stream services) -- clean up a
+      # leftover install from before this was removed, so an upgrade
+      # doesn't leave a Wants=liquidsoap.service target still able to
+      # resurrect a dead unit. Safe to always attempt: a no-op on any
+      # box that never had it.
+      systemctl disable --now liquidsoap.service >/dev/null 2>&1 || true
+      rm -f /etc/systemd/system/liquidsoap.service
+      rm -rf /etc/systemd/system/liquidsoap.service.d
 
       cp /usr/share/rivolution/sudoers.d/rivapi /etc/sudoers.d/rivapi
       chmod 440 /etc/sudoers.d/rivapi

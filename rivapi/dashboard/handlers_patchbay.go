@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/anjeleno/rivolution/rivapi/store"
 )
@@ -35,6 +36,18 @@ type patchbayData struct {
 	Error             string
 	JustSaved         bool // true right after a successful Save, for a confirmation message
 	DisconnectedCount int  // > 0 right after a successful bulk disconnect-unsaved
+
+	// ProgramSource: what feeds every broadcast stream. Moved here from
+	// /broadcast (2026-07-17) -- it's a routing decision, not a stream
+	// encoding setting, and belongs next to the rest of this station's
+	// patching. Still just BroadcastConfig.ProgramSource under the hood
+	// (see its own doc comment) and still only takes effect on a stream
+	// once /broadcast's "Save & Deploy" runs -- saving it here only
+	// updates the stored config value, deliberately not an immediate
+	// redeploy from a page that isn't otherwise deploy-triggering.
+	ProgramSource        string
+	ProgramSourceOptions []string
+	ProgramSourceSaved   bool // true right after a successful Program Source save
 }
 
 func linkKey(output, input string) string {
@@ -76,6 +89,18 @@ func (h *Handler) patchbayData(r *http.Request) (patchbayData, error) {
 			Saved:  savedSet[linkKey(l.Output, l.Input)],
 		}
 	}
+
+	// Best-effort, same tolerance as the rest of this page doesn't have the
+	// luxury of (the live port lists above ARE the point of /patchbay): a
+	// config-load hiccup or an empty client list shouldn't block loading
+	// everything else. Client names, not individual ports -- ProgramSource
+	// is a per-client concept (see ListOutputClients), unlike this page's
+	// own per-port Outputs/Inputs dropdowns.
+	if cfg, err := store.LoadBroadcastConfig(h.cfg.BroadcastConfigPath); err == nil {
+		data.ProgramSource = cfg.ProgramSource
+	}
+	data.ProgramSourceOptions, _ = store.ListOutputClients()
+
 	return data, nil
 }
 
@@ -88,12 +113,35 @@ func (h *Handler) Patchbay(w http.ResponseWriter, r *http.Request) {
 		data.Error = e
 	}
 	data.JustSaved = r.URL.Query().Get("saved") == "1"
+	data.ProgramSourceSaved = r.URL.Query().Get("program_source_saved") == "1"
 	if n, err := strconv.Atoi(r.URL.Query().Get("disconnected")); err == nil {
 		data.DisconnectedCount = n
 	}
 	if err := tmplPatchbay.ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
+}
+
+// PatchbayProgramSource handles POST /patchbay/program-source: updates just
+// BroadcastConfig.ProgramSource and saves the config. Deliberately does not
+// touch icecast.xml, ffmpeg streams, or any running service -- unlike
+// /broadcast's "Save & Deploy", this only records the new value; it takes
+// effect the next time a stream is (re)deployed from /broadcast. See
+// patchbayData's ProgramSource doc comment for why.
+func (h *Handler) PatchbayProgramSource(w http.ResponseWriter, r *http.Request) {
+	redirect := "/patchbay"
+
+	cfg, err := store.LoadBroadcastConfig(h.cfg.BroadcastConfigPath)
+	if err != nil {
+		http.Redirect(w, r, redirect+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+	cfg.ProgramSource = strings.TrimSpace(r.FormValue("program_source"))
+	if err := store.SaveBroadcastConfig(cfg, h.cfg.BroadcastConfigPath); err != nil {
+		http.Redirect(w, r, redirect+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, redirect+"?program_source_saved=1", http.StatusSeeOther)
 }
 
 // PatchbaySave handles POST /patchbay/save: persists the current live link

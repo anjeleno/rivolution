@@ -67,6 +67,16 @@ class RDAudioConvert : public QObject
   static QString errorText(RDAudioConvert::ErrorCode err);
 
  private:
+  // Classifies a write failure caught immediately after a failed
+  // sf_writef_float() call. 'err' must be errno captured as the very
+  // first statement in the failure branch, before any other library
+  // call (delete/sf_close/etc.) has a chance to clobber it -- see the
+  // RDWaveFile::createWave() errno-clobbering fix for the same lesson
+  // learned the hard way. Only ENOSPC is reported as ErrorNoSpace; any
+  // other cause (EROFS, EIO, EDQUOT, ...) is logged with its real
+  // strerror() text and reported as the generic ErrorInternal instead
+  // of the misleading "No space left on device".
+  static RDAudioConvert::ErrorCode WriteErrorCode(int err);
   RDAudioConvert::ErrorCode Stage1Convert(const QString &srcfile,
 					  const QString &dstfile);
   RDAudioConvert::ErrorCode Stage1Flac(const QString &dstfile,

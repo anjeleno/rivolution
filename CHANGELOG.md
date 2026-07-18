@@ -7,6 +7,59 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-17
+
+- `DefaultBroadcastConfig()` still seeded new dashboard configs with
+  Liquidsoap-era defaults (`JackInputID: "liquidsoap"`, a
+  `liquidsoap.log` path) even though the ffmpeg-based broadcast pipeline
+  replaced Liquidsoap entirely. Every fresh install hit this. Updated
+  the two default values to `ffmpeg`/`ffmpeg.log`; the `Liquidsoap`
+  struct and field names themselves are unchanged on purpose, to avoid
+  a config migration for existing installs' saved JSON.
+- `RDAudioConvert::convert()` reported every conversion write failure as
+  "No space left on device" regardless of the real cause -- disk-full,
+  a read-only filesystem, an I/O error, and a quota limit all produced
+  the identical, often-wrong message. Added `WriteErrorCode()`, which
+  classifies the failure from the real `errno` (captured immediately
+  after the failing write, before any cleanup call gets a chance to
+  clobber it): genuine `ENOSPC` still reports as before, anything else
+  is logged with its real `strerror()` text and reported as a generic
+  internal error instead. Applied at all ~19 write-failure sites across
+  every conversion stage.
+- `apis/pypad/scripts/pypad_icecast2.exemplar` shipped its four
+  `[IcecastN]` mountpoint sections active by default, with placeholder
+  hostname/credential values. Rewrote it so every section (header and
+  all keys) ships commented out; enabling a mountpoint now requires
+  explicitly uncommenting and editing it.
+- RDAdmin's "Reset Dropbox" button cleared the already-imported-files
+  cache but never told `rdservice` to actually reload that Dropbox's
+  worker, unlike Add/Edit/Delete in the Dropbox list, which have always
+  sent an `RDNotification::DropboxType` that `ripcd` turns into a live
+  `SIGUSR1` reload. Reset now sends the same notification.
+- RDMonitor's application-menu shortcut was never added to
+  `xdg/rivendell-rivendell.menu`'s `Include` list, so the desktop menu
+  fell back to filing it under a generic "Other" category alongside
+  unrelated software instead of grouping it with the rest of the
+  Rivendell tools. Added it under the existing "Utilities" submenu,
+  next to the other secondary/monitoring tools already there.
+- Moved `BroadcastConfig.ProgramSource` (what feeds every broadcast
+  stream) from `/broadcast` to `/patchbay`. It's a routing decision,
+  not a stream-encoding setting, and belonged next to the rest of a
+  station's patching -- being on `/broadcast` cost real time tracking
+  down a routing question that wasn't visible from the page an
+  operator would actually look on. Saving it on `/patchbay` only
+  updates the stored value; it still takes effect the next time
+  `/broadcast`'s "Save & Deploy" runs, same as before.
+- `rivolution-stack.target` still hardcoded `Wants=liquidsoap.service`
+  long after Liquidsoap was fully replaced by the ffmpeg-based
+  broadcast stream services -- every stack restart (including the
+  `/system` page's "Restart Stack" button) silently tried to resurrect
+  a unit whose binary no longer existed, restart-looping indefinitely
+  since the package was purged. Removed the dependency, deleted the
+  now-fully-dead `liquidsoap.service` unit and its drop-in from the
+  package build, and added a one-time cleanup to `postinst` so an
+  upgrade removes any already-installed leftover copy.
+
 ## 2026-07-10
 
 - MP3 streams' `ffmpegPipeline` set only `-b:a` (target bitrate) with no

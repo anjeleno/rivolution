@@ -218,16 +218,13 @@ binary-arch: build-arch
 	cp rivapi/rivapi debian/rivolution/usr/bin/rivapi
 	mkdir -p debian/rivolution/usr/share/rivolution/systemd/rivendell.service.d
 	mkdir -p debian/rivolution/usr/share/rivolution/systemd/icecast2.service.d
-	mkdir -p debian/rivolution/usr/share/rivolution/systemd/liquidsoap.service.d
 	cp conf/systemd/rivolution-stack.target debian/rivolution/usr/share/rivolution/systemd/
 	cp conf/systemd/pipewire-system.service debian/rivolution/usr/share/rivolution/systemd/
 	cp conf/systemd/wireplumber-system.service debian/rivolution/usr/share/rivolution/systemd/
-	cp conf/systemd/liquidsoap.service debian/rivolution/usr/share/rivolution/systemd/
 	cp conf/systemd/stereo-tool.service debian/rivolution/usr/share/rivolution/systemd/
 	cp conf/systemd/rivapi.service debian/rivolution/usr/share/rivolution/systemd/
 	cp conf/systemd/rivendell.service.d/rivolution.conf debian/rivolution/usr/share/rivolution/systemd/rivendell.service.d/
 	cp conf/systemd/icecast2.service.d/rivolution.conf debian/rivolution/usr/share/rivolution/systemd/icecast2.service.d/
-	cp conf/systemd/liquidsoap.service.d/rivolution.conf debian/rivolution/usr/share/rivolution/systemd/liquidsoap.service.d/
 	mkdir -p debian/rivolution/usr/share/rivolution/sudoers.d
 	cp conf/sudoers.d/rivapi debian/rivolution/usr/share/rivolution/sudoers.d/
 	mkdir -p debian/rivolution/usr/share/rivolution/udev

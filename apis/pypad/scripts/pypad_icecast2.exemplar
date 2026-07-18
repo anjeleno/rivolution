@@ -3,41 +3,43 @@
 ; mountpoint using Now & Next data.
 ;
 ; This template supports up to four Icecast2 mountpoints out of the box
-; ('Icecast1' through 'Icecast4' below) -- delete any sections you don't
-; need, or add more following the same numbering if a station needs more
-; than four.
+; ('Icecast1' through 'Icecast4' below), all shipped commented out. To
+; enable a mountpoint, uncomment its entire section (every line, including
+; the '[IcecastN]' header) and edit the placeholder values to match your
+; server. Add more sections following the same numbering if a station needs
+; more than four.
 ;
 
 ; Section Header
 ;
 ; One section per Icecast2 mountpoint is configured, starting with
 ; 'Icecast1' and working up consecutively
-[Icecast1]
+;[Icecast1]
 
 ; User Name
 ;
 ; The username of the Icecast2 account to which to send updates.
-Username=source
+;Username=source
 
 ; Password
 ;
 ; The password of the Icecast2 account to which to send updates.
-Password=hackme
+;Password=hackme
 
 ; Host Name
 ;
 ; The fully-qualified domain name or IP address of the Icecast2 server
-Hostname=icecast.example.com
+;Hostname=icecast.example.com
 
 ; Host Port
 ;
 ; The TCP port number of the Icecast2 server
-Tcpport=8000
+;Tcpport=8000
 
 ; Mountpoint
 ;
 ; The Icecast2 mountpoint
-Mountpoint=/audio1.mp3
+;Mountpoint=/audio1.mp3
 
 ; Format String.  The metadata to be sent each time RDAirPlay changes
 ; play state, including any wildcards as placeholders for metadata values.
@@ -45,7 +47,7 @@ Mountpoint=/audio1.mp3
 ; The list of available wildcards can be found in the 'metadata_wildcards.txt'
 ; file in the Rivendell documentation directory.
 ;
-FormatString=%a - %t
+;FormatString=%a - %t
 
 ; Log Selection
 ;
@@ -53,61 +55,61 @@ FormatString=%a - %t
 ; state changes on that log should be output to this account.  If set
 ; to 'Onair', then output will be generated only if RDAirPlays OnAir flag
 ; is active.
-MasterLog=Yes
-Aux1Log=Yes
-Aux2Log=Yes
-VLog101=No
-VLog102=No
-VLog103=No
-VLog104=No
-VLog105=No
-VLog106=No
-VLog107=No
-VLog108=No
-VLog109=No
-VLog110=No
-VLog111=No
-VLog112=No
-VLog113=No
-VLog114=No
-VLog115=No
-VLog116=No
-VLog117=No
-VLog118=No
-VLog119=No
-VLog120=No
+;MasterLog=Yes
+;Aux1Log=Yes
+;Aux2Log=Yes
+;VLog101=No
+;VLog102=No
+;VLog103=No
+;VLog104=No
+;VLog105=No
+;VLog106=No
+;VLog107=No
+;VLog108=No
+;VLog109=No
+;VLog110=No
+;VLog111=No
+;VLog112=No
+;VLog113=No
+;VLog114=No
+;VLog115=No
+;VLog116=No
+;VLog117=No
+;VLog118=No
+;VLog119=No
+;VLog120=No
 
 
 ; Section Header
 ;
 ; One section per Icecast2 mountpoint is configured, starting with
 ; 'Icecast1' and working up consecutively
-[Icecast2]
+;[Icecast2]
 
 ; User Name
 ;
 ; The username of the Icecast2 account to which to send updates.
-Username=source
+;Username=source
 
 ; Password
 ;
 ; The password of the Icecast2 account to which to send updates.
-Password=hackme
+;Password=hackme
 
 ; Host Name
 ;
 ; The fully-qualified domain name or IP address of the Icecast2 server
-Hostname=icecast.example.com
+;Hostname=icecast.example.com
 
 ; Host Port
 ;
 ; The TCP port number of the Icecast2 server
-Tcpport=8000
+;Tcpport=8000
 
 ; Mountpoint
 ;
 ; The Icecast2 mountpoint
-Mountpoint=/audio2.mp3
+;Mountpoint=/audio2.mp3
 
 ; Format String.  The metadata to be sent each time RDAirPlay changes
 ; play state, including any wildcards as placeholders for metadata values.
@@ -115,7 +117,7 @@ Mountpoint=/audio2.mp3
 ; The list of available wildcards can be found in the 'metadata_wildcards.txt'
 ; file in the Rivendell documentation directory.
 ;
-FormatString=%a - %t
+;FormatString=%a - %t
 
 ; Log Selection
 ;
@@ -123,61 +125,61 @@ FormatString=%a - %t
 ; state changes on that log should be output to this account.  If set
 ; to 'Onair', then output will be generated only if RDAirPlays OnAir flag
 ; is active.
-MasterLog=Yes
-Aux1Log=Yes
-Aux2Log=Yes
-VLog101=No
-VLog102=No
-VLog103=No
-VLog104=No
-VLog105=No
-VLog106=No
-VLog107=No
-VLog108=No
-VLog109=No
-VLog110=No
-VLog111=No
-VLog112=No
-VLog113=No
-VLog114=No
-VLog115=No
-VLog116=No
-VLog117=No
-VLog118=No
-VLog119=No
-VLog120=No
+;MasterLog=Yes
+;Aux1Log=Yes
+;Aux2Log=Yes
+;VLog101=No
+;VLog102=No
+;VLog103=No
+;VLog104=No
+;VLog105=No
+;VLog106=No
+;VLog107=No
+;VLog108=No
+;VLog109=No
+;VLog110=No
+;VLog111=No
+;VLog112=No
+;VLog113=No
+;VLog114=No
+;VLog115=No
+;VLog116=No
+;VLog117=No
+;VLog118=No
+;VLog119=No
+;VLog120=No
 
 
 ; Section Header
 ;
 ; One section per Icecast2 mountpoint is configured, starting with
 ; 'Icecast1' and working up consecutively
-[Icecast3]
+;[Icecast3]
 
 ; User Name
 ;
 ; The username of the Icecast2 account to which to send updates.
-Username=source
+;Username=source
 
 ; Password
 ;
 ; The password of the Icecast2 account to which to send updates.
-Password=hackme
+;Password=hackme
 
 ; Host Name
 ;
 ; The fully-qualified domain name or IP address of the Icecast2 server
-Hostname=icecast.example.com
+;Hostname=icecast.example.com
 
 ; Host Port
 ;
 ; The TCP port number of the Icecast2 server
-Tcpport=8000
+;Tcpport=8000
 
 ; Mountpoint
 ;
 ; The Icecast2 mountpoint
-Mountpoint=/audio3.mp3
+;Mountpoint=/audio3.mp3
 
 ; Format String.  The metadata to be sent each time RDAirPlay changes
 ; play state, including any wildcards as placeholders for metadata values.
@@ -185,7 +187,7 @@ Mountpoint=/audio3.mp3
 ; The list of available wildcards can be found in the 'metadata_wildcards.txt'
 ; file in the Rivendell documentation directory.
 ;
-FormatString=%a - %t
+;FormatString=%a - %t
 
 ; Log Selection
 ;
@@ -193,61 +195,61 @@ FormatString=%a - %t
 ; state changes on that log should be output to this account.  If set
 ; to 'Onair', then output will be generated only if RDAirPlays OnAir flag
 ; is active.
-MasterLog=Yes
-Aux1Log=Yes
-Aux2Log=Yes
-VLog101=No
-VLog102=No
-VLog103=No
-VLog104=No
-VLog105=No
-VLog106=No
-VLog107=No
-VLog108=No
-VLog109=No
-VLog110=No
-VLog111=No
-VLog112=No
-VLog113=No
-VLog114=No
-VLog115=No
-VLog116=No
-VLog117=No
-VLog118=No
-VLog119=No
-VLog120=No
+;MasterLog=Yes
+;Aux1Log=Yes
+;Aux2Log=Yes
+;VLog101=No
+;VLog102=No
+;VLog103=No
+;VLog104=No
+;VLog105=No
+;VLog106=No
+;VLog107=No
+;VLog108=No
+;VLog109=No
+;VLog110=No
+;VLog111=No
+;VLog112=No
+;VLog113=No
+;VLog114=No
+;VLog115=No
+;VLog116=No
+;VLog117=No
+;VLog118=No
+;VLog119=No
+;VLog120=No
 
 
 ; Section Header
 ;
 ; One section per Icecast2 mountpoint is configured, starting with
 ; 'Icecast1' and working up consecutively
-[Icecast4]
+;[Icecast4]
 
 ; User Name
 ;
 ; The username of the Icecast2 account to which to send updates.
-Username=source
+;Username=source
 
 ; Password
 ;
 ; The password of the Icecast2 account to which to send updates.
-Password=hackme
+;Password=hackme
 
 ; Host Name
 ;
 ; The fully-qualified domain name or IP address of the Icecast2 server
-Hostname=icecast.example.com
+;Hostname=icecast.example.com
 
 ; Host Port
 ;
 ; The TCP port number of the Icecast2 server
-Tcpport=8000
+;Tcpport=8000
 
 ; Mountpoint
 ;
 ; The Icecast2 mountpoint
-Mountpoint=/audio4.mp3
+;Mountpoint=/audio4.mp3
 
 ; Format String.  The metadata to be sent each time RDAirPlay changes
 ; play state, including any wildcards as placeholders for metadata values.
@@ -255,7 +257,7 @@ Mountpoint=/audio4.mp3
 ; The list of available wildcards can be found in the 'metadata_wildcards.txt'
 ; file in the Rivendell documentation directory.
 ;
-FormatString=%a - %t
+;FormatString=%a - %t
 
 ; Log Selection
 ;
@@ -263,29 +265,29 @@ FormatString=%a - %t
 ; state changes on that log should be output to this account.  If set
 ; to 'Onair', then output will be generated only if RDAirPlays OnAir flag
 ; is active.
-MasterLog=Yes
-Aux1Log=Yes
-Aux2Log=Yes
-VLog101=No
-VLog102=No
-VLog103=No
-VLog104=No
-VLog105=No
-VLog106=No
-VLog107=No
-VLog108=No
-VLog109=No
-VLog110=No
-VLog111=No
-VLog112=No
-VLog113=No
-VLog114=No
-VLog115=No
-VLog116=No
-VLog117=No
-VLog118=No
-VLog119=No
-VLog120=No
+;MasterLog=Yes
+;Aux1Log=Yes
+;Aux2Log=Yes
+;VLog101=No
+;VLog102=No
+;VLog103=No
+;VLog104=No
+;VLog105=No
+;VLog106=No
+;VLog107=No
+;VLog108=No
+;VLog109=No
+;VLog110=No
+;VLog111=No
+;VLog112=No
+;VLog113=No
+;VLog114=No
+;VLog115=No
+;VLog116=No
+;VLog117=No
+;VLog118=No
+;VLog119=No
+;VLog120=No
 
 
 [NowGroups]
