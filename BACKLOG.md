@@ -862,3 +862,52 @@ ends up being more confusing than the original wording, worth doing
 the full internal rename in one pass -- it's roughly 110 occurrences
 across 18 files by a straight grep, but all mechanical, no persisted
 data involved outside the three places named above.
+
+## `postinst`'s fresh-vs-upgrade guard trusts a single signal (`OLD_VERSION`) that can be fooled by an intervening purge
+
+`debian/postinst`'s destructive block (`DROP DATABASE`, regenerate the
+MySQL password, regenerate the dashboard JWT secret, `rddbmgr --create
+--generate-audio`) is gated entirely on `test -z "$OLD_VERSION"`
+(`$2`, dpkg's own upgrade-vs-fresh-install argument). This is exactly
+what fired incorrectly on `acid-rack`, 2026-07-10: `rivolution` had
+been `apt purge`d over an hour before the actual reinstall, which
+resets dpkg's own tracked "previously configured version" state, so
+the guard saw an empty `$2` and correctly-by-its-own-logic (but
+disastrously in practice) treated a real upgrade as a genuinely fresh
+install. The guard itself was never buggy; the problem is that it only
+has one signal, and that signal is decoupled from whether real data
+actually exists.
+
+**Proposed fix, not yet built:** before the destructive block runs
+(i.e. before `mysql_pass`/`jwt_secret` get regenerated and written
+into `/etc/rivendell.d/rd-default.conf`, `postinst` lines ~146-150),
+query MySQL directly for whether a database matching the *current*
+`/etc/rd.conf`'s `[mySQL] Database=` value already exists **and
+actually contains tables** (an empty just-`CREATE DATABASE`'d shell
+from a partial/failed prior attempt shouldn't count) --
+`information_schema.tables` row count, not just schema-name
+existence. This needs no new credentials: the existing `mysql -h
+"$mysql_host"` calls in this same block already connect with no
+explicit user/password, relying on MariaDB's `unix_socket` auth for
+`root@localhost`, which works passwordless for anything running as
+root -- the same mechanism a pre-check could reuse.
+
+Then require **both** `OLD_VERSION` empty *and* no real populated
+database found before treating an install as genuinely fresh. If the
+two signals disagree -- `OLD_VERSION` empty but a real, populated
+database exists (exactly the 07-10 scenario) -- abort the install with
+a loud, explicit error instead of guessing which signal to trust,
+forcing a human to actually look at it before anything destructive
+runs. `/etc/rd.conf`'s own existence (already checked earlier in this
+same script, line 120) is a third, already-computed, free signal that
+could fold into the same combined check.
+
+**Real caveat, needs a deliberate answer before this ships:** a
+genuinely intentional clean wipe (fresh testing, deliberately starting
+over) would now be blocked by this same check and need an explicit
+escape hatch -- an env var or a flag file checked before the guard --
+so the safety net doesn't become impossible to override on purpose.
+
+Not fixed yet: Brandon flagged this 2026-07-17 as worth strengthening,
+explicitly deferred to a future session rather than done live against
+`postinst` the same night as three other production changes.
