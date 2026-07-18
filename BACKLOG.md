@@ -902,11 +902,17 @@ runs. `/etc/rd.conf`'s own existence (already checked earlier in this
 same script, line 120) is a third, already-computed, free signal that
 could fold into the same combined check.
 
-**Real caveat, needs a deliberate answer before this ships:** a
+**Confirmed requirement, not just a caveat to think about later:** a
 genuinely intentional clean wipe (fresh testing, deliberately starting
-over) would now be blocked by this same check and need an explicit
-escape hatch -- an env var or a flag file checked before the guard --
-so the safety net doesn't become impossible to override on purpose.
+over) would now be blocked by this same check, and Brandon confirmed
+2026-07-17 that the escape hatch itself is a definite part of this fix,
+not an optional nice-to-have -- an env var or a flag file checked
+before the guard, so the safety net can be deliberately overridden on
+purpose but never silently bypassed by accident (e.g. by an
+intervening purge, the actual 07-10 failure mode). Both halves --
+the double-signal check and the explicit override -- ship together or
+not at all; a version of this fix without the escape hatch just trades
+one footgun for another.
 
 Not fixed yet: Brandon flagged this 2026-07-17 as worth strengthening,
 explicitly deferred to a future session rather than done live against
