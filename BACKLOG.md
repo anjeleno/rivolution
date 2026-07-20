@@ -635,17 +635,69 @@ class: dev-box state hides real install bugs" (Instance 5) for the full
 trace; discovered 2026-07-20 diagnosing a Stereo Tool failure on a
 fresh DigitalOcean droplet install.
 
-**Needed, not yet built:** a real probe/detection step during install,
-covering both physical and virtual sound hardware, that auto-configures
+**Needed, not yet built:** a real probe/detection step, covering both
+physical and virtual sound hardware, that auto-configures
 `AUDIO_CARDS.DRIVER` and generates the default patches — no manual
-RDAdmin step required. On a hardware-less target (every bare cloud VM),
-detect that directly and provision a working driver path automatically
-rather than leaving Card 0 undriven.
+RDAdmin/RDAlsaConfig step required. Brandon's own framing, 2026-07-20:
+this needs to work "at any stage," not just once at install time — so
+whatever picks this up should cover both a fresh-install probe and some
+way to re-detect later (hardware changed, a VM's virtualized device
+profile changed, etc.), not just a one-shot `postinst` step.
+
+**Not blocking rc1-2**, confirmed with Brandon 2026-07-20: the manual
+RDAlsaConfig workaround (deselect every listed device, Save — see the
+next entry) is a real, repeatable, now-documented path to a working
+install (see the wiki's `.deb` package install page). This entry is the
+real long-term fix, deferred, not a release blocker.
 
 Related, but one layer downstream: the "Audio processing chain
 routing... is hardcoded" entry above assumes a JACK-driven `caed`
 already exists and covers routing *from* it — this entry is about
 whether a JACK-driven card exists at all on a fresh install.
+
+## `liquidsoap`/`liq_*` references still present in the active codebase — deferred cleanup
+
+Flagged by Brandon 2026-07-20 while root-causing the entry above: the
+dead pre-ffmpeg-swap Liquidsoap architecture still leaves real traces
+in currently-executing code and shipped config, not just historical
+docs/comments. Confirmed by a full grep, 2026-07-20:
+
+- `conf/alsa/rd.asoundrc`'s shipped template hardcodes `playback_ports`
+  to `liquidsoap:in_0`/`in_1` (a target that hasn't existed since
+  Liquidsoap was replaced by per-stream ffmpeg processes) and its
+  header comment describes the pre-2026-07-09 architecture as current.
+  This is the literal default a fresh install's `~/.asoundrc` ships
+  with before any real deploy ever patches it — see the entry above
+  this one for how that becomes a real, live failure mode.
+- `conf/systemd/icecast2.service.d/rivolution.conf`'s comment still
+  describes Icecast/`caed` ordering in terms of Liquidsoap.
+- `rivapi/store/broadcast_config.go`'s `LiquidsoapCfg` struct, the
+  `Liquidsoap` field, its `"liquidsoap"` JSON key, and every `liq_*`
+  form-field name in `handlers_broadcast.go`/`broadcast.html` are
+  load-bearing, not just naming — they're what's actually persisted in
+  every already-saved `broadcast.json` on a real box today (including
+  this droplet). Same shape as the already-tracked "Dashboard nav says
+  'Streaming', everything underneath still says 'Broadcast'" entry
+  above — a rename here needs an on-load migration (accept the old
+  `"liquidsoap"` key, write the new one) so an upgrade doesn't silently
+  blank out an existing install's config.
+- Various explanatory comments across `ffmpeg_generator.go`/
+  `stereo_tool_install.go` narrate the Liquidsoap-to-ffmpeg swap as
+  "why" context — arguably legitimate per this project's own comment
+  philosophy (explains non-obvious history), but worth a second look
+  once the rest of this entry is picked up.
+
+**Deferred, not blocking rc1-2** — confirmed with Brandon 2026-07-20.
+Two real options when this is picked up, not yet decided between: (1) a
+full rename of the persisted field/JSON key with a migration, so zero
+trace of "liquidsoap" remains anywhere including on-disk config, or (2)
+fix everything dead/misleading (the asoundrc template, its comment, the
+icecast2.conf drop-in comment) while leaving the internal field/JSON
+name as a clearly-commented, deliberate, tracked exception for
+backward compatibility. Whichever is chosen, it satisfies the
+project's own "don't leave things unfinished without calling it out"
+rule either way, as long as whatever's left is explicitly marked as a
+known exception rather than silently lingering.
 
 ## RDAlsaConfig gives no explicit way to select JACK — deselecting all listed cards is the only way, unlabeled
 
