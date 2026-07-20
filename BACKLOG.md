@@ -105,84 +105,26 @@ the same ~50-file directory that originally surfaced the crash.
 replace the FOP+DocBook-XSL rendering pipeline entirely — see
 [`ROADMAP.md`](https://github.com/anjeleno/rivolution/blob/main/ROADMAP.md).
 
-## `autoreconf` failing repo-wide on missing top-level `ChangeLog` file — resolved
+## No automated detection of a stale `/usr/local`-prefix install shadowing `/usr`
 
-**Symptom:** running `autoreconf -fi` from a clean checkout failed with
-`Makefile.am: error: required file './ChangeLog' not found`, before
-automake got far enough to process any individual directory's rules.
-Confirmed this was **pre-existing and unrelated** to any specific
-directory's build rules: reproduced identically against an unmodified
-checkout (verified via `git stash` before re-running), so it wasn't
-caused by, or specific to, the DocBook/FOP work above.
+A raw `./configure` (bypassing `configure_build.sh`, which correctly
+hardcodes `--prefix=/usr`) installs a complete parallel copy of every
+binary/library/icon at the autotools default prefix, `/usr/local`.
+`$PATH` and the XDG icon search order both prefer `/usr/local` over
+`/usr`, so a stale copy left behind this way silently keeps winning —
+confirmed live 2026-06-24: it shadowed a correct `/usr` install for the
+better part of a day, and two unrelated-looking symptoms (RDLibrary's
+group list, `rdimport`'s dropbox-watch) got mis-diagnosed before the
+stale install was found. See
+[`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md)
+for the full manual detection/cleanup steps.
 
-**Cause:** `configure.ac`'s `AM_INIT_AUTOMAKE([1.9 tar-pax])` doesn't
-pass the `foreign` option, so automake defaults to GNU-package
-strictness, which requires a literal `ChangeLog` file to exist at the
-top level (along with `NEWS`, `README`, `AUTHORS`, `COPYING`, all of
-which this repo already has). It's purely a filename-existence check —
-automake doesn't read or validate the file's contents, it just checks
-the name is present. This fork's actual changelog convention is
-`CHANGELOG.md` (see this repo's own internal conventions for why); the
-literal `ChangeLog` filename automake checks for didn't exist — only
-the frozen, never-appended-to `ChangeLog.upstream-v4` did, which
-doesn't match the name automake looks for.
-
-**Fix:** `ln -s CHANGELOG.md ChangeLog` at the repo root. Since
-automake's check is existence-only and follows symlinks, this
-satisfies it with zero duplicate content and zero drift risk — it's
-the same file under a second name, not a second changelog to keep in
-sync. Deliberately chosen over the two heavier alternatives considered
-first: adding `foreign` to `AM_INIT_AUTOMAKE` would have also disabled
-every *other* GNU-convention check it currently performs (not just
-this one), and a real standalone `ChangeLog` file would have meant two
-changelogs that could silently drift apart. Verified directly:
-`autoreconf -fi` now completes cleanly end-to-end, and all five
-DocBook directories' `Makefile.in` files regenerated correctly with
-the JIT workaround from the entry above intact. Tracked in git as a
-normal symlink (`git add ChangeLog`).
-
-## Install prefix: resolved — use `configure_build.sh`, not raw `./configure`
-
-Today's dev install went to `--prefix=/usr/local`, but that wasn't
-because anything actually defaults there: `configure_build.sh`
-(upstream's own distro-detection wrapper) already hardcodes
-`--prefix=/usr` for every distro case (debian/rhel/ubuntu), matching
-every example in `INSTALL`'s distro-specific notes. `/usr/local` only
-happened because today's build invoked raw `./configure` directly
-(for speed/control while debugging Qt6 issues), bypassing that wrapper
-entirely.
-
-`/usr/local` was originally adopted on the old shared 24.04 box
-specifically to let `v4` (`/usr`) and `v6` coexist without `make
-install` overwriting `v4`'s binaries. That reason no longer applies on
-the dedicated `v6` box, and `/usr/local` has a real cost: it needs an
-explicit `sudo ldconfig` after every install that `/usr/lib` typically
-doesn't (see [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md)), and it's non-standard relative to
-every script/config elsewhere in this toolchain (Apache config,
-systemd units, [`rivolution-unified-installer`'s provisioning scripts](https://github.com/anjeleno/rivolution-unified-installer/tree/main/roles/provision)) that
-assumes the conventional `/usr`-rooted FHS layout. If this fork ever
-ships a real `.deb`, `/usr` is mandatory — Debian packaging conventions
-reserve `/usr/local` for software installed outside the package
-manager.
-
-**No code change needed** — just use `./configure_build.sh` for future
-builds instead of raw `./configure`, and clean up the stale
-`/usr/local`-installed files once a `/usr`-prefixed build replaces
-them.
-
-**Follow-up, 2026-06-24:** that cleanup didn't happen automatically and
-the stale `/usr/local` tree sat there silently shadowing the real
-`/usr` install for the better part of a day — `$PATH` and the XDG icon
-theme search order both prefer `/usr/local` over `/usr`, so binaries
-and icons kept resolving to the old build with zero indication
-anything was wrong, until two seemingly-unrelated symptoms (RDLibrary's
-group list, `rdimport`'s dropbox-watch) both got mis-diagnosed for a
-while before the stale install was found and manually removed. See
-[`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the operator-facing symptom/check/cleanup detail.
-Still no automated detection — a `make install` (or a separate check)
-that flags a populated `/usr/local` Rivendell tree when installing to a
-different prefix would have caught this immediately instead of costing
-real debugging time.
+**Not yet built:** a `make install` hook (or separate check) that flags
+a populated `/usr/local` Rivendell tree when installing to a different
+prefix, so this is caught immediately instead of costing real debugging
+time. Using `configure_build.sh` instead of raw `./configure` avoids
+causing this in the first place, but doesn't detect an existing one
+left over from before.
 
 ## `make install` doesn't refresh the linker cache
 
@@ -330,52 +272,23 @@ priority (dead air on a live broadcast). See [`ROADMAP.md`](https://github.com/a
 related feature request (a library-wide missing-audio audit tool) that
 came up alongside this report — distinct from this bug fix itself.
 
-## Edit Markers waveform goes blank/truncated at high zoom on long cuts — fixed
+## Waveform zoom has a ~26ms precision floor
 
-**Flagged 2026-06-22, root-caused and fixed 2026-07-03.** Long-standing,
-pre-existing Rivendell v4 behavior — not introduced by this fork. Same
-underlying bug as upstream `ElvishArtisan/rivendell` issue #835
-("RdLibrary: Waveform display broken when zooming"), open there since
-2022 with only a stopgap (capping the maximum zoom level rather than
-fixing the rendering).
-
-**Root cause:** `RDMarkerView::WriteWave()` rendered a cut's entire
-waveform into a single `QPixmap`, sized to `cut_length / zoom_level`.
-Long cuts at high zoom need a pixmap wider than Qt/X11's roughly
-32767px maximum single-bitmap dimension, which silently truncates or
-blanks the pixmap's contents past that width rather than erroring —
-explaining both symptoms (blank near the end of a long file, or
-truncated mid-file) as the same limit hit from different starting
-positions. A partial safety net already existed
-(`RDMarkerView::d_min_shrink_factor`, capping how far a user could zoom
-in) but wasn't actually enforced on either real interaction path
-(mouse-wheel zoom, the "Full In" toolbar button), so in practice it
-provided no protection at all.
-
-**Fix:** `RDWaveFactory::generate()` (`lib/rdwavefactory.cpp`) now
-accepts an optional column range and can render just a slice of the
-waveform; `WriteWave()` (`lib/rdmarkerview.cpp`) renders the full width
-as a strip of bounded-width tiles (each well under the ~32767px limit)
-laid edge-to-edge in the same `QGraphicsScene`, instead of one pixmap.
-No single `QPixmap` this widget creates can hit the limit regardless of
-cut length or zoom, so the now-superfluous `d_min_shrink_factor` cap
-was removed entirely — zoom is limited only by the underlying peak
-data's own resolution (see the precision entry below), not an
-artificial ceiling.
-
-**Known remaining limitation, deferred:** the peak data
+The Edit Markers waveform's own crash/truncation bug at high zoom on
+long cuts was root-caused and fixed 2026-07-03 (tiled rendering instead
+of one oversized `QPixmap` — see `CHANGELOG.md`). A separate, smaller
+limitation remains, deliberately deferred: the peak data
 `RDWaveFactory`/`RDWavePainter` render from is pre-computed in
 1152-sample blocks (~26ms at 44.1kHz) — `RDWaveFile::GetEnergy()`, the
 same mechanism used for the MP3 passthrough autotrim support added
 2026-07-03. Zooming in past that resolution doesn't reveal finer real
 detail, it just stretches the same block value across more pixels.
-Genuinely sample-accurate marker placement at extreme zoom would need
-a further change: falling back to reading real per-sample PCM data
-directly from the file (rather than the coarse peak-block cache) once
-the visible zoom level exceeds that resolution. Not implemented here —
-this fix resolves the crash/truncation bug and the artificial
-file-length-dependent zoom ceiling, not the separate ~26ms precision
-floor.
+
+**Not yet built:** genuinely sample-accurate marker placement at
+extreme zoom would need falling back to reading real per-sample PCM
+data directly from the file (rather than the coarse peak-block cache)
+once the visible zoom level exceeds that resolution — new code, not a
+port of anything that exists elsewhere in this codebase today.
 
 ## RDLibrary's manual "Add" cart flow may still lose audio after a confirmed OK click — suspected Qt6-migration regression
 
@@ -742,23 +655,25 @@ them alongside whatever RDAdmin-parity work makes them coherent.
 Icecast/Liquidsoap/VLC config generation and Stereo Tool download are
 now properly handled by `rivapi` (specs 0007/0008), and its seed
 database was hardcoded to a single host name (`onair`), not
-general-purpose. But the role also did several things with **no
-dashboard equivalent yet**, silently lost when it was removed:
+general-purpose. But the role also did several things with no dashboard
+equivalent at the time it was removed:
 
-- Nightly cron jobs: database backup (`daily_db_backup.sh`) and log
-  generation (`autologgen.sh`)
+- ~~Nightly cron jobs: database backup (`daily_db_backup.sh`) and log
+  generation (`autologgen.sh`)~~ — **done.** `/tasks` (2026-07-04) added
+  exactly this as real systemd service+timer pairs, not a
+  reimplementation of cron; its log-generation task type had a real bug
+  (calling `rdlogmanager -t` instead of `-g`) found and fixed 2026-07-09
+  on the first real-box run. See `CHANGELOG.md`.
 - `auto-merge.sh`, `reconcile-traffic.sh`, `stl.sh` — automation
-  scripts with no traced dashboard replacement
+  scripts still with no traced dashboard replacement.
 - Desktop shortcuts for RDAdmin/RDAirplay/RDLibrary/RDLogEdit/
-  RDLogManager, Stereo Tool, and STL
+  RDLogManager, Stereo Tool, and STL — still not built.
 
 **Deferred, not forgotten** — the plan is a custom implementation of
 this functionality in the Go dashboard (`rivapi`) rather than
-reintroducing the old fixed-bundle Ansible role. Needs its own scoping
-pass: at minimum, scheduled DB backup and log generation are real
-operational gaps until this lands. The removed role's content is still
-in `rivolution-unified-installer`'s git history if needed as a
-reference for what the old scripts actually did.
+reintroducing the old fixed-bundle Ansible role. The removed role's
+content is still in `rivolution-unified-installer`'s git history if
+needed as a reference for what the old scripts actually did.
 
 ## Patchbay can't persist connections to clients with PID-embedded JACK names (Stereo Tool's case fixed; general case still open)
 

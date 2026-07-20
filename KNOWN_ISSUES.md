@@ -40,20 +40,30 @@ dpkg: error processing package rivolution (--configure):
 
 **Cause:** the binaries in an `amd64` `.deb` are compiled with whatever
 CPU instruction-set baseline the machine that built them defaults to.
-If that machine's toolchain assumes instructions (e.g. AVX2/BMI2) that
-the *installing* machine's CPU doesn't have, the binary refuses to run
-at all -- this is a glibc dynamic-linker check, not anything
-`rivolution`'s own build configuration requests (no `-march`/`-mtune`
-is set anywhere in this project's build files). Some VPS providers
-present an intentionally conservative/generic virtual CPU model to
-guests for live-migration compatibility, which is more likely to hit
-this than bare-metal or providers that pass through more of the host
-CPU's real feature set.
+`debian/rules.src` has capped this at `-march=x86-64-v2` since
+2026-07-05 (both `CFLAGS`/`CXXFLAGS` and `LDFLAGS`, the latter needed
+because this toolchain's LTO does real codegen at the link step) --
+but that cap alone isn't sufficient on Ubuntu 26.04's CPU-ISA-tiered
+package archive: a build machine with a modern CPU gets served the
+`amd64v3` tier of its *own build toolchain* (including the CRT startup
+objects linked into every binary) regardless of any `-march` flag this
+project's build passes, so a GitHub Actions CI runner (or any other
+v3-capable build machine) can still silently produce a `v3`-requiring
+binary. Confirmed released `.deb`s are built to avoid this (see
+`BACKLOG.md`'s x64 CI entry for the current build-on-real-v2-hardware
+workaround) — this remains a real risk specifically for a build done
+on CI without that manual step. Some VPS providers present an
+intentionally conservative/generic virtual CPU model to guests for
+live-migration compatibility, which is more likely to hit this than
+bare-metal or providers that pass through more of the host CPU's real
+feature set.
 
 **Workaround:** build from source directly on the target machine
 instead of installing a pre-built `.deb` -- a native build always
-matches the actual CPU it's running on. If you hit this on a `.deb`
-install, please report which provider/CPU it was on.
+matches the actual CPU it's running on. If you hit this on a released
+`.deb`, please report which provider/CPU it was on — released packages
+are built specifically to avoid this, so it would indicate the
+workaround above didn't hold for that build.
 
 **Related:** if a `.deb` install fails for *any* reason (including
 this one) and you retry via `sudo apt install ./the.deb` again without
@@ -175,21 +185,6 @@ and `/usr/local/etc/rd-bin.conf`. Run `sudo ldconfig` afterward to drop
 the removed `librd*.so` entries from the linker cache. Not yet
 automated — see [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md).
 
-## Missing `mp3gain` makes MP3 imports silently much slower, not broken
-
-**Symptom:** importing and normalizing an MP3 still works, but takes
-noticeably longer than expected, with no error — easy to mistake for
-an unrelated performance problem rather than a missing package.
-
-**Cause:** `mp3gain` is a runtime-only dependency, never linked
-against at build time — it's invoked at import time to apply MP3
-loudness normalization directly to the compressed bitstream. Without
-it, normalization still happens, but falls back to a full decode and
-re-encode instead of the fast bitstream-level patch.
-
-**Workaround:** install `mp3gain` (see the build dependency list in
-[Build From Source](https://github.com/anjeleno/rivolution/wiki/Build-From-Source)).
-
 ## Submitted mixes must be encoded at the system's sample rate
 
 **Symptom:** an imported MP3 plays back pitch-shifted ("helium"
@@ -302,28 +297,6 @@ not just the incidental closes it was meant to protect against. See
 cart actually discarded, delete it manually afterward through
 RDLibrary (not raw SQL, to keep bookkeeping consistent).
 
-## Edit Markers waveform goes blank/truncated on long cuts at high zoom — fixed 2026-07-03, pending real-world confirmation
-
-**Symptom:** in "Edit Markers," zooming in on a long cut could show
-blank space or a truncated waveform instead of the actual audio,
-making it hard to place a segue marker precisely.
-
-**Cause:** the waveform display rendered an entire cut into a single
-image sized to fit the whole file at the current zoom level; long
-cuts at high zoom needed an image wider than the display toolkit
-supports, silently corrupting the image past that width. Long-standing
-Rivendell v4 behavior, not introduced by this fork (see
-[`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)
-for the technical detail).
-
-**Fix:** the waveform is now rendered as a strip of bounded-width tiles
-instead of one oversized image, and the artificial zoom-level cap this
-issue's earlier workaround relied on has been removed — zoom is no
-longer limited by cut length at all.
-
-**Workaround (if still seen after updating):** zoom out two or three
-steps from maximum when placing markers near the end of a file.
-
 ## Waveform zoom has a precision floor of about 26 milliseconds
 
 **Symptom:** zooming in on a cut's waveform past a certain point in
@@ -341,54 +314,6 @@ for the technical detail and what a real fix would require.
 **Workaround:** none currently; place markers with the understanding
 that sub-26ms accuracy isn't achievable in the waveform display yet.
 
-## RDAdmin's PyPAD "Add" button does nothing on a fresh install — fixed 2026-07-04, pending real-world confirmation
-
-**Symptom:** in RDAdmin, under a host's PyPAD Instances list, clicking
-"Add" is supposed to open a file picker pre-populated with the
-available PyPAD script templates. On a genuinely fresh install, it
-silently does nothing instead — no dialog, no error.
-
-**Cause:** the script-template directory RDAdmin seeds that dialog
-with was still hardcoded to this project's pre-rebrand path, while the
-actual install location had already been updated. Seeding a native
-Linux file dialog with a directory that doesn't exist fails silently
-rather than falling back to any other default, which is why it only
-ever showed up on a truly clean system — a dev box carrying stale
-files from an older build has both the old and new directories
-present, masking the mismatch completely.
-
-A follow-up sweep for the same pattern found it in several more
-places: the default RDAirplay/RDPanel skin and RDAirplay logo images
-(both the compiled-in default and the database schema default applied
-on a fresh install or downgrade), and the Akamai CDN purge script's key
-file location.
-
-**Fix:** all of the affected install-path constants and schema
-defaults now point at this project's actual install locations.
-
-**Workaround (if still seen after updating):** browse to the templates
-manually — PyPAD scripts install to `/usr/lib/rivolution/pypad`.
-
-## RSS feed generation/reports fail with an `xsltproc` error dialog on a fresh install — fixed 2026-07-04, pending real-world confirmation
-
-**Symptom:** generating a podcast/RSS feed, or a front/back feed item
-report from RDAdmin or RDCastManager, shows an error dialog mentioning
-`xsltproc` instead of producing the feed or report.
-
-**Cause:** the same stale-path pattern as the PyPAD "Add" button
-above, applied to this project's RSS XSL stylesheets — the code
-looked for them at this project's pre-rebrand path, while the actual
-install location had already moved. Unlike the PyPAD case, this one
-fails loudly, since the underlying `xsltproc(1)` call returns a
-nonzero exit status against a missing stylesheet rather than silently
-doing nothing.
-
-**Fix:** the stylesheet paths now point at this project's actual
-install location.
-
-**Workaround (if still seen after updating):** none — this is a hard
-failure with no manual path to work around from the UI.
-
 ## Stereo Tool's web UI shows "Access denied" on first visit
 
 **Symptom:** browsing to Stereo Tool's own web UI (port 8079 by
@@ -405,36 +330,6 @@ this project ships.
 running on (not over the network) and whitelist your IP from its own
 settings — the access-denied page itself shows the exact IP to add and
 the accepted formats. This only needs to be done once per machine.
-
-## Patchbay saved patches didn't survive a reboot without manually restarting the stack — fixed 2026-07-04, pending real-world confirmation
-
-**Symptom:** after a reboot, `/patchbay` didn't apply the saved
-persistent connections on its own — it came up with far more
-connections than saved, seemingly linking every available output to
-every available input. Going to the System page and clicking "Restart
-Stack" would then correctly reduce the graph down to just the saved
-connections.
-
-**Cause:** the background reconciler that's supposed to keep the live
-PipeWire graph matching the saved connection set only ever *added*
-missing saved connections — it never removed a live connection that
-wasn't part of the saved set. WirePlumber's own default auto-linking
-policy connects newly-appeared JACK-bridged ports to default sinks/
-sources on its own initiative at boot (this project ships no override
-disabling that), and those extra connections then sat there
-indefinitely alongside the saved ones, since nothing ever cleared them
-except a full stack restart giving the reconciler a clean slate to
-build from.
-
-**Fix:** the reconciler is now authoritative over the whole graph
-(once at least one connection set has actually been saved) — it
-removes anything live that isn't in the saved set, not just adds
-what's missing. Runs every 30 seconds rather than 5, both to reduce
-overhead and to give a deliberately-unsaved ad-hoc test connection a
-real window to listen to before it's torn back out.
-
-**Workaround (if still seen after updating):** Restart Stack from the
-System page once after a reboot.
 
 ## RDAdmin's "Reset Dropbox" button doesn't make the running system pick up path/format changes — fixed 2026-07-17, pending real-world confirmation
 
