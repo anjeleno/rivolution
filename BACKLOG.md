@@ -589,6 +589,51 @@ Phase 2 (`caed`/Stereo Tool/streams as fully native PipeWire clients,
 no per-app auto-connect guessing or ALSA bridging anywhere) remains the
 real final fix and is still unscoped.
 
+## Fresh installs never provision a working audio card — `postinst`'s ALSA/JACK step was never implemented
+
+`debian/postinst` has carried a literal `# FIXME: Configure ALSA Here!`
+placeholder for the entire life of the audio-card provisioning step —
+still present as of this writing. `rddbmgr --create --generate-audio`'s
+fresh-install seeding (`utils/rddbmgr/create.cpp`) only inserts
+placeholder `AUDIO_CARDS`/`AUDIO_INPUTS`/`AUDIO_OUTPUTS` rows, leaving
+`DRIVER` at its schema default (`None`). Nothing in the installer ever
+probes physical or virtual sound hardware, or sets a card's driver to
+JACK. Every box that has worked so far got that done by hand, once, in
+RDAdmin's Edit Audio Ports dialog — not by the installer, which has
+never done this for anyone. See `ARCHITECTURE.md`'s "Recurring mistake
+class: dev-box state hides real install bugs" (Instance 5) for the full
+trace; discovered 2026-07-20 diagnosing a Stereo Tool failure on a
+fresh DigitalOcean droplet install.
+
+**Needed, not yet built:** a real probe/detection step during install,
+covering both physical and virtual sound hardware, that auto-configures
+`AUDIO_CARDS.DRIVER` and generates the default patches — no manual
+RDAdmin step required. On a hardware-less target (every bare cloud VM),
+detect that directly and provision a working driver path automatically
+rather than leaving Card 0 undriven.
+
+Related, but one layer downstream: the "Audio processing chain
+routing... is hardcoded" entry above assumes a JACK-driven `caed`
+already exists and covers routing *from* it — this entry is about
+whether a JACK-driven card exists at all on a fresh install.
+
+## RDAlsaConfig gives no explicit way to select JACK — deselecting all listed cards is the only way, unlabeled
+
+Today, using the JACK driver isn't a control anywhere in RDAlsaConfig's
+own UI — it's an emergent side effect of the "ALSA Sound Devices" list
+having nothing checked when Save is clicked. Confirmed live 2026-07-20:
+an empty device list (no real hardware on a DigitalOcean droplet), Save
+with nothing selected, and Card 0's driver became "JACK Audio
+Connection Kit" in RDAdmin's Edit Audio Ports afterward. On a VM that
+does expose something (e.g. a virtualized "Intel HDA" device under some
+hypervisors), an operator has to know to explicitly *un*check it, with
+nothing in the dialog explaining that doing so is what selects JACK.
+
+**Not urgent, not yet scoped** — flagged by Brandon 2026-07-20 while
+working through the fresh-droplet-install audio investigation above,
+deliberately deferred. Worth making JACK an explicit, visible option in
+RDAlsaConfig's own UI instead of an implicit gesture.
+
 ## Groups and Carts nav links hidden — not yet meaningful in the new dashboard
 
 `/groups` and `/carts` (from the original `rivapi` Phase 1 work) are
