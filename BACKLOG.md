@@ -589,6 +589,36 @@ Phase 2 (`caed`/Stereo Tool/streams as fully native PipeWire clients,
 no per-app auto-connect guessing or ALSA bridging anywhere) remains the
 real final fix and is still unscoped.
 
+**Update 2026-07-20 — real ordering trap found and confirmed on a
+fresh droplet install.** `syncStereoToolTarget` only runs as part of
+`/broadcast`'s Save & Deploy, using whatever `ProgramSource` is already
+saved to disk at that moment. On a genuinely fresh install, the natural
+order is: configure streams and click Save & Deploy on `/broadcast`
+first (before `ProgramSource` has ever been set on `/patchbay`), then
+set `ProgramSource` afterward. Per the 07-17 design decision, saving
+`ProgramSource` on `/patchbay` deliberately does not trigger a
+redeploy — so the very first deploy runs with an empty `ProgramSource`,
+`syncStereoToolTarget` no-ops (no error, no write, no restart), and
+`~/.asoundrc` is left exactly as shipped: hardcoded to the long-dead
+`liquidsoap:in_0/1` target inherited from the pre-ffmpeg-swap era (see
+`conf/alsa/rd.asoundrc`). Restarting the stack doesn't fix it either —
+nothing but a real `/broadcast` Save & Deploy call reaches
+`syncStereoToolTarget`. Confirmed live: re-running Save & Deploy on
+`/broadcast` after `ProgramSource` was set patched `~/.asoundrc` to the
+real `ffmpeg-192:input_1/2` target and restarted `stereo-tool.service`
+correctly — `/patchbay` showed all four expected links (both
+`rivendell_0` → Stereo Tool input ports, both Stereo Tool output ports
+→ `ffmpeg-192`) saved immediately after.
+
+**Not yet fixed:** the trap itself — whichever of `/broadcast` Save &
+Deploy or `/patchbay`'s Program Source save runs first, the other one's
+effect on Stereo Tool's routing is silently deferred with no warning —
+needs either a UI nudge or real install documentation calling it out
+explicitly. A wiki write-up for `.deb` package installs (distinct from
+the existing from-source build walkthrough) is planned to cover this
+with an unmissable callout, alongside the audio-driver provisioning gap
+above.
+
 ## Fresh installs never provision a working audio card — `postinst`'s ALSA/JACK step was never implemented
 
 `debian/postinst` has carried a literal `# FIXME: Configure ALSA Here!`
