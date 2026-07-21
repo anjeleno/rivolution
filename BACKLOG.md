@@ -934,3 +934,26 @@ activate, MagicDNS/status display, TLS cert provisioning — plus the
 matching `rivapi` sudoers grant and `RIVAPI_TLS_CERT`/`RIVAPI_TLS_KEY`/
 `RIVAPI_TLS_CERT_DIR` env var support spec 0014 already calls for.
 Flagged as a priority for the `rc1-3` candidate.
+
+## WirePlumber auto-connects new JACK clients straight to hardware output, on both PipeWire instances
+
+Found 2026-07-21 investigating the VLC-into-Rivendell routing fix (see
+`ARCHITECTURE.md`'s "a desktop-launched app runs in a different PipeWire
+graph than Rivendell's own"): neither the system-scope nor the per-user
+PipeWire instance carries any override disabling WirePlumber's own
+default policy of auto-connecting a newly-appeared client's output ports
+to the default hardware sink. `patchbay.go`'s `ReconcileLinks` already
+prunes unwanted *system-scope* connections, but only once patchbay.json
+has at least one saved link, and only on its next 30-second tick — not
+immediately, and not on the per-user instance at all. On this fork's real
+deployment target (a QEMU/UTM VM), anything that reaches the virtual
+sound card's real ALSA output gets passed through to the physical host's
+speakers by the hypervisor itself, independent of PipeWire/Pulse
+entirely — so any new JACK client on either instance can audibly leak to
+monitor speakers for up to that ~30-second window.
+
+**Needed, not yet built:** a WirePlumber policy override (a
+`wireplumber.conf.d/*.conf` snippet disabling default auto-linking to the
+hardware sink for both instances) shipped and installed by `postinst`,
+rather than relying solely on the existing periodic prune to catch it
+after the fact.

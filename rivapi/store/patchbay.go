@@ -165,6 +165,48 @@ func DisconnectUnsaved(path string) (int, error) {
 	return removed, nil
 }
 
+// vlcDefaultLinkMarkerPath records whether the default VLC -> Rivendell
+// link (below) has ever been offered, independent of whatever's currently
+// in patchbay.json -- so an operator who later removes that link on
+// purpose (they don't want VLC feeding this bus, or want a different one)
+// stays removed, instead of ReconcileLinks-adjacent logic silently adding
+// it back on the next tick. Deliberately not just "is patchbay.json
+// empty" or "is there any vlc-rivendell entry" -- either would re-offer
+// the default forever after an operator's explicit removal.
+const vlcDefaultLinkMarkerPath = "/home/rd/etc/rivolution/.vlc-default-link-seeded"
+
+// EnsureVLCDefaultLink seeds a one-time default connection from
+// vlc-rivendell-wrapper.sh's fixed JACK client (see debian/postinst) to
+// Rivendell's first input bus, so a fresh or upgraded install has VLC
+// already routed into Rivendell without an operator drawing it by hand in
+// /patchbay first -- confirmed 2026-07-21 that a desktop-launched VLC's
+// JACK client otherwise never reaches Rivendell's graph at all (see
+// ARCHITECTURE.md). Runs at most once per install (see
+// vlcDefaultLinkMarkerPath) -- cheap to call on every reconcile tick
+// alongside ReconcileLinks, same pattern as ReconcileStereoToolDeviceIDs.
+func EnsureVLCDefaultLink(path string) error {
+	if _, err := os.Stat(vlcDefaultLinkMarkerPath); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("check vlc default link marker: %w", err)
+	}
+	desired, err := LoadDesiredLinks(path)
+	if err != nil {
+		return fmt.Errorf("load desired links: %w", err)
+	}
+	desired = append(desired,
+		PatchLink{Output: "vlc-rivendell:vlc-rivendell_out_1", Input: "rivendell_0:record_0L"},
+		PatchLink{Output: "vlc-rivendell:vlc-rivendell_out_2", Input: "rivendell_0:record_0R"},
+	)
+	if err := SaveDesiredLinks(desired, path); err != nil {
+		return fmt.Errorf("save desired links: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(vlcDefaultLinkMarkerPath), 0755); err != nil {
+		return fmt.Errorf("create vlc default link marker dir: %w", err)
+	}
+	return os.WriteFile(vlcDefaultLinkMarkerPath, nil, 0644)
+}
+
 // stereoToolPortPattern matches a port name from Stereo Tool's ALSA-JACK
 // bridge, which bakes its own process ID into its client name (e.g.
 // "stereo_tool.C.4853.2:in_000") -- a fresh PID every time the service

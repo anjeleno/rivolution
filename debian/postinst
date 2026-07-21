@@ -96,6 +96,28 @@ case "$1" in
 	      rm -f /root/.Xauthority
 	      ln -s "$rd_home/.Xauthority" /root/.Xauthority
 	  fi
+
+	  # VLC (vlc-plugin-jack is an explicit Depends, above) is meant to
+	  # feed an external stream straight into Rivendell's input, but a
+	  # desktop-launched VLC inherits XDG_RUNTIME_DIR from rd's own
+	  # login session -- a per-user PipeWire instance entirely separate
+	  # from the system-scope one caed/Stereo Tool/rivapi all use (see
+	  # ARCHITECTURE.md). Launched plain, VLC's JACK client never
+	  # reaches Rivendell's graph at all -- confirmed 2026-07-21 live.
+	  # This overrides the stock /usr/share/applications/vlc.desktop
+	  # for rd's own desktop session only: ~/.local/share/applications
+	  # takes priority over the system directory for the same
+	  # desktop-file ID, so upgrading the vlc package itself can never
+	  # revert this, and no dpkg-divert is needed. Written unconditionally
+	  # every configure run (not gated on OLD_VERSION) -- this file has
+	  # no operator-editable content of its own, so it should always
+	  # self-heal to whatever this package's current version ships, on
+	  # both a fresh install and an upgrade.
+	  if test -n "$rd_home" && test -d "$rd_home" ; then
+	      mkdir -p "$rd_home/.local/share/applications"
+	      cp /usr/share/rivolution/vlc/vlc-rivendell.desktop "$rd_home/.local/share/applications/vlc.desktop"
+	      chown -R rd:rd "$rd_home/.local"
+	  fi
       fi
 
       # Legacy rivendell/pypad system accounts -- upstream's fixed
