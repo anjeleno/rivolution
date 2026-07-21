@@ -116,7 +116,7 @@ func (h *Handler) BroadcastSave(w http.ResponseWriter, r *http.Request) {
 	// capture -> encode -> Icecast push), replacing the single
 	// radio.liq/liquidsoap.service this used to be. See
 	// rivapi/store/ffmpeg_generator.go and docs/handoff/2026-07-09.md
-	// for why Liquidsoap was replaced.
+	// for why Liquidsoap was replaced by ffmpeg.
 	if err := store.DeployFfmpegStreams(cfg); err != nil {
 		result.Error = "deploying stream services: " + err.Error()
 		data, _ := h.broadcastPageData(r, result)
@@ -175,19 +175,19 @@ func parseBroadcastForm(r *http.Request) (store.BroadcastConfig, error) {
 		BurstSize:      burstSize,
 	}
 
-	liqPort := 8000
-	if p, err := parseInt(r.FormValue("liq_icecast_port")); err == nil {
-		liqPort = p
+	ffmpegIcecastPort := 8000
+	if p, err := parseInt(r.FormValue("ffmpeg_icecast_port")); err == nil {
+		ffmpegIcecastPort = p
 	}
 	sampleRate := 48000
-	if s, err := parseInt(r.FormValue("liq_sample_rate")); err == nil {
+	if s, err := parseInt(r.FormValue("ffmpeg_sample_rate")); err == nil {
 		sampleRate = s
 	}
-	cfg.Liquidsoap = store.LiquidsoapCfg{
-		IcecastHost: strings.TrimSpace(r.FormValue("liq_icecast_host")),
-		IcecastPort: liqPort,
-		JackInputID: strings.TrimSpace(r.FormValue("liq_jack_input_id")),
-		LogPath:     strings.TrimSpace(r.FormValue("liq_log_path")),
+	cfg.FfmpegOutput = store.FfmpegOutputCfg{
+		IcecastHost: strings.TrimSpace(r.FormValue("ffmpeg_icecast_host")),
+		IcecastPort: ffmpegIcecastPort,
+		JackInputID: strings.TrimSpace(r.FormValue("ffmpeg_jack_input_id")),
+		LogPath:     strings.TrimSpace(r.FormValue("ffmpeg_log_path")),
 		SampleRate:  sampleRate,
 	}
 

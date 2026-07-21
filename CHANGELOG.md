@@ -20,6 +20,20 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   A station that wants ALSA-driven physical hardware instead still needs
   a manual database change today -- no GUI writes this column yet (see
   `BACKLOG.md`).
+- Removed every remaining `liquidsoap`/`liq_*` reference from active
+  code and shipped config -- the dead pre-ffmpeg-swap Liquidsoap
+  architecture, replaced 2026-07-09, still left real traces: `rivapi`'s
+  `LiquidsoapCfg` struct/`Liquidsoap` field/`"liquidsoap"` JSON key
+  (renamed to `FfmpegOutputCfg`/`FfmpegOutput`/`"ffmpeg_output"`), every
+  `liq_*` broadcast-dashboard form field (renamed to `ffmpeg_*`),
+  `conf/alsa/rd.asoundrc`'s shipped template (hardcoded
+  `liquidsoap:in_0`/`in_1`, now a placeholder `ffmpeg:input_1`/
+  `input_2` -- the real target is always rewritten at first deploy
+  regardless), and a stale Liquidsoap-era comment in
+  `conf/systemd/icecast2.service.d/rivolution.conf`. **Breaking change,
+  by design, no migration**: any already-saved `broadcast.json` using
+  the old `"liquidsoap"` key needs its streams reconfigured and
+  redeployed after this update.
 
 ## 2026-07-20
 
