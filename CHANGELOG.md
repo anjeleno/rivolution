@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- Stereo Tool never appeared as a JACK output on a genuinely fresh
+  install, even with `/patchbay`'s Program Source correctly set to it --
+  `~/.stereo_tool.rc`'s `[Soundcard - Normal output]` section's own
+  "Device ID=" (the field that actually selects `jack (ALSA)` as the
+  output device) was left at whatever real ALSA hardware Stereo Tool's
+  own bootstrap happened to detect; nothing in this codebase ever set
+  it. Only the separate, effectively-inert "Jack ID 1"/"Jack ID 2"
+  fields were ever patched. `ConfigureStereoToolJack` now also forces
+  both the input and output sections' "Device ID=" to `jack (ALSA)`
+  unconditionally (`patchStereoToolDeviceIDs`, `rivapi/store/
+  stereo_tool_install.go`).
 - The shipped `rd.conf-sample`'s default `SyslogFacility=1` (USER) never
   matched `conf/syslog.conf-sample`'s `LOCAL7.INFO` rsyslog rule
   (`facility 23`), so a fresh install's Rivendell syslog output never
