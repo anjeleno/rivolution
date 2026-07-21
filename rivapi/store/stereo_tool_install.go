@@ -166,6 +166,36 @@ func ConfigureStereoToolJack(installPath, configPath string, webPort int, sinkPo
 	return patchStereoToolJackIDs(configPath, sinkPortL, sinkPortR)
 }
 
+// ReconcileStereoToolDeviceIDs re-checks StereoToolConfigPath's Device
+// ID fields and restarts stereo-tool.service if either one needed
+// correcting. Called periodically (see rivapi/main.go's reconcile
+// loop), not just from ConfigureStereoToolJack's one-time install/
+// configure flow -- confirmed live 2026-07-21 that the one-time flow
+// alone leaves a real gap: rebuilding/upgrading the .deb never
+// re-triggers ConfigureStereoToolJack on its own (Stereo Tool isn't
+// part of the package at all; it's only ever installed/configured via
+// the dashboard's "Install Stereo Tool" button), so a box that already
+// has Stereo Tool configured before this fix existed would otherwise
+// need someone to notice and manually re-run that install step. No-ops
+// entirely if Stereo Tool has never been installed at all (no config
+// file yet to patch).
+func ReconcileStereoToolDeviceIDs() error {
+	if _, err := os.Stat(StereoToolConfigPath); os.IsNotExist(err) {
+		return nil
+	}
+	changed, err := patchStereoToolDeviceIDs(StereoToolConfigPath)
+	if err != nil {
+		return fmt.Errorf("patching stereo tool device IDs: %w", err)
+	}
+	if !changed {
+		return nil
+	}
+	if err := sudoSystemctl("restart", "stereo-tool.service"); err != nil {
+		return fmt.Errorf("restarting stereo-tool.service: %w", err)
+	}
+	return nil
+}
+
 func hasStereoToolOutputSection(configPath string) bool {
 	data, err := os.ReadFile(configPath)
 	if err != nil {

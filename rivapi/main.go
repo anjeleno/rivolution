@@ -116,6 +116,15 @@ func main() {
 			if err := store.ReconcileStereoToolTarget(cfg.BroadcastConfigPath); err != nil {
 				log.Printf("stereo tool target reconcile: %v", err)
 			}
+			// Same interval again: Stereo Tool's own Device ID fields are
+			// only ever set by ConfigureStereoToolJack's one-time install/
+			// configure flow, which nothing re-triggers on a package
+			// upgrade -- a box that already had Stereo Tool configured
+			// before this fix existed would otherwise stay wrong forever.
+			// See ReconcileStereoToolDeviceIDs's own doc comment.
+			if err := store.ReconcileStereoToolDeviceIDs(); err != nil {
+				log.Printf("stereo tool device ID reconcile: %v", err)
+			}
 		}
 	}()
 

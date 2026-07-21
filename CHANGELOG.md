@@ -19,7 +19,12 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   fields were ever patched. `ConfigureStereoToolJack` now also forces
   both the input and output sections' "Device ID=" to `jack (ALSA)`
   unconditionally (`patchStereoToolDeviceIDs`, `rivapi/store/
-  stereo_tool_install.go`).
+  stereo_tool_install.go`). Also added `ReconcileStereoToolDeviceIDs`
+  to the same 30s reconcile loop as the existing patchbay/Stereo Tool
+  target checks -- the one-time install/configure flow alone would
+  never re-apply this fix to a box that already had Stereo Tool
+  configured before this update, since nothing re-triggers it on a
+  package upgrade.
 - The shipped `rd.conf-sample`'s default `SyslogFacility=1` (USER) never
   matched `conf/syslog.conf-sample`'s `LOCAL7.INFO` rsyslog rule
   (`facility 23`), so a fresh install's Rivendell syslog output never
