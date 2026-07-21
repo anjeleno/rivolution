@@ -46,6 +46,7 @@ class MainWidget : public RDWidget
  private slots:
   void saveData();
   void cancelData();
+  void alsaSelectionChanged();
 
  protected:
   void resizeEvent(QResizeEvent *e);
@@ -61,6 +62,7 @@ class MainWidget : public RDWidget
   QStringList alsa_other_lines;
   QPushButton *alsa_save_button;
   QPushButton *alsa_cancel_button;
+  bool alsa_ignore_selection_change;
 };
 
 
