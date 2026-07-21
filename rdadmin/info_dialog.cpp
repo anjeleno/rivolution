@@ -88,7 +88,7 @@ InfoDialog::InfoDialog(QWidget *parent)
   //
   // Version
   //
-  label=new QLabel(tr("Version")+" "+VERSION,this);
+  label=new QLabel(tr("Version")+" "+RD_FULL_VERSION,this);
   label->setGeometry(10,73,200,14);
   label->setFont(subLabelFont());
 
