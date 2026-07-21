@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- `rivendell.service` had no ordering dependency on `mariadb.service` at
+  all -- only `Restart=always` masked this, since a failed *first*
+  start attempt (common on a fresh boot, before MariaDB is ready) still
+  counts as "reached" for any other unit's plain `After=
+  rivendell.service`. `stereo-tool.service` already carries its own
+  fix for exactly this class of race (a JACK-port readiness poll,
+  2026-07-04) but the underlying gap in `rivendell.service` itself was
+  never closed. Added `After=mariadb.service` to `rivendell.service`'s
+  drop-in (`conf/systemd/rivendell.service.d/rivolution.conf`) --
+  `mariadb.service` is `Type=notify`, so plain `After=` is sufficient to
+  wait for it to actually be ready, no custom polling needed.
 - `rddbmgr --create --generate-audio`'s fresh-install seeding left every
   `AUDIO_CARDS` row's `DRIVER` at its schema default (`None`) --
   `debian/postinst` carried a literal `# FIXME: Configure ALSA Here!`
