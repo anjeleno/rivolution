@@ -9,6 +9,31 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- Stereo Tool never appeared as a JACK output on a genuinely fresh
+  install, even with `/patchbay`'s Program Source correctly set to it --
+  `~/.stereo_tool.rc`'s `[Soundcard - Normal output]` section's own
+  "Device ID=" (the field that actually selects `jack (ALSA)` as the
+  output device) was left at whatever real ALSA hardware Stereo Tool's
+  own bootstrap happened to detect; nothing in this codebase ever set
+  it. Only the separate, effectively-inert "Jack ID 1"/"Jack ID 2"
+  fields were ever patched. `ConfigureStereoToolJack` now also forces
+  both the input and output sections' "Device ID=" to `jack (ALSA)`
+  unconditionally (`patchStereoToolDeviceIDs`, `rivapi/store/
+  stereo_tool_install.go`). Also added `ReconcileStereoToolDeviceIDs`
+  to the same 30s reconcile loop as the existing patchbay/Stereo Tool
+  target checks -- the one-time install/configure flow alone would
+  never re-apply this fix to a box that already had Stereo Tool
+  configured before this update, since nothing re-triggers it on a
+  package upgrade.
+- The Applications Menu's top-level category still displayed
+  "Rivendell" even though every tool and icon filed under it had
+  already been rebranded -- the category's own display name comes from
+  `xdg/rivendell-rivendell.directory`'s `Name=` field and
+  `xdg/rivendell-rivendell.menu`'s `<Menu><Name>`, neither of which the
+  2026-06-24 icon/branding pass touched. Both renamed to "Rivolution";
+  the underlying filenames, `.desktop` references, and the icon theme
+  name are left as-is, consistent with this project's existing
+  convention of not renaming install-path identifiers.
 - The shipped `rd.conf-sample`'s default `SyslogFacility=1` (USER) never
   matched `conf/syslog.conf-sample`'s `LOCAL7.INFO` rsyslog rule
   (`facility 23`), so a fresh install's Rivendell syslog output never

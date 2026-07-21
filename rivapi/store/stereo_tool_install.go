@@ -115,13 +115,28 @@ func InstallStereoTool(installPath, version string) error {
 }
 
 // stSoundcardOutputSection is the INI section in ~/.stereo_tool.rc that
-// holds the JACK auto-connect target Stereo Tool's own native libjack
-// client (confirmed via strings/ldd -- it is not ALSA-bridged despite
-// its own config UI labeling the device "jack (ALSA)") uses for its
-// processed output. Left blank, it falls through to a Thimeo-hardcoded
-// default ("liquidsoap:in_0/in_1") that no longer exists now that
-// Liquidsoap has been replaced by per-stream ffmpeg processes.
+// holds the JACK auto-connect target for Stereo Tool's processed
+// output. Confirmed via live behavioral testing (2026-07-10, not just
+// static analysis -- see ARCHITECTURE.md's "device label" recurring-
+// mistake writeup): Stereo Tool really does reach JACK through ALSA's
+// own `type jack` PCM plugin, exactly as its config UI's "jack (ALSA)"
+// label says. Left blank, the Jack ID fields fall through to a
+// Thimeo-hardcoded default ("liquidsoap:in_0/in_1") that no longer
+// exists now that Liquidsoap has been replaced by per-stream ffmpeg
+// processes.
 const stSoundcardOutputSection = "[Soundcard - Normal output]"
+
+// stSoundcardInputSection is the matching INI section for Stereo
+// Tool's own input device -- asymmetrically named in Stereo Tool's own
+// file format ("Input", not "Normal input") to stSoundcardOutputSection's
+// "Normal output".
+const stSoundcardInputSection = "[Soundcard - Input]"
+
+// stJackDeviceID is the exact "Device ID=" value Stereo Tool's own INI
+// format uses to mean "route through ALSA's jack (ALSA) plugin" --
+// confirmed against a real installed config's own dropdown-populated
+// value, not guessed.
+const stJackDeviceID = "jack (ALSA)"
 
 const (
 	stBootstrapTimeout      = 15 * time.Second
@@ -131,18 +146,54 @@ const (
 
 // ConfigureStereoToolJack ensures configPath's [Soundcard - Normal output]
 // Jack ID 1/Jack ID 2 point at sinkPortL/sinkPortR instead of Stereo
-// Tool's own dead default. If configPath doesn't exist yet or has no
+// Tool's own dead default, and that both the input and output sections'
+// own "Device ID=" actually selects the jack (ALSA) device -- not just
+// the Jack ID fields, which have no effect unless the device itself is
+// set to route through JACK in the first place (see
+// patchStereoToolDeviceIDs). If configPath doesn't exist yet or has no
 // [Soundcard - Normal output] section (a genuinely fresh install --
 // Stereo Tool has never run), it bootstraps one via a brief --no-gui
-// launch first. Fields that are already set to something (an operator's
-// own prior choice) are left untouched.
+// launch first.
 func ConfigureStereoToolJack(installPath, configPath string, webPort int, sinkPortL, sinkPortR string) error {
 	if !hasStereoToolOutputSection(configPath) {
 		if err := bootstrapStereoToolConfig(installPath, configPath, webPort); err != nil {
 			return fmt.Errorf("bootstrapping stereo tool config: %w", err)
 		}
 	}
+	if _, err := patchStereoToolDeviceIDs(configPath); err != nil {
+		return fmt.Errorf("patching device IDs: %w", err)
+	}
 	return patchStereoToolJackIDs(configPath, sinkPortL, sinkPortR)
+}
+
+// ReconcileStereoToolDeviceIDs re-checks StereoToolConfigPath's Device
+// ID fields and restarts stereo-tool.service if either one needed
+// correcting. Called periodically (see rivapi/main.go's reconcile
+// loop), not just from ConfigureStereoToolJack's one-time install/
+// configure flow -- confirmed live 2026-07-21 that the one-time flow
+// alone leaves a real gap: rebuilding/upgrading the .deb never
+// re-triggers ConfigureStereoToolJack on its own (Stereo Tool isn't
+// part of the package at all; it's only ever installed/configured via
+// the dashboard's "Install Stereo Tool" button), so a box that already
+// has Stereo Tool configured before this fix existed would otherwise
+// need someone to notice and manually re-run that install step. No-ops
+// entirely if Stereo Tool has never been installed at all (no config
+// file yet to patch).
+func ReconcileStereoToolDeviceIDs() error {
+	if _, err := os.Stat(StereoToolConfigPath); os.IsNotExist(err) {
+		return nil
+	}
+	changed, err := patchStereoToolDeviceIDs(StereoToolConfigPath)
+	if err != nil {
+		return fmt.Errorf("patching stereo tool device IDs: %w", err)
+	}
+	if !changed {
+		return nil
+	}
+	if err := sudoSystemctl("restart", "stereo-tool.service"); err != nil {
+		return fmt.Errorf("restarting stereo-tool.service: %w", err)
+	}
+	return nil
 }
 
 func hasStereoToolOutputSection(configPath string) bool {
@@ -192,6 +243,65 @@ func bootstrapStereoToolConfig(installPath, configPath string, webPort int) erro
 			stSoundcardOutputSection, stBootstrapTimeout)
 	}
 	return nil
+}
+
+// patchStereoToolDeviceIDs forces both [Soundcard - Input] and
+// [Soundcard - Normal output]'s own "Device ID=" to stJackDeviceID.
+// Confirmed live 2026-07-21: unlike the Jack ID fields below (always
+// blank until something sets them), "Device ID=" is never blank after
+// Stereo Tool's own bootstrap -- it defaults to whatever real ALSA
+// hardware it happens to detect (e.g. "HDA Intel: Generic Analog
+// (hw:0,0) (ALSA)"), which nothing in this codebase ever overwrote
+// before now. The input section's own default happened to already be
+// correct on the box this was found on, which is exactly what let the
+// gap go unnoticed: the output section's own separate, always-wrong
+// default was masked by the input section coincidentally being right.
+// Both are set unconditionally (not just when blank, the pattern
+// patchStereoToolJackIDs uses) since a real hardware device name is
+// never something this fork's own architecture wants preserved as an
+// operator's deliberate choice -- routing through jack (ALSA) is a
+// hard requirement here, not a default that's merely convenient.
+// Returns whether anything actually changed, so the caller only logs a
+// restart-worthy change when one genuinely happened.
+func patchStereoToolDeviceIDs(configPath string) (bool, error) {
+	info, err := os.Stat(configPath)
+	if err != nil {
+		return false, fmt.Errorf("stat %s: %w", configPath, err)
+	}
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return false, fmt.Errorf("reading %s: %w", configPath, err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	inTargetSection := false
+	changed := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			inTargetSection = trimmed == stSoundcardInputSection || trimmed == stSoundcardOutputSection
+			continue
+		}
+		if !inTargetSection {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "Device ID=") && trimmed != "Device ID="+stJackDeviceID {
+			lines[i] = "Device ID=" + stJackDeviceID
+			changed = true
+		}
+	}
+	if !changed {
+		return false, nil
+	}
+
+	tmp := configPath + ".tmp"
+	if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")), info.Mode()); err != nil {
+		return false, fmt.Errorf("writing %s: %w", tmp, err)
+	}
+	if err := os.Rename(tmp, configPath); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // patchStereoToolJackIDs sets Jack ID 1/Jack ID 2 within
