@@ -181,46 +181,58 @@ fix.
 
 ## Full modernization (the "v6" effort)
 
-Longer-term direction, with several major decisions now locked in and
-real specs written for them. Each spec still needs implementation —
-none of this is built yet — but the architectural shape is no longer
-speculative for the items below.
+Longer-term direction. Two of the four major decisions below are now
+substantially shipped and running in production; the other two remain
+real future work with a locked-in architectural shape.
 
-**Decided, with a real spec:**
-- **Go REST API + web dashboard, covering `RDAdmin`/`RDLogManager`/
-  `RDCatch`-shaped administration functionality.** `RDAirplay`/
-  `RDLibrary`/`RDLogEdit`/`RDPanel` stay native, untouched. The Go layer
-  is primarily a proxy/translator in front of the existing `rdxport.cgi`
-  HTTP/XML API (46 commands, already documented in
-  `docs/apis/web_api.xml`) — not a new transport, and never touches RML
-  (RML stays exclusively internal to the native apps). See
-  [`docs/specs/0005-go-api-foundation.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0005-go-api-foundation.md) for the full bucket-based
-  risk classification, Phase 1 scope, and the authentication design
-  (JWT for browser sessions, layered over `rdxport.cgi`'s existing
-  IP-bound ticket system).
-- **Qt6 migration for the native desktop applications.** Real,
-  medium-sized, mechanically tractable scope (a handful of
-  `QWebView`/`QRegExp`/`QString::KeepEmptyParts` migrations plus a
-  `configure.ac` module-detection change) — see
-  [`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md). No technical dependency on the Go
-  API work; the two proceed in parallel.
+**Shipped:**
+- **Go REST API + web dashboard** (`rivapi`), covering `RDAdmin`/
+  `RDLogManager`/`RDCatch`-shaped administration functionality.
+  `RDAirplay`/`RDLibrary`/`RDLogEdit`/`RDPanel` stay native, untouched,
+  as designed. Live in production today with working `/broadcast`,
+  `/patchbay`, `/tasks`, `/mode`, and `/system` pages, JWT-based
+  dashboard auth layered over `rdxport.cgi`'s existing IP-bound ticket
+  system. See [`docs/specs/0005-go-api-foundation.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0005-go-api-foundation.md)
+  for the full bucket-based risk classification and Phase 1 scope this
+  was built against. Still open: which further `rdxport.cgi`-proxied
+  endpoints (if any) eventually move to native Go — deliberately
+  case-by-case, not pre-decided.
+- **Qt6 migration for the native desktop applications.** Complete —
+  `configure.ac` now mandates Qt6 outright (`Qt6Core`/`Qt6Widgets`/
+  `Qt6Gui`/`Qt6Network`/`Qt6Sql`/`Qt6Xml`/`Qt6WebEngineWidgets`), not an
+  optional target. See [`docs/specs/0006-qt6-migration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0006-qt6-migration.md)
+  for the migrations this involved.
+- **Broadcast tool suite integration as Go-managed configuration**, so
+  an operator never hand-edits these tools' native config files
+  directly. Substantially shipped, though the tool it was originally
+  built around changed mid-flight: Icecast and Stereo Tool are
+  Go-managed exactly as designed; Liquidsoap was fully replaced by a
+  per-stream `ffmpeg` process 2026-07-09 rather than being Go-managed
+  itself (see [`docs/specs/0015-ffmpeg-broadcast-output.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0015-ffmpeg-broadcast-output.md));
+  persistent patch connections via `/patchbay` and a continuously-running
+  reconciler are live. See [`docs/specs/0008-broadcast-tool-suite-integration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0008-broadcast-tool-suite-integration.md)
+  for the original design and its supersession note. **Still open:**
+  VLC (remote-audio capture into the JACK graph, `vlc-plugin-jack`) was
+  part of the original scope and was never built.
+
+**Decided, with a real spec, not yet built:**
 - **Native PipeWire support in `caed`, for AES67 and real cross-driver
-  routing.** `caed` already runs ALSA/JACK/AudioScience HPI
-  concurrently, but every route is driver-private today — there is no
-  way to patch a port on one driver to a port on another. PipeWire's
-  unified graph model, plus its native AES67 support (PTP sync, SAP
-  discovery, available from PipeWire 1.1 — confirmed packaged in Ubuntu
-  26.04) is the target architecture for closing that gap, not just
-  adding AES67 as an isolated fourth driver. See
-  [`docs/specs/0007-pipewire-audio-engine.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0007-pipewire-audio-engine.md) for the full design,
-  including the requirement that the new routing UI (likely the Go
-  dashboard) fully replace `qjackctl`, and the core/CPU-affinity-tuning
-  feature scoped alongside it.
-- **Broadcast tool suite integration** (Icecast, Liquidsoap, Stereo
-  Tool, VLC, persistent patch connections) **as Go-managed
-  configuration**, so an operator never hand-edits any of these tools'
-  native config files directly. See
-  [`docs/specs/0008-broadcast-tool-suite-integration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0008-broadcast-tool-suite-integration.md).
+  routing.** Phase 1 is live: system-scope PipeWire is deployed and
+  verified running (`pw-dump`/`pw-link` against the real stack) as the
+  practical backend across the whole broadcast chain (`caed`, Stereo
+  Tool's ALSA-`type jack` bridge, `ffmpeg`) — see `ARCHITECTURE.md`'s
+  "Broadcast audio processing chain" section. Cross-driver routing
+  itself is functionally solved for that one pipeline today, via
+  `rivapi`'s `/patchbay` and its reconciler, not via a new driver inside
+  `caed`. The deeper goal remains unbuilt: `caed` has no native
+  PipeWire driver type yet (`RDStation::AudioDriver`'s enum is still
+  only `{None,Hpi,Jack,Alsa}`), so there is no general-purpose
+  any-to-any routing usable outside the broadcast chain, and no AES67
+  (PTP sync, SAP discovery) at all. See
+  [`docs/specs/0007-pipewire-audio-engine.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0007-pipewire-audio-engine.md)
+  for the full design, including the requirement that the new routing
+  UI (likely the Go dashboard) fully replace `qjackctl`, and the
+  core/CPU-affinity-tuning feature scoped alongside it.
 
 **Repo structure, sequencing decided:** finish verifying and merging
 the currently in-flight branches into `v4` first; only then copy that
@@ -246,9 +258,8 @@ and remains unchanged.
 - Exact core/CPU-affinity auto-detection heuristics and manual-override
   UI design (spec 0007 names the feature; the detailed design is not
   yet written).
-- Which `rdxport.cgi`-proxied endpoints (if any) eventually move to
-  native Go — deliberately case-by-case, not pre-decided (spec 0005).
-- Exact per-tool config schema/validation design for spec 0008.
+- VLC's config schema/validation design (spec 0008) — the only one of
+  that spec's original tools never built.
 
 ## Wiki markdown copied into the main repo for portability
 
