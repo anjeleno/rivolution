@@ -71,6 +71,7 @@ func main() {
 		r.Post("/system/stereo-tool/launch", dash.StereoToolLaunch)
 		r.Get("/broadcast", dash.Broadcast)
 		r.Post("/broadcast/save", dash.BroadcastSave)
+		r.Post("/broadcast/apply-detected-jack-id", dash.BroadcastApplyDetectedJackID)
 		r.Get("/patchbay", dash.Patchbay)
 		r.Post("/patchbay/connect", dash.PatchbayConnect)
 		r.Post("/patchbay/disconnect", dash.PatchbayDisconnect)

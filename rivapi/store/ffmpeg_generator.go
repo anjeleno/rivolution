@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -112,6 +113,85 @@ func primaryStreamMount(cfg BroadcastConfig) (string, bool) {
 	return mounts[0], true
 }
 
+// StereoToolTargetStatus is the last-known result of syncStereoToolTarget's
+// live-existence check, for the dashboard to display -- separate from
+// the error return value so the periodic reconciler (which only logs
+// errors server-side) surfaces the identical thing an explicit Save &
+// Deploy would show. See stMu/stStatus below.
+type StereoToolTargetStatus struct {
+	OK           bool
+	Mount        string
+	ConfiguredID string
+	DetectedID   string // real live client base ID found instead, if any
+}
+
+var (
+	stMu     sync.Mutex
+	stStatus = StereoToolTargetStatus{OK: true}
+)
+
+// LastStereoToolTargetStatus returns the most recent result of
+// syncStereoToolTarget's live-existence check (updated on every deploy
+// and every 30s reconcile tick -- see rivapi/main.go).
+func LastStereoToolTargetStatus() StereoToolTargetStatus {
+	stMu.Lock()
+	defer stMu.Unlock()
+	return stStatus
+}
+
+func setStereoToolTargetStatus(s StereoToolTargetStatus) {
+	stMu.Lock()
+	stStatus = s
+	stMu.Unlock()
+}
+
+// clientHasLivePorts reports whether clientID currently has any live
+// input port -- i.e. whether it's a real, connectable JACK/PipeWire
+// client right now, not just a string syncStereoToolTarget computed.
+func clientHasLivePorts(clientID string) bool {
+	ports, err := ListInputPorts()
+	if err != nil {
+		return false
+	}
+	prefix := clientID + ":"
+	for _, p := range ports {
+		if strings.HasPrefix(p, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// detectLiveStreamClientID scans live JACK input ports for a client
+// name ending in "-<sanitized-mount>" -- used when the configured
+// streamJackClientID doesn't exist live, to find what base ID the
+// actually-running stream registered under instead. Found live
+// 2026-07-21: a renamed config field (Liquidsoap -> FfmpegOutput, no
+// migration by design) left JackInputID empty, computing
+// "rivolution-192" while the real running stream was "ffmpeg-192" --
+// this is exactly the mismatch that discovery is for.
+func detectLiveStreamClientID(mount string) (baseID string, ok bool) {
+	ports, err := ListInputPorts()
+	if err != nil {
+		return "", false
+	}
+	sanitized := jackClientNameRe.ReplaceAllString(strings.Trim(mount, "/"), "-")
+	if sanitized == "" {
+		sanitized = "stream"
+	}
+	suffix := "-" + sanitized
+	for _, p := range ports {
+		client, _, found := strings.Cut(p, ":")
+		if !found {
+			continue
+		}
+		if strings.HasSuffix(client, suffix) {
+			return strings.TrimSuffix(client, suffix), true
+		}
+	}
+	return "", false
+}
+
 // syncStereoToolTarget points Stereo Tool's ALSA-JACK bridge
 // (AsoundrcPath's pcm.jack playback_ports, confirmed 2026-07-10 to be
 // what it actually reads its target from -- see AsoundrcPath's doc
@@ -121,15 +201,38 @@ func primaryStreamMount(cfg BroadcastConfig) (string, bool) {
 // on every deploy, since Stereo Tool's own connection is otherwise left
 // alone once established. No-ops entirely if ProgramSource isn't the
 // Stereo Tool sentinel, or no streams are configured yet.
+//
+// Validates the target actually exists live before touching anything --
+// found live 2026-07-21 that three separate historical bugs (a dead
+// hardcoded default, an ordering trap, and a config value gone stale)
+// all produced the identical symptom (Stereo Tool retrying a target
+// that was never real, accumulating orphaned ports) because nothing
+// ever checked the computed target against live reality before patching
+// ~/.asoundrc and restarting Stereo Tool. This closes that whole class
+// at the one checkpoint instead of needing a fourth bespoke fix next
+// time the target string is wrong for a new reason.
 func syncStereoToolTarget(cfg BroadcastConfig) error {
 	if cfg.ProgramSource != ProgramSourceStereoTool {
+		setStereoToolTargetStatus(StereoToolTargetStatus{OK: true})
 		return nil
 	}
 	mount, ok := primaryStreamMount(cfg)
 	if !ok {
+		setStereoToolTargetStatus(StereoToolTargetStatus{OK: true})
 		return nil
 	}
 	clientID := streamJackClientID(cfg.FfmpegOutput.JackInputID, mount)
+	if !clientHasLivePorts(clientID) {
+		detected, found := detectLiveStreamClientID(mount)
+		setStereoToolTargetStatus(StereoToolTargetStatus{
+			OK: false, Mount: mount, ConfiguredID: clientID, DetectedID: detected,
+		})
+		if found {
+			return fmt.Errorf("stereo tool target %q has no live JACK ports -- %q is what's actually running for mount %q; not restarting stereo-tool.service against a target that won't resolve", clientID, detected, mount)
+		}
+		return fmt.Errorf("stereo tool target %q has no live JACK ports, and no live stream was found for mount %q either -- not restarting stereo-tool.service against a target that won't resolve", clientID, mount)
+	}
+	setStereoToolTargetStatus(StereoToolTargetStatus{OK: true, Mount: mount, ConfiguredID: clientID})
 	changed, err := PatchAsoundrcTarget(AsoundrcPath, clientID+":input_1", clientID+":input_2")
 	if err != nil {
 		return fmt.Errorf("patching %s: %w", AsoundrcPath, err)
