@@ -934,22 +934,3 @@ activate, MagicDNS/status display, TLS cert provisioning — plus the
 matching `rivapi` sudoers grant and `RIVAPI_TLS_CERT`/`RIVAPI_TLS_KEY`/
 `RIVAPI_TLS_CERT_DIR` env var support spec 0014 already calls for.
 Flagged as a priority for the `rc1-3` candidate.
-
-## Ubuntu Applications Menu still says "Rivendell", not "Rivolution"
-
-The 2026-07-17 desktop-menu investigation fixed a real, narrow bug
-(RDMonitor's shortcut landing in a generic "Other" category instead of
-with the rest of the Rivendell/Rivolution tools — see `CHANGELOG.md`)
-but didn't touch this: the actual top-level Applications Menu
-**category/submenu itself** (Applications -> Rivendell -> ...) is still
-literally labeled "Rivendell," not "Rivolution" — every rebranded icon
-and tool still files under the old name at the menu-navigation level.
-Flagged by Brandon 2026-07-20 as a priority for the `rc1-3` candidate.
-
-**Needed, not yet built:** find and update wherever the submenu's
-display name is actually declared (likely `xdg/rivendell-rivendell.menu`
-and/or a `.directory` file defining the category's `Name=`) and rename
-it to Rivolution, consistent with everything else the 2026-06-24 icon/
-branding pass already covers. Not yet investigated in detail -- start
-from the same `xdg/*.menu`/`.desktop` files the RDMonitor fix already
-traced.

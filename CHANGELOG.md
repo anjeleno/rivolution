@@ -25,6 +25,15 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   never re-apply this fix to a box that already had Stereo Tool
   configured before this update, since nothing re-triggers it on a
   package upgrade.
+- The Applications Menu's top-level category still displayed
+  "Rivendell" even though every tool and icon filed under it had
+  already been rebranded -- the category's own display name comes from
+  `xdg/rivendell-rivendell.directory`'s `Name=` field and
+  `xdg/rivendell-rivendell.menu`'s `<Menu><Name>`, neither of which the
+  2026-06-24 icon/branding pass touched. Both renamed to "Rivolution";
+  the underlying filenames, `.desktop` references, and the icon theme
+  name are left as-is, consistent with this project's existing
+  convention of not renaming install-path identifiers.
 - The shipped `rd.conf-sample`'s default `SyslogFacility=1` (USER) never
   matched `conf/syslog.conf-sample`'s `LOCAL7.INFO` rsyslog rule
   (`facility 23`), so a fresh install's Rivendell syslog output never

@@ -4,7 +4,7 @@
 <Menu>
 <Name>Applications</Name>
 <Menu>
-  <Name>Rivendell</Name>
+  <Name>Rivolution</Name>
   <Directory>rivendell-rivendell.directory</Directory>
   <Include>
     <Filename>rivendell-rdairplay.desktop</Filename>
