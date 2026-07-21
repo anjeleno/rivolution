@@ -9,6 +9,18 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- The shipped `rd.conf-sample`'s default `SyslogFacility=1` (USER) never
+  matched `conf/syslog.conf-sample`'s `LOCAL7.INFO` rsyslog rule
+  (`facility 23`), so a fresh install's Rivendell syslog output never
+  reached `/var/log/rivendell/operations` at all -- `debian/rules.src`
+  already had a `sed` patch correcting this for a separate, unused
+  documentation-only copy of the file, but never the real one
+  `postinst` actually installs. Fixed at the source (`SyslogFacility=23`
+  in `conf/rd.conf-sample` itself); simplified the now-redundant `sed`
+  workaround to a plain `cp`. Also added `/home/rd/logs` (rd-owned) to
+  `postinst` for user-level logs (ffmpeg, rdimport, etc.) -- separate
+  from `/var/log/rivendell`, which is root:syslog-owned and not
+  writable by `rd`.
 - `LoadBroadcastConfig` now fills in any `FfmpegOutput` field still at
   Go's zero value (from an existing file) with `DefaultBroadcastConfig`'s
   own defaults -- previously those defaults only applied when

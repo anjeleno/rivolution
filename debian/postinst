@@ -129,6 +129,16 @@ case "$1" in
       mkdir -p /var/snd
       chown rd:rivendell /var/snd
       chmod 775 /var/snd
+
+      # User-level logs (ffmpeg's per-stream output, rdimport, and any
+      # other rd-run tool's own log file) are separate from
+      # /var/log/rivendell above -- that directory is root:syslog owned
+      # for syslog-integrated native-app logging, not writable by rd,
+      # which is what actually runs these. Brandon's own convention,
+      # confirmed 2026-07-21: /home/rd/logs/<name>.log.
+      mkdir -p /home/rd/logs
+      chown rd:rd /home/rd/logs
+
       if test ! -d /etc/rivendell.d ; then
 	  mkdir -p /etc/rivendell.d
 	  chmod 775 /etc/rivendell.d
