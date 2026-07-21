@@ -49,7 +49,7 @@ type Config struct {
 	StereoToolWebPort int
 
 	// BroadcastConfigPath is where the broadcast dashboard persists its
-	// JSON config (station, Icecast, Liquidsoap, stream list).
+	// JSON config (station, Icecast, ffmpeg output, stream list).
 	BroadcastConfigPath string
 }
 

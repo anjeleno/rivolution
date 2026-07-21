@@ -7,11 +7,14 @@
 # routes through -- it accesses JACK only via this ALSA-JACK bridge
 # plugin, not as a native JACK client.
 #
-# TEMPORARY / HARDCODED: this pins Stereo Tool's input to caed's stream 0
-# and its output to Liquidsoap, matching the caed -> Stereo Tool ->
-# Liquidsoap signal chain. It is meant to be superseded by the dashboard's
-# visual patch matrix (dynamic WirePlumber-backed routing) once that
-# exists -- see BACKLOG.md.
+# Playback target is a placeholder, not a real client -- rivapi's
+# syncStereoToolTarget (rivapi/store/ffmpeg_generator.go) rewrites it to
+# the actual configured ffmpeg stream's JACK client at first real
+# Save & Deploy (caed -> Stereo Tool -> ffmpeg is the current signal
+# chain; Stereo Tool never talks to Liquidsoap, which no longer exists in
+# this project). It is meant to be superseded by the dashboard's visual
+# patch matrix (dynamic WirePlumber-backed routing) once that exists --
+# see BACKLOG.md.
 #
 # Install: copy to ~/.asoundrc (user-level override, takes precedence
 # over the system-wide /usr/share/alsa/alsa.conf.d/50-jack.conf without
@@ -20,8 +23,8 @@
 pcm.jack {
 	type jack
 	playback_ports {
-		0 liquidsoap:in_0
-		1 liquidsoap:in_1
+		0 ffmpeg:input_1
+		1 ffmpeg:input_2
 	}
 	capture_ports {
 		0 rivendell_0:playout_0L
@@ -32,6 +35,6 @@ pcm.jack {
 			@func refer
 			name defaults.namehint.basic
 		}
-		description "JACK Audio Connection Kit (Rivolution: caed -> Stereo Tool -> Liquidsoap)"
+		description "JACK Audio Connection Kit (Rivolution: caed -> Stereo Tool -> ffmpeg)"
 	}
 }

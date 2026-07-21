@@ -142,27 +142,27 @@
             <div class="grid">
                 <label>
                     Icecast host
-                    <input type="text" name="liq_icecast_host" x-model="liquidsoap.icecast_host">
+                    <input type="text" name="ffmpeg_icecast_host" x-model="ffmpegOutput.icecast_host">
                 </label>
                 <label>
                     Icecast port
-                    <input type="number" name="liq_icecast_port" x-model.number="liquidsoap.icecast_port" min="1" max="65535">
+                    <input type="number" name="ffmpeg_icecast_port" x-model.number="ffmpegOutput.icecast_port" min="1" max="65535">
                 </label>
             </div>
             <div class="grid">
                 <label>
                     JACK client base name
-                    <input type="text" name="liq_jack_input_id" x-model="liquidsoap.jack_input_id">
+                    <input type="text" name="ffmpeg_jack_input_id" x-model="ffmpegOutput.jack_input_id">
                     <small>Each stream gets its own JACK client, named this plus its mount.</small>
                 </label>
                 <label>
                     Sample rate (Hz)
-                    <input type="number" name="liq_sample_rate" x-model.number="liquidsoap.sample_rate">
+                    <input type="number" name="ffmpeg_sample_rate" x-model.number="ffmpegOutput.sample_rate">
                 </label>
             </div>
             <label>
                 Log path
-                <input type="text" name="liq_log_path" x-model="liquidsoap.log_path">
+                <input type="text" name="ffmpeg_log_path" x-model="ffmpegOutput.log_path">
             </label>
             <p style="color: var(--pico-muted-color);">
                 Program source (what feeds every stream below) now lives on
@@ -217,7 +217,7 @@
             <div style="margin-top:0.5rem;">
                 <small style="color:var(--pico-muted-color);">
                     Stream URL:
-                    <code x-text="'http://' + liquidsoap.icecast_host + ':' + liquidsoap.icecast_port + s.mount"></code>
+                    <code x-text="'http://' + ffmpegOutput.icecast_host + ':' + ffmpegOutput.icecast_port + s.mount"></code>
                 </small>
             </div>
 
@@ -249,7 +249,7 @@
                     <label>
                         Stream URL override
                         <input type="text" :value="s.url" @input="s.url = $event.target.value"
-                               :placeholder="'http://' + liquidsoap.icecast_host + ':' + liquidsoap.icecast_port + s.mount">
+                               :placeholder="'http://' + ffmpegOutput.icecast_host + ':' + ffmpegOutput.icecast_port + s.mount">
                         <small>Icecast "Listen Live" link for this stream. Auto-generated from host:port/mount — only set this if the public URL differs (e.g. behind a reverse proxy).</small>
                     </label>
                 </div>
@@ -278,7 +278,7 @@ function broadcastConfig(initial) {
     return {
         station:    initial.station    || {name:'', genre:'', description:'', url:''},
         icecast:    initial.icecast    || {},
-        liquidsoap: initial.liquidsoap || {},
+        ffmpegOutput: initial.ffmpeg_output || {},
         streams:    initial.streams    || [],
         addStream() {
             this.streams.push({

@@ -7,13 +7,14 @@ import (
 )
 
 // BroadcastConfig is the persisted state for the broadcast dashboard.
-// Stored as JSON at BroadcastConfigPath; both the Icecast XML and the
-// Liquidsoap .liq are generated from this at save time.
+// Stored as JSON at BroadcastConfigPath; the Icecast XML is generated
+// from this at save time, and FfmpegOutput's fields feed each stream's
+// generated ffmpeg command line (see ffmpeg_generator.go).
 type BroadcastConfig struct {
-	Station    StationDefaults `json:"station"`
-	Icecast    IcecastCfg      `json:"icecast"`
-	Liquidsoap LiquidsoapCfg   `json:"liquidsoap"`
-	Streams    []StreamConfig  `json:"streams"`
+	Station      StationDefaults `json:"station"`
+	Icecast      IcecastCfg      `json:"icecast"`
+	FfmpegOutput FfmpegOutputCfg `json:"ffmpeg_output"`
+	Streams      []StreamConfig  `json:"streams"`
 
 	// ProgramSource is what feeds every broadcast stream: either
 	// ProgramSourceStereoTool (see its own doc comment -- a station that
@@ -40,7 +41,7 @@ type StationDefaults struct {
 	URL         string `json:"url"`
 }
 
-// StreamConfig describes one Liquidsoap output.icecast() call.
+// StreamConfig describes one ffmpeg-encoded, Icecast-pushed stream.
 // Codec values: "mp3", "he-aac-v1", "he-aac-v2", "ogg".
 // Bitrate is in kbps; no preset — fully user-controlled. Used by every
 // codec except "ogg", which is quality (VBR) based instead — see Quality.
@@ -82,8 +83,9 @@ type IcecastCfg struct {
 	BurstSize      int    `json:"burst_size"`
 }
 
-// LiquidsoapCfg holds every field rendered into radio.liq.
-type LiquidsoapCfg struct {
+// FfmpegOutputCfg holds every field shared across each stream's
+// generated ffmpeg command line (see ffmpegPipeline).
+type FfmpegOutputCfg struct {
 	IcecastHost string `json:"icecast_host"`
 	IcecastPort int    `json:"icecast_port"`
 	JackInputID string `json:"jack_input_id"`
@@ -141,7 +143,7 @@ func DefaultBroadcastConfig() BroadcastConfig {
 			MaxClients:     100,
 			BurstSize:      65535,
 		},
-		Liquidsoap: LiquidsoapCfg{
+		FfmpegOutput: FfmpegOutputCfg{
 			IcecastHost: "localhost",
 			IcecastPort: 8000,
 			JackInputID: "ffmpeg",
