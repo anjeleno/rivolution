@@ -2010,7 +2010,7 @@ QString RDStation::audioDriverText(RDStation::AudioDriver dvr)
     break;
 
   case RDStation::Jack:
-    ret=QObject::tr("JACK Audio Connection Kit");
+    ret=QObject::tr("PipeWire/JACK");
     break;
 
   case RDStation::Alsa:

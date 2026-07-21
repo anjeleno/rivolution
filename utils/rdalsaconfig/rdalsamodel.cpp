@@ -25,6 +25,7 @@ RDAlsaModel::RDAlsaModel(unsigned samprate,QObject *parent)
   : QAbstractListModel(parent)
 {
   model_sample_rate=samprate;
+  model_pipewire_jack_enabled=true;
 
   LoadSystemConfig();
 }
@@ -32,7 +33,7 @@ RDAlsaModel::RDAlsaModel(unsigned samprate,QObject *parent)
 
 int RDAlsaModel::rowCount(const QModelIndex &parent) const
 {
-  return model_alsa_cards.size();
+  return model_alsa_cards.size()+1;
 }
 
 
@@ -40,7 +41,8 @@ Qt::ItemFlags RDAlsaModel::flags(const QModelIndex &index) const
 {
   Qt::ItemFlags flags=QAbstractListModel::flags(index);
 
-  if((model_alsa_cards.at(index.row())->id()=="Axia")&&
+  if((index.row()>0)&&
+     (model_alsa_cards.at(index.row()-1)->id()=="Axia")&&
      (model_sample_rate!=48000)) {
     flags=flags&Qt::ItemIsEnabled;
   }
@@ -55,7 +57,10 @@ QVariant RDAlsaModel::data(const QModelIndex &index,int role) const
 
   switch((Qt::ItemDataRole)role) {
   case Qt::DisplayRole:
-    return QVariant(model_alsa_cards.at(row)->prettyLongName());
+    if(row==0) {
+      return QVariant(tr("PipeWire/JACK"));
+    }
+    return QVariant(model_alsa_cards.at(row-1)->prettyLongName());
     break;
 
   case Qt::DecorationRole:
@@ -118,13 +123,20 @@ QModelIndex RDAlsaModel::indexOf(const QString &card_id) const
 
 bool RDAlsaModel::isEnabled(int row) const
 {
-  return model_alsa_cards.at(row)->isEnabled();
+  if(row==0) {
+    return model_pipewire_jack_enabled;
+  }
+  return model_alsa_cards.at(row-1)->isEnabled();
 }
 
 
 void RDAlsaModel::setEnabled(int row,bool state)
 {
-  return model_alsa_cards.at(row)->setEnabled(state);
+  if(row==0) {
+    model_pipewire_jack_enabled=state;
+    return;
+  }
+  model_alsa_cards.at(row-1)->setEnabled(state);
 }
 
 
@@ -224,6 +236,18 @@ bool RDAlsaModel::loadConfig(const QString &filename)
     }
   }
   fclose(f);
+
+  // The file only ever describes real ALSA devices -- PipeWire/JACK is
+  // never written into it (see saveConfig()). Its enabled state is
+  // derived, same meaning as before this option existed explicitly: no
+  // real device enabled means PipeWire/JACK is what's active.
+  model_pipewire_jack_enabled=true;
+  for(int i=0;i<model_alsa_cards.size();i++) {
+    if(model_alsa_cards.at(i)->isEnabled()) {
+      model_pipewire_jack_enabled=false;
+      break;
+    }
+  }
 
   return true;
 }

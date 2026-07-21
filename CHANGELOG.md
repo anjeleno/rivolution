@@ -17,9 +17,8 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   on every fresh install -- no hardware probing needed, since `caed`'s
   JACK driver is backed by `pipewire-jack` regardless of whether real
   audio hardware exists. Removes the FIXME placeholder from `postinst`.
-  A station that wants ALSA-driven physical hardware instead still needs
-  a manual database change today -- no GUI writes this column yet (see
-  `BACKLOG.md`).
+  A station that wants ALSA-driven physical hardware instead can switch
+  via RDAlsaConfig's new PipeWire/JACK option (below).
 - Removed every remaining `liquidsoap`/`liq_*` reference from active
   code and shipped config -- the dead pre-ffmpeg-swap Liquidsoap
   architecture, replaced 2026-07-09, still left real traces: `rivapi`'s
@@ -44,6 +43,21 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   mismatch (e.g. Program Source set on `/patchbay` after the first
   Save & Deploy already ran) now self-heals within one interval
   instead of requiring a manual redeploy.
+- RDAlsaConfig's device list gained an explicit "PipeWire/JACK" entry,
+  selectable the same way as any real ALSA device -- previously, no GUI
+  anywhere could actually write `AUDIO_CARDS.DRIVER` at all
+  (`RDStation::setCardDriver()` had zero callers in the whole codebase);
+  every working box got it set via a raw SQL edit, and "select JACK"
+  meant deselecting every listed device with nothing in the dialog
+  actually saying so. Wires the new entry directly to that
+  previously-dead method, and enforces it mutually exclusive with any
+  selected ALSA device live in the list (not just by convention):
+  selecting it deselects every device, selecting a device deselects it.
+  Labeled "PipeWire/JACK," not bare "JACK," to signal the real
+  mechanism and that it's a bridge, not the end state -- also updated
+  in RDAdmin's Edit Audio Ports read-only display and
+  `RDStation::audioDriverText()`, both of which previously said "JACK
+  Audio Connection Kit."
 
 ## 2026-07-20
 

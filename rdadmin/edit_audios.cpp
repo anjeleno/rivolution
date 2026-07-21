@@ -331,7 +331,7 @@ void EditAudioPorts::ReadRecord(int card)
 
   case RDStation::Jack:
     card_label_edit->setText(tr("[none]"));
-    card_driver_edit->setText("JACK Audio Connection Kit");
+    card_driver_edit->setText("PipeWire/JACK");
     edit_clock_box->setDisabled(true);
     edit_clock_label->setDisabled(true);
     for (int i=0;i<RD_MAX_PORTS;i++) {
