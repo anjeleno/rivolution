@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- `LoadBroadcastConfig` now fills in any `FfmpegOutput` field still at
+  Go's zero value (from an existing file) with `DefaultBroadcastConfig`'s
+  own defaults -- previously those defaults only applied when
+  `broadcast.json` didn't exist at all, so an existing file whose
+  `ffmpeg_output` section was blank (exactly what the liquidsoap rename
+  above did, with no migration by design) loaded as empty strings/zeros
+  instead of a working configuration. Also fixed the default `LogPath`
+  itself, which was wrong -- `/home/rd/Log/ffmpeg.log` (capital `Log`)
+  doesn't exist on a real system; the real directory is
+  `/home/rd/logs/ffmpeg.log` (confirmed against an actual running
+  station's log directory).
 - `syncStereoToolTarget` now validates its computed target actually has
   live JACK ports before patching `~/.asoundrc` or restarting
   `stereo-tool.service` -- previously it would blindly write whatever

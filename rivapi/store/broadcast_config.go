@@ -147,7 +147,7 @@ func DefaultBroadcastConfig() BroadcastConfig {
 			IcecastHost: "localhost",
 			IcecastPort: 8000,
 			JackInputID: "ffmpeg",
-			LogPath:     "/home/rd/Log/ffmpeg.log",
+			LogPath:     "/home/rd/logs/ffmpeg.log",
 			SampleRate:  48000,
 		},
 		Streams: []StreamConfig{
@@ -158,7 +158,16 @@ func DefaultBroadcastConfig() BroadcastConfig {
 }
 
 // LoadBroadcastConfig reads the JSON config at path. Returns
-// DefaultBroadcastConfig if the file does not exist yet.
+// DefaultBroadcastConfig if the file does not exist yet. For a file
+// that does exist, also fills in any FfmpegOutput field still at Go's
+// zero value from those same defaults -- found live 2026-07-21: the
+// liquidsoap->ffmpeg rename (no migration, by design) left an
+// already-saved file's ffmpeg_output section entirely blank, computing
+// a nonsense JACK client name and stalling Stereo Tool indefinitely
+// until an operator noticed and filled in every field by hand. A
+// config that's missing this section, for any reason, now starts from
+// a working configuration instead of an empty one -- still fully
+// overridable per-field, same as any other saved value.
 func LoadBroadcastConfig(path string) (BroadcastConfig, error) {
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -171,7 +180,29 @@ func LoadBroadcastConfig(path string) (BroadcastConfig, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return BroadcastConfig{}, err
 	}
+	applyFfmpegOutputDefaults(&cfg)
 	return cfg, nil
+}
+
+// applyFfmpegOutputDefaults fills any zero-valued FfmpegOutputCfg field
+// in cfg from DefaultBroadcastConfig()'s own values, in place.
+func applyFfmpegOutputDefaults(cfg *BroadcastConfig) {
+	d := DefaultBroadcastConfig().FfmpegOutput
+	if cfg.FfmpegOutput.IcecastHost == "" {
+		cfg.FfmpegOutput.IcecastHost = d.IcecastHost
+	}
+	if cfg.FfmpegOutput.IcecastPort == 0 {
+		cfg.FfmpegOutput.IcecastPort = d.IcecastPort
+	}
+	if cfg.FfmpegOutput.JackInputID == "" {
+		cfg.FfmpegOutput.JackInputID = d.JackInputID
+	}
+	if cfg.FfmpegOutput.LogPath == "" {
+		cfg.FfmpegOutput.LogPath = d.LogPath
+	}
+	if cfg.FfmpegOutput.SampleRate == 0 {
+		cfg.FfmpegOutput.SampleRate = d.SampleRate
+	}
 }
 
 // SaveBroadcastConfig writes cfg as JSON to path, creating parent
