@@ -568,6 +568,18 @@ routing... is hardcoded" entry above assumes a JACK-driven `caed`
 already exists and covers routing *from* it — this entry is about
 whether a JACK-driven card exists at all on a fresh install.
 
+**Partial mitigation shipped 2026-07-20, Ansible-provisioned installs
+only**: `rivolution-unified-installer`'s new `roles/audio_provisioning`
+(see that repo's `docs/specs/0004-deb-based-provisioning.md`) applies
+the same probe-and-set logic this entry describes, directly against the
+database, using the real/virtual hardware facts `roles/desktop` already
+gathers. Doesn't close this entry — a `.deb`-only install (no Ansible)
+still needs the manual RDAlsaConfig step — but worth knowing before
+picking this up: if/when this entry's general `postinst` fix lands,
+revisit that role too, since it may become fully redundant at that
+point rather than something that should keep duplicating the same
+logic.
+
 ## `liquidsoap`/`liq_*` references still present in the active codebase — deferred cleanup
 
 Flagged by Brandon 2026-07-20 while root-causing the entry above: the
@@ -754,6 +766,27 @@ resulting asset is manually substituted for whatever `build-deb.yml`
 auto-attaches to the release. This is a manual step with nothing
 enforcing it, and is worth automating once a decision is made either
 way.
+
+## No Debian-built `.deb` release target
+
+`build-deb.yml`'s x64 leg only ever runs on Ubuntu runners (26.04
+primary, 24.04 `-noble`); the arm64 leg is built by hand on `rivdev`
+(also Ubuntu). No Debian Trixie `.deb` has ever been published, despite
+spec 0002 in `rivolution-unified-installer` having specifically
+designed ARM64 *and* Debian source-build support. Confirmed a real,
+practical consequence 2026-07-20: `rivolution-unified-installer`'s
+rewrite around installing the released `.deb` by default
+(`docs/specs/0004-deb-based-provisioning.md` in that repo) means its
+`rivolution_install_method: deb` path can't target Debian at all until
+this closes — `rivolution_install_method: source` (builds a local
+`.deb` from a checkout) is the only way onto Debian with that playbook
+today.
+
+**Needed, not yet built:** a Debian leg in `build-deb.yml`, or a
+documented decision that Debian support is source-build-only going
+forward and spec 0002's original intent has narrowed. Whichever way
+this goes, update `rivolution-unified-installer`'s spec 0004 to match
+once it's decided.
 
 ## Per-function AVX2/BMI2 multi-versioning for audio processing code
 

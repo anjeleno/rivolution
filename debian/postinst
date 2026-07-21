@@ -80,6 +80,22 @@ case "$1" in
 	      cp /usr/share/rivolution/alsa/rd.asoundrc "$rd_home/.asoundrc"
 	      chown rd:rd "$rd_home/.asoundrc" 2>/dev/null || true
 	  fi
+
+	  # Ubuntu's stock PAM stack has no pam_xauth module anywhere
+	  # (confirmed 2026-07-20 by grepping /etc/pam.d/ on a real box) --
+	  # there is no automatic mechanism that hands root a copy of rd's
+	  # X11 cookie on sudo, on any install, physical or virtual. Without
+	  # this, "sudo rdalsaconfig"/"rdconfig" fails an X11/xcb
+	  # authorization error every time -- most visible under xrdp (no
+	  # separate physical console to silently fall back to), but not
+	  # actually specific to it. Safe to create even before rd has ever
+	  # logged into a desktop session: a symlink to a not-yet-existing
+	  # ~/.Xauthority is a harmless dangling link that starts resolving
+	  # the first time X11 creates that file, no further action needed.
+	  if test -n "$rd_home" && test ! -L /root/.Xauthority ; then
+	      rm -f /root/.Xauthority
+	      ln -s "$rd_home/.Xauthority" /root/.Xauthority
+	  fi
       fi
 
       # Legacy rivendell/pypad system accounts -- upstream's fixed
