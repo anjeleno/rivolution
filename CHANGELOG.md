@@ -7,6 +7,20 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-21
+
+- `rddbmgr --create --generate-audio`'s fresh-install seeding left every
+  `AUDIO_CARDS` row's `DRIVER` at its schema default (`None`) --
+  `debian/postinst` carried a literal `# FIXME: Configure ALSA Here!`
+  placeholder for the entire life of this step, and nothing ever set a
+  card's driver. Card 0 now defaults to JACK (`utils/rddbmgr/create.cpp`)
+  on every fresh install -- no hardware probing needed, since `caed`'s
+  JACK driver is backed by `pipewire-jack` regardless of whether real
+  audio hardware exists. Removes the FIXME placeholder from `postinst`.
+  A station that wants ALSA-driven physical hardware instead still needs
+  a manual database change today -- no GUI writes this column yet (see
+  `BACKLOG.md`).
+
 ## 2026-07-20
 
 - `debian/postinst` now symlinks `/root/.Xauthority` to the `rd` user's
