@@ -523,14 +523,25 @@ correctly — `/patchbay` showed all four expected links (both
 `rivendell_0` → Stereo Tool input ports, both Stereo Tool output ports
 → `ffmpeg-192`) saved immediately after.
 
-**Not yet fixed:** the trap itself — whichever of `/broadcast` Save &
-Deploy or `/patchbay`'s Program Source save runs first, the other one's
-effect on Stereo Tool's routing is silently deferred with no warning —
-needs either a UI nudge or real install documentation calling it out
-explicitly. A wiki write-up for `.deb` package installs (distinct from
-the existing from-source build walkthrough) is planned to cover this
-with an unmissable callout, alongside the audio-driver provisioning gap
-above.
+**Update 2026-07-21 (shipped): the ordering trap now self-heals.**
+`syncStereoToolTarget` was only ever called from the explicit
+`/broadcast` Save & Deploy action — the already-running 30s patchbay
+link reconciler (`rivapi/main.go`'s ticker → `ReconcileLinks`) never
+touched Stereo Tool's target at all, which is exactly why the trap
+needed a manual re-click to clear. Added `ReconcileStereoToolTarget`
+(`rivapi/store/ffmpeg_generator.go`), called from that same ticker
+alongside `ReconcileLinks` — loads the current `BroadcastConfig` and
+re-runs the identical sync every 30 seconds, not just at deploy time.
+Cheap when nothing's wrong: `syncStereoToolTarget` itself still no-ops
+immediately unless `ProgramSource` is the Stereo Tool sentinel, and only
+restarts `stereo-tool.service` when the target actually changed. Whichever
+of Save & Deploy or Program Source runs first, the mismatch now
+corrects itself within one reconcile interval instead of requiring an
+operator to notice and manually redeploy. The wiki's
+[`Deb-Package-Install`](https://github.com/anjeleno/rivolution/wiki/Deb-Package-Install)
+callout about this ordering stays as useful context for why a fresh
+install can take up to ~30 seconds to settle, but is no longer the only
+thing standing between a fresh install and working audio.
 
 ## Nothing in any GUI can actually set `AUDIO_CARDS.DRIVER` — RDAlsaConfig only manages ALSA device selection, not the driver column
 

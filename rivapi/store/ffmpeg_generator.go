@@ -143,6 +143,29 @@ func syncStereoToolTarget(cfg BroadcastConfig) error {
 	return nil
 }
 
+// ReconcileStereoToolTarget loads the current BroadcastConfig from
+// configPath and re-runs syncStereoToolTarget against it. Called
+// periodically (see rivapi/main.go's reconcile loop), not just from an
+// explicit Save & Deploy -- confirmed live 2026-07-20 that Save & Deploy
+// alone leaves a real gap: setting Program Source on /patchbay
+// deliberately doesn't trigger a redeploy (see BroadcastConfig.
+// ProgramSource's own doc comment), so if Save & Deploy already ran
+// once before Program Source was ever set, ~/.asoundrc is left
+// pointing at the dead shipped-template target until an operator
+// happens to notice and re-run Save & Deploy by hand. Polling this on
+// the same interval as ReconcileLinks closes that gap automatically,
+// and is just as cheap to call when nothing's actually wrong:
+// syncStereoToolTarget itself no-ops immediately unless ProgramSource
+// is the Stereo Tool sentinel, and only restarts stereo-tool.service
+// when the target actually changed.
+func ReconcileStereoToolTarget(configPath string) error {
+	cfg, err := LoadBroadcastConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("loading broadcast config: %w", err)
+	}
+	return syncStereoToolTarget(cfg)
+}
+
 // StreamUnitID deterministically derives a task-shaped 16-hex-char ID
 // from a stream's mount, so redeploying the same set of streams reuses
 // the same unit names instead of creating new ones every save (and so
