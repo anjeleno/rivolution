@@ -231,6 +231,10 @@ binary-arch: build-arch
 	cp conf/udev/99-ptp.rules debian/rivolution/usr/share/rivolution/udev/
 	mkdir -p debian/rivolution/usr/share/rivolution/alsa
 	cp conf/alsa/rd.asoundrc debian/rivolution/usr/share/rivolution/alsa/
+	mkdir -p debian/rivolution/usr/share/rivolution/vlc
+	cp conf/vlc/vlc-rivendell-wrapper.sh debian/rivolution/usr/share/rivolution/vlc/
+	chmod 755 debian/rivolution/usr/share/rivolution/vlc/vlc-rivendell-wrapper.sh
+	cp conf/vlc/vlc-rivendell.desktop debian/rivolution/usr/share/rivolution/vlc/
 
 	dh_strip_nondeterminism
 	dh_compress

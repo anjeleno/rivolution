@@ -9,6 +9,26 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- A desktop-launched VLC never reached Rivendell's audio graph at all,
+  even with its own audio output set to JACK -- confirmed live that
+  a normal desktop session runs its own per-user PipeWire instance,
+  entirely separate from the system-scope one `caed`/Stereo Tool/
+  `rivapi` all use (the same class of scope mismatch as the Stereo
+  Tool Device ID issue above, different mechanism). Added
+  `vlc-rivendell-wrapper.sh`, which sets `XDG_RUNTIME_DIR=/run/
+  pipewire-system` and a fixed `--jack-name` (never VLC's own
+  PID-based default) before launching the real binary, and a
+  `~/.local/share/applications/vlc.desktop` override (takes priority
+  over the system-wide entry for the same desktop-file ID, so an
+  `apt upgrade` of the `vlc` package itself can't revert it) that
+  points at the wrapper instead. `rivapi` now also seeds a one-time
+  default patchbay connection from VLC's fixed JACK ports to
+  Rivendell's first input bus (`EnsureVLCDefaultLink`,
+  `rivapi/store/patchbay.go`) on both a fresh install and an upgrade,
+  so this works out of the box without an operator drawing the
+  connection by hand in `/patchbay` first -- an operator who later
+  removes it on purpose stays removed (a marker file distinguishes
+  "never offered" from "offered, then explicitly undone").
 - Stereo Tool never appeared as a JACK output on a genuinely fresh
   install, even with `/patchbay`'s Program Source correctly set to it --
   `~/.stereo_tool.rc`'s `[Soundcard - Normal output]` section's own

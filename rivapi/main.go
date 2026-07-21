@@ -125,6 +125,13 @@ func main() {
 			if err := store.ReconcileStereoToolDeviceIDs(); err != nil {
 				log.Printf("stereo tool device ID reconcile: %v", err)
 			}
+			// One-time (see EnsureVLCDefaultLink's own doc comment for
+			// why "one-time" rather than every tick) -- cheap no-op via
+			// its marker-file check once it's run, same interval as
+			// everything else here just for one consistent loop.
+			if err := store.EnsureVLCDefaultLink(store.DesiredLinksPath); err != nil {
+				log.Printf("vlc default link seed: %v", err)
+			}
 		}
 	}()
 
