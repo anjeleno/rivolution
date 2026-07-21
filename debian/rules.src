@@ -189,7 +189,7 @@ binary-arch: build-arch
 	cp UPGRADING debian/rivolution/usr/share/doc/rivolution/
 	cp CODINGSTYLE debian/rivolution/usr/share/doc/rivolution/
 	cp conf/*.conf debian/rivolution/usr/share/doc/rivolution/
-	cat conf/rd.conf-sample | sed s/SyslogFacility=1/SyslogFacility=23/ > debian/rivolution/usr/share/doc/rivolution/rd.conf-sample
+	cp conf/rd.conf-sample debian/rivolution/usr/share/doc/rivolution/rd.conf-sample
 	cp conf/asound.conf-sample debian/rivolution/usr/share/doc/rivolution/
 	mkdir -p debian/rivolution/usr/share/rivolution
 	cp conf/syslog.conf-sample debian/rivolution/usr/share/rivolution/

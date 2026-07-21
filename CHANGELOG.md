@@ -9,6 +9,47 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- The shipped `rd.conf-sample`'s default `SyslogFacility=1` (USER) never
+  matched `conf/syslog.conf-sample`'s `LOCAL7.INFO` rsyslog rule
+  (`facility 23`), so a fresh install's Rivendell syslog output never
+  reached `/var/log/rivendell/operations` at all -- `debian/rules.src`
+  already had a `sed` patch correcting this for a separate, unused
+  documentation-only copy of the file, but never the real one
+  `postinst` actually installs. Fixed at the source (`SyslogFacility=23`
+  in `conf/rd.conf-sample` itself); simplified the now-redundant `sed`
+  workaround to a plain `cp`. Also added `/home/rd/logs` (rd-owned) to
+  `postinst` for user-level logs (ffmpeg, rdimport, etc.) -- separate
+  from `/var/log/rivendell`, which is root:syslog-owned and not
+  writable by `rd`.
+- `LoadBroadcastConfig` now fills in any `FfmpegOutput` field still at
+  Go's zero value (from an existing file) with `DefaultBroadcastConfig`'s
+  own defaults -- previously those defaults only applied when
+  `broadcast.json` didn't exist at all, so an existing file whose
+  `ffmpeg_output` section was blank (exactly what the liquidsoap rename
+  above did, with no migration by design) loaded as empty strings/zeros
+  instead of a working configuration. Also fixed the default `LogPath`
+  itself, which was wrong -- `/home/rd/Log/ffmpeg.log` (capital `Log`)
+  doesn't exist on a real system; the real directory is
+  `/home/rd/logs/ffmpeg.log` (confirmed against an actual running
+  station's log directory).
+- `syncStereoToolTarget` now validates its computed target actually has
+  live JACK ports before patching `~/.asoundrc` or restarting
+  `stereo-tool.service` -- previously it would blindly write whatever
+  string it computed and restart Stereo Tool regardless, which across
+  three separate incidents (a dead hardcoded default, an ordering trap,
+  and a stale config value from the liquidsoap rename below) produced
+  the identical symptom: Stereo Tool endlessly retrying a target that
+  was never real, accumulating orphaned JACK port instances each retry.
+  When the target doesn't resolve, it now scans live ports for a client
+  matching the configured mount instead (`detectLiveStreamClientID`) and
+  surfaces the real answer on `/broadcast` -- "Configured JACK client is
+  X, which has no live ports; your streams are actually running as Y" --
+  with a one-click "Use Y and redeploy" button
+  (`POST /broadcast/apply-detected-jack-id`) that applies the detected
+  value and redeploys, rather than a warning that just describes the
+  problem. `store.LastStereoToolTargetStatus()` is updated by both the
+  explicit Save & Deploy path and the 30s reconciler tick, so the
+  banner reflects whichever caught it first.
 - `rivendell.service` had no ordering dependency on `mariadb.service` at
   all -- only `Restart=always` masked this, since a failed *first*
   start attempt (common on a fresh boot, before MariaDB is ready) still

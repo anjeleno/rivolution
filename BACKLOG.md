@@ -543,6 +543,27 @@ callout about this ordering stays as useful context for why a fresh
 install can take up to ~30 seconds to settle, but is no longer the only
 thing standing between a fresh install and working audio.
 
+**Update 2026-07-21 (shipped): the whole class of "target string is
+wrong" bugs is now caught at one checkpoint instead of needing a fix
+per cause.** Found live the same day, testing the reconciler fix above
+on a real rebuilt install: the liquidsoap→ffmpeg rename (no migration,
+by design) left `FfmpegOutput.JackInputID` empty in an already-saved
+`broadcast.json`, so `streamJackClientID` computed `rivolution-192`
+instead of the actually-running `ffmpeg-192` — a third, different way
+for `syncStereoToolTarget`'s target string to be wrong, on top of the
+07-10 dead-default and 07-20 ordering-trap cases, producing the
+identical symptom (Stereo Tool endlessly retrying a target that was
+never real, accumulating orphaned JACK ports each attempt). Rather
+than patch this third cause individually, `syncStereoToolTarget` now
+checks whether its computed target actually has live JACK ports before
+touching `~/.asoundrc` or restarting `stereo-tool.service` at all — this
+closes all three historical cases (and any future one shaped the same
+way) at the single checkpoint where the target is used, not the many
+places it could be computed wrong. When the check fails,
+`detectLiveStreamClientID` scans live ports for a client actually
+matching the configured mount and surfaces it on `/broadcast` with a
+one-click "Use X and redeploy" fix — see `CHANGELOG.md`.
+
 ## Groups and Carts nav links hidden — not yet meaningful in the new dashboard
 
 `/groups` and `/carts` (from the original `rivapi` Phase 1 work) are

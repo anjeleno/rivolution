@@ -17,6 +17,7 @@ type broadcastPageData struct {
 	Config     store.BroadcastConfig
 	ConfigJS   template.JS // safe for Alpine x-data initialization
 	SaveResult *broadcastSaveResult
+	StereoTool store.StereoToolTargetStatus
 }
 
 type broadcastSaveResult struct {
@@ -39,6 +40,7 @@ func (h *Handler) broadcastPageData(r *http.Request, result *broadcastSaveResult
 		Config:     cfg,
 		ConfigJS:   template.JS(cfgJSON),
 		SaveResult: result,
+		StereoTool: store.LastStereoToolTargetStatus(),
 	}, nil
 }
 
@@ -199,6 +201,54 @@ func parseBroadcastForm(r *http.Request) (store.BroadcastConfig, error) {
 	}
 
 	return cfg, nil
+}
+
+// BroadcastApplyDetectedJackID handles POST /broadcast/apply-detected-jack-id --
+// the one-click fix for the mismatch store.LastStereoToolTargetStatus
+// surfaces: applies the live-detected JACK client base name and
+// redeploys, instead of just telling the operator where to go look.
+func (h *Handler) BroadcastApplyDetectedJackID(w http.ResponseWriter, r *http.Request) {
+	result := &broadcastSaveResult{}
+	status := store.LastStereoToolTargetStatus()
+	if status.OK || status.DetectedID == "" {
+		result.Error = "no detected fix available -- reload the page after the next reconcile tick"
+		data, _ := h.broadcastPageData(r, result)
+		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
+		return
+	}
+
+	cfg, err := store.LoadBroadcastConfig(h.cfg.BroadcastConfigPath)
+	if err != nil {
+		result.Error = "loading config: " + err.Error()
+		data, _ := h.broadcastPageData(r, result)
+		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
+		return
+	}
+	cfg.FfmpegOutput.JackInputID = status.DetectedID
+	if err := store.SaveBroadcastConfig(cfg, h.cfg.BroadcastConfigPath); err != nil {
+		result.Error = "saving config: " + err.Error()
+		data, _ := h.broadcastPageData(r, result)
+		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
+		return
+	}
+	result.Steps = append(result.Steps, fmt.Sprintf("JACK client base name set to %q (detected from live streams).", status.DetectedID))
+
+	if err := store.DeployFfmpegStreams(cfg); err != nil {
+		result.Error = "redeploying: " + err.Error()
+		data, _ := h.broadcastPageData(r, result)
+		_ = tmplBroadcast.ExecuteTemplate(w, "base", data)
+		return
+	}
+	result.Steps = append(result.Steps, "Streams redeployed.")
+	result.Success = true
+	data, err := h.broadcastPageData(r, result)
+	if err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+		return
+	}
+	if err := tmplBroadcast.ExecuteTemplate(w, "base", data); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+	}
 }
 
 func parseInt(s string) (int, error) {

@@ -33,6 +33,27 @@
 {{end}}
 {{end}}
 
+{{if not .StereoTool.OK}}
+<div role="alert" style="padding:1rem; border-left:4px solid var(--pico-del-color); margin-bottom:1.5rem;">
+    <strong>Stereo Tool can't reach its target.</strong>
+    <p style="margin:0.5rem 0;">
+        Configured JACK client is <code>{{.StereoTool.ConfiguredID}}</code>,
+        which has no live ports for mount <code>{{.StereoTool.Mount}}</code>.
+        {{if .StereoTool.DetectedID}}
+        Your streams are actually running as <code>{{.StereoTool.DetectedID}}-*</code>.
+        {{else}}
+        No live stream was found for this mount either -- check that it's
+        actually deployed below.
+        {{end}}
+    </p>
+    {{if .StereoTool.DetectedID}}
+    <form method="POST" action="/broadcast/apply-detected-jack-id" style="margin:0;">
+        <button type="submit">Use "{{.StereoTool.DetectedID}}" and redeploy</button>
+    </form>
+    {{end}}
+</div>
+{{end}}
+
 <form id="broadcast-form"
       method="POST"
       action="/broadcast/save"
