@@ -560,7 +560,7 @@ assumption) found:
   `card_driver_edit->setReadOnly(true)`) — it shows "JACK Audio
   Connection Kit"/"ALSA"/"AudioScience HPI"/"[none]" but has no control
   to change it.
-- `RDStation::setDriver()` (`lib/rdstation.cpp`, the only method that
+- `RDStation::setCardDriver()` (`lib/rdstation.cpp`, the only method that
   writes this column) has **zero callers anywhere in the codebase** —
   confirmed via a full-tree grep, including the other Rivendell/
   Rivolution checkouts on this box (`rivendell`,
@@ -609,7 +609,7 @@ for the fix above --
   convention.
 - Implementation hook: `RDAlsaConfig::saveData()`/`SaveConfig()`
   (`utils/rdalsaconfig/rdalsaconfig.cpp`) already runs once, right
-  place to also call `RDStation::setDriver()` — writing `Jack` when
+  place to also call `RDStation::setCardDriver()` — writing `Jack` when
   "PipeWire/JACK" is selected, `Alsa` when a real device is selected
   instead. No new plumbing needed on the database side; this genuinely
   is just wiring up an existing, currently-dead method.
