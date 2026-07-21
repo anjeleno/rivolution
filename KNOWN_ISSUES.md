@@ -331,23 +331,3 @@ running on (not over the network) and whitelist your IP from its own
 settings — the access-denied page itself shows the exact IP to add and
 the accepted formats. This only needs to be done once per machine.
 
-## RDAdmin's "Reset Dropbox" button doesn't make the running system pick up path/format changes — fixed 2026-07-17, pending real-world confirmation
-
-**Symptom:** after changing a Dropbox's watch path or `CODING_FORMAT`
-override in RDAdmin, clicking "Reset Dropbox" (which promises to make
-already-imported files eligible for reimport) doesn't cause the
-running system to actually watch the new path or use the new format —
-it keeps behaving as if configured the old way.
-
-**Cause:** each Dropbox is watched by a worker thread that `rdservice`
-starts once, from the database, and keeps running until told
-otherwise. Every other Dropbox list action (Add, Edit, Duplicate,
-Delete) has always told it to reload, by sending an
-`RDNotification::DropboxType` notification that `ripcd` picks up and
-turns into a live signal to `rdservice` — the same mechanism that's
-worked all along. "Reset Dropbox," a separate button inside the
-per-dropbox edit dialog, only cleared the already-imported-files cache
-and never sent that notification.
-
-**Fix:** "Reset Dropbox" now sends the same notification Add/Edit/
-Duplicate/Delete already do.
