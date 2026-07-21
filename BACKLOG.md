@@ -959,3 +959,41 @@ one footgun for another.
 Not fixed yet: Brandon flagged this 2026-07-17 as worth strengthening,
 explicitly deferred to a future session rather than done live against
 `postinst` the same night as three other production changes.
+
+## Tailscale dashboard "Network" page — spec 0014's other half, still fully unbuilt
+
+`docs/specs/0014-tailscale-integration.md` designs Tailscale as three
+pieces: an Ansible role (install + enable, opt-in), a dashboard
+"Network" page (auth-key activation, MagicDNS/status display, TLS cert
+provisioning via `tailscale cert`), and TLS-serving support in `rivapi`
+itself. Confirmed 2026-07-20: only the first piece exists
+(`rivolution-unified-installer`'s `roles/tailscale`, shipped the same
+day). The dashboard half has no route, no handler file, and no
+`conf/sudoers.d/rivapi` entries for `tailscale up`/`cert`/`status` —
+`base.html`'s nav only lists System/Streaming/Patchbay/Mode/Tasks/
+Backup, nothing Tailscale-related.
+
+**Needed, not yet built:** the actual dashboard page — auth-key paste +
+activate, MagicDNS/status display, TLS cert provisioning — plus the
+matching `rivapi` sudoers grant and `RIVAPI_TLS_CERT`/`RIVAPI_TLS_KEY`/
+`RIVAPI_TLS_CERT_DIR` env var support spec 0014 already calls for.
+Flagged as a priority for the `rc1-3` candidate.
+
+## Ubuntu Applications Menu still says "Rivendell", not "Rivolution"
+
+The 2026-07-17 desktop-menu investigation fixed a real, narrow bug
+(RDMonitor's shortcut landing in a generic "Other" category instead of
+with the rest of the Rivendell/Rivolution tools — see `CHANGELOG.md`)
+but didn't touch this: the actual top-level Applications Menu
+**category/submenu itself** (Applications -> Rivendell -> ...) is still
+literally labeled "Rivendell," not "Rivolution" — every rebranded icon
+and tool still files under the old name at the menu-navigation level.
+Flagged by Brandon 2026-07-20 as a priority for the `rc1-3` candidate.
+
+**Needed, not yet built:** find and update wherever the submenu's
+display name is actually declared (likely `xdg/rivendell-rivendell.menu`
+and/or a `.directory` file defining the category's `Name=`) and rename
+it to Rivolution, consistent with everything else the 2026-06-24 icon/
+branding pass already covers. Not yet investigated in detail -- start
+from the same `xdg/*.menu`/`.desktop` files the RDMonitor fix already
+traced.
