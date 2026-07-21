@@ -26,6 +26,23 @@ m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 AC_CONFIG_MACRO_DIR([m4])
 
 #
+# Full package version (upstream + Debian revision, e.g. "6.0.0~rc1-4"),
+# shown in RDAdmin's System Information dialog -- distinct from
+# PACKAGE_VERSION/VERSION above, which never changes for a
+# same-upstream-version rebuild (see ARCHITECTURE.md's versioning
+# scheme), so the dialog alone couldn't otherwise distinguish e.g.
+# rc1-2 from rc1-4. Read directly from debian/changelog's current top
+# entry so there's nothing separate to keep in sync -- falls back to
+# the bare upstream version if dpkg-parsechangelog isn't available
+# (e.g. building on a non-Debian host) or debian/changelog is missing.
+#
+RD_FULL_VERSION=m4_esyscmd(dpkg-parsechangelog -l debian/changelog -S Version 2>/dev/null | tr -d '\n')
+if test -z "$RD_FULL_VERSION" ; then
+   RD_FULL_VERSION="$PACKAGE_VERSION"
+fi
+AC_DEFINE_UNQUOTED(RD_FULL_VERSION,"$RD_FULL_VERSION",[Full package version, including the Debian revision])
+
+#
 # API Versioning
 #
 AC_SUBST(PYTHONAPI_VERSION,m4_esyscmd(cat versions/PYTHONAPI_VERSION))

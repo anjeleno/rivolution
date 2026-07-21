@@ -9,6 +9,17 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- RDAdmin's System Information dialog showed only the upstream package
+  version (e.g. "6.0.0~rc1"), which by design stays identical across
+  every Debian revision of the same upstream milestone (rc1-1 through
+  rc1-4 all show the same string -- see `ARCHITECTURE.md`'s versioning
+  scheme) -- meaning there was no way to tell which of those revisions
+  was actually installed just by looking at the dialog. `configure.ac`
+  now also defines `RD_FULL_VERSION`, read directly from
+  `debian/changelog`'s current top entry via `dpkg-parsechangelog` (no
+  separate file to keep in sync; falls back to the bare upstream
+  version if that's unavailable), and `info_dialog.cpp` now displays
+  that instead of the bare upstream version.
 - A desktop-launched VLC never reached Rivendell's audio graph at all,
   even with its own audio output set to JACK -- confirmed live that
   a normal desktop session runs its own per-user PipeWire instance,
