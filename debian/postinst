@@ -145,10 +145,6 @@ case "$1" in
 	 cp /usr/share/rivolution/rivendell-env.sh /etc/profile.d/
       fi
 
-      #
-      # FIXME: Configure ALSA Here!
-      #
-
       # Database: a fresh install creates and seeds an empty database
       # (mirrors scripts/rivolution-first-run.sh, folded in here so a
       # .deb install needs no separate manual step); an upgrade only

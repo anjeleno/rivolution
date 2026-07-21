@@ -2075,6 +2075,16 @@ bool MainObject::InititalizeNewDb(const QString &station_name,bool gen_audio,
     sql=QString("insert into `AUDIO_CARDS` set ")+
       "`STATION_NAME`='"+RDEscapeString(station_name)+"',"+
       QString::asprintf("`CARD_NUMBER`=%d",i);
+    if(i==0) {
+      // Card 0 defaults to JACK (RDStation::AudioDriver's Jack value,
+      // lib/rdstation.h) rather than the schema's own None default --
+      // caed's JACK driver is backed by pipewire-jack regardless of
+      // whether real audio hardware exists, so this gives every fresh
+      // install a working audio path with no manual RDAlsaConfig step.
+      // A station that genuinely wants ALSA-driven hardware can still
+      // switch card 0 away from this default.
+      sql+=",`DRIVER`=2";
+    }
     if(!RDSqlQuery::apply(sql,err_msg)) {
       return false;
     }

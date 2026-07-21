@@ -532,54 +532,6 @@ the existing from-source build walkthrough) is planned to cover this
 with an unmissable callout, alongside the audio-driver provisioning gap
 above.
 
-## Fresh installs never provision a working audio card — `postinst`'s ALSA/JACK step was never implemented
-
-`debian/postinst` has carried a literal `# FIXME: Configure ALSA Here!`
-placeholder for the entire life of the audio-card provisioning step —
-still present as of this writing. `rddbmgr --create --generate-audio`'s
-fresh-install seeding (`utils/rddbmgr/create.cpp`) only inserts
-placeholder `AUDIO_CARDS`/`AUDIO_INPUTS`/`AUDIO_OUTPUTS` rows, leaving
-`DRIVER` at its schema default (`None`). Nothing in the installer ever
-probes physical or virtual sound hardware, or sets a card's driver to
-JACK. Every box that has worked so far got that done by hand, once, in
-RDAdmin's Edit Audio Ports dialog — not by the installer, which has
-never done this for anyone. See `ARCHITECTURE.md`'s "Recurring mistake
-class: dev-box state hides real install bugs" (Instance 5) for the full
-trace; discovered 2026-07-20 diagnosing a Stereo Tool failure on a
-fresh DigitalOcean droplet install.
-
-**Needed, not yet built:** a real probe/detection step, covering both
-physical and virtual sound hardware, that auto-configures
-`AUDIO_CARDS.DRIVER` and generates the default patches — no manual
-RDAdmin/RDAlsaConfig step required. Brandon's own framing, 2026-07-20:
-this needs to work "at any stage," not just once at install time — so
-whatever picks this up should cover both a fresh-install probe and some
-way to re-detect later (hardware changed, a VM's virtualized device
-profile changed, etc.), not just a one-shot `postinst` step.
-
-**Not blocking rc1-2**, confirmed with Brandon 2026-07-20: the manual
-RDAlsaConfig workaround (deselect every listed device, Save — see the
-next entry) is a real, repeatable, now-documented path to a working
-install (see the wiki's `.deb` package install page). This entry is the
-real long-term fix, deferred, not a release blocker.
-
-Related, but one layer downstream: the "Audio processing chain
-routing... is hardcoded" entry above assumes a JACK-driven `caed`
-already exists and covers routing *from* it — this entry is about
-whether a JACK-driven card exists at all on a fresh install.
-
-**Partial mitigation shipped 2026-07-20, Ansible-provisioned installs
-only**: `rivolution-unified-installer`'s new `roles/audio_provisioning`
-(see that repo's `docs/specs/0004-deb-based-provisioning.md`) applies
-the same probe-and-set logic this entry describes, directly against the
-database, using the real/virtual hardware facts `roles/desktop` already
-gathers. Doesn't close this entry — a `.deb`-only install (no Ansible)
-still needs the manual RDAlsaConfig step — but worth knowing before
-picking this up: if/when this entry's general `postinst` fix lands,
-revisit that role too, since it may become fully redundant at that
-point rather than something that should keep duplicating the same
-logic.
-
 ## `liquidsoap`/`liq_*` references still present in the active codebase — deferred cleanup
 
 Flagged by Brandon 2026-07-20 while root-causing the entry above: the
@@ -624,22 +576,76 @@ project's own "don't leave things unfinished without calling it out"
 rule either way, as long as whatever's left is explicitly marked as a
 known exception rather than silently lingering.
 
-## RDAlsaConfig gives no explicit way to select JACK — deselecting all listed cards is the only way, unlabeled
+## Nothing in any GUI can actually set `AUDIO_CARDS.DRIVER` — RDAlsaConfig only manages ALSA device selection, not the driver column
 
-Today, using the JACK driver isn't a control anywhere in RDAlsaConfig's
-own UI — it's an emergent side effect of the "ALSA Sound Devices" list
-having nothing checked when Save is clicked. Confirmed live 2026-07-20:
-an empty device list (no real hardware on a DigitalOcean droplet), Save
-with nothing selected, and Card 0's driver became "JACK Audio
-Connection Kit" in RDAdmin's Edit Audio Ports afterward. On a VM that
-does expose something (e.g. a virtualized "Intel HDA" device under some
-hypervisors), an operator has to know to explicitly *un*check it, with
-nothing in the dialog explaining that doing so is what selects JACK.
+Traced 2026-07-21 while scoping the fresh-install JACK-default fix
+below: this entry originally described RDAlsaConfig's "deselect every
+listed device, click Save" gesture as an *unlabeled* way to select
+JACK. That undersold the actual gap. Direct code tracing (not
+assumption) found:
 
-**Not urgent, not yet scoped** — flagged by Brandon 2026-07-20 while
-working through the fresh-droplet-install audio investigation above,
-deliberately deferred. Worth making JACK an explicit, visible option in
-RDAlsaConfig's own UI instead of an implicit gesture.
+- `RDAlsaConfig` (`utils/rdalsaconfig/rdalsaconfig.cpp`) only ever
+  writes `/etc/asound.conf` (an ALSA hardware enable/disable list,
+  `RDAlsaModel::saveConfig()`) — no code path in this tool touches the
+  database at all.
+- `RDAdmin`'s "Edit Audio Ports" dialog displays Card Driver as a
+  **read-only** field (`rdadmin/edit_audios.cpp:65`,
+  `card_driver_edit->setReadOnly(true)`) — it shows "JACK Audio
+  Connection Kit"/"ALSA"/"AudioScience HPI"/"[none]" but has no control
+  to change it.
+- `RDStation::setDriver()` (`lib/rdstation.cpp`, the only method that
+  writes this column) has **zero callers anywhere in the codebase** —
+  confirmed via a full-tree grep, including the other Rivendell/
+  Rivolution checkouts on this box (`rivendell`,
+  `rivendell-v6-deprecated`, `rivendell-work`).
+
+So every previously-working box got `AUDIO_CARDS.DRIVER` set via a raw
+SQL edit, not "RDAdmin's Edit Audio Ports dialog" as this entry
+previously claimed — that claim was wrong and is corrected here.
+Live-observed correlation on the 2026-07-20 droplet (an empty
+`asound.conf` alongside a JACK-driven Card 0) is consistent with either
+a real sync mechanism this trace missed, or simply both having been set
+correctly by hand at the same time with nothing keeping them in sync
+since — not yet settled either way; a live before/after test (toggle
+RDAlsaConfig's device selection, check the DB) would confirm it, not
+yet run.
+
+**Now load-bearing, not just a UX nitpick**, given the fresh-install
+default below: once `postinst` defaults Card 0 to JACK unconditionally,
+a station that genuinely wants ALSA-driven physical hardware has **no
+working path at all** to switch to it short of a manual SQL edit.
+**Needed:** make `RDAlsaConfig` write `AUDIO_CARDS.DRIVER` for real when
+an operator selects a specific device (and back to JACK when none are
+selected) — turning today's implicit, database-blind gesture into the
+actual control surface it's already assumed to be. Also flagged by
+Brandon as something to revisit properly once PipeWire's own native
+`caed` driver work (see `ROADMAP.md`'s "Full modernization" section)
+gets a real planning pass — this may get superseded rather than fixed
+in place, depending what that redesign decides about audio-device
+selection generally.
+
+**Design refined 2026-07-21, not yet built:** Brandon's concrete shape
+for the fix above --
+- Label the explicit driver choice **"PipeWire/JACK"**, not bare
+  "JACK" — both in the new RDAlsaConfig control and in RDAdmin's Edit
+  Audio Ports read-only display (currently "JACK Audio Connection
+  Kit," `rdadmin/edit_audios.cpp:334`). Deliberately named to signal
+  the real mechanism (`caed`'s JACK driver, backed by `pipewire-jack`)
+  and that it's a bridge, not the end state — this label should change
+  again once `caed` gains a genuinely native PipeWire driver.
+- Selecting "PipeWire/JACK" in RDAlsaConfig must **automatically
+  deselect every currently-selected ALSA device** before `Save` runs —
+  not require the operator to separately uncheck them, which is the
+  exact awkwardness this whole entry is about. The two states
+  (PipeWire/JACK selected vs. one-or-more real ALSA devices selected)
+  should be mutually exclusive at the control level, not just by
+  convention.
+- Implementation hook: `RDAlsaConfig::saveData()`/`SaveConfig()`
+  (`utils/rdalsaconfig/rdalsaconfig.cpp`) already runs once, right
+  place to also call `RDStation::setDriver()` — writing `Jack` when
+  "PipeWire/JACK" is selected, `Alsa` when a real device is selected
+  instead. No new plumbing needed on the database side; this genuinely
+  is just wiring up an existing, currently-dead method.
 
 ## Groups and Carts nav links hidden — not yet meaningful in the new dashboard
 
