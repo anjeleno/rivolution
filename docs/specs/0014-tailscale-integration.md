@@ -83,7 +83,7 @@ systemd unit control.
 
 1. Admin pastes a pre-auth key (generated in the Tailscale admin console
    under Settings → Keys) into the dashboard's "Connect to tailnet" field.
-2. Dashboard POST handler runs `tailscale up --authkey=<key>` (via
+2. Dashboard POST handler runs `tailscale up --auth-key=<key>` (via
    `exec.Command`). Returns success or error message.
 3. Status panel refreshes via htmx polling or a manual refresh button,
    calling `tailscale status --json`, and displays: connection state,
