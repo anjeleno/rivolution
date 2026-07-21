@@ -7,6 +7,21 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-20
+
+- `debian/postinst` now symlinks `/root/.Xauthority` to the `rd` user's
+  own, for every install -- previously a manual, undocumented one-time
+  step (`sudo ln -s /home/rd/.Xauthority /root/.Xauthority`). Found
+  while scoping `rivolution-unified-installer`'s rewrite: Ubuntu's
+  stock PAM stack has no `pam_xauth` module anywhere (confirmed via
+  `grep -rl pam_xauth /etc/pam.d/` on a real box), so `sudo
+  rdalsaconfig`/`rddbconfig` fails an X11/xcb authorization error on
+  *any* install, physical or virtual -- xrdp just made it visible
+  first, since a virtual session has no separate physical console to
+  silently mask the same problem. Safe to create even before `rd` has
+  ever logged into a desktop session -- a dangling symlink resolves
+  correctly the first time X11 creates `~/.Xauthority`.
+
 ## 2026-07-17
 
 - `DefaultBroadcastConfig()` still seeded new dashboard configs with
