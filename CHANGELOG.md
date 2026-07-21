@@ -34,6 +34,16 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   by design, no migration**: any already-saved `broadcast.json` using
   the old `"liquidsoap"` key needs its streams reconfigured and
   redeployed after this update.
+- Stereo Tool's ALSA-JACK bridge target could get stuck on the dead
+  shipped-template default until an operator noticed and manually
+  re-ran `/broadcast`'s Save & Deploy -- `syncStereoToolTarget` only
+  ran from that explicit action, never from the periodic patchbay
+  reconciler already polling every 30s. Added
+  `ReconcileStereoToolTarget`, called from that same reconcile loop
+  (`rivapi/main.go`) alongside the existing link reconcile, so a
+  mismatch (e.g. Program Source set on `/patchbay` after the first
+  Save & Deploy already ran) now self-heals within one interval
+  instead of requiring a manual redeploy.
 
 ## 2026-07-20
 

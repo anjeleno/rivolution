@@ -106,6 +106,15 @@ func main() {
 			if err := store.ReconcileLinks(store.DesiredLinksPath); err != nil {
 				log.Printf("patchbay reconcile: %v", err)
 			}
+			// Same interval, same self-healing rationale as the link
+			// reconcile above: closes the real gap where Program Source
+			// gets set on /patchbay after Save & Deploy already ran once,
+			// leaving Stereo Tool's ALSA-JACK bridge stuck on the dead
+			// shipped-template target until this catches it. See
+			// ReconcileStereoToolTarget's own doc comment.
+			if err := store.ReconcileStereoToolTarget(cfg.BroadcastConfigPath); err != nil {
+				log.Printf("stereo tool target reconcile: %v", err)
+			}
 		}
 	}()
 
