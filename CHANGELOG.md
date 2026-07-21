@@ -9,16 +9,28 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-21
 
+- `rivendell.service` had no ordering dependency on `mariadb.service` at
+  all -- only `Restart=always` masked this, since a failed *first*
+  start attempt (common on a fresh boot, before MariaDB is ready) still
+  counts as "reached" for any other unit's plain `After=
+  rivendell.service`. `stereo-tool.service` already carries its own
+  fix for exactly this class of race (a JACK-port readiness poll,
+  2026-07-04) but the underlying gap in `rivendell.service` itself was
+  never closed. Added `After=mariadb.service` to `rivendell.service`'s
+  drop-in (`conf/systemd/rivendell.service.d/rivolution.conf`) --
+  `mariadb.service` is `Type=notify`, so plain `After=` is sufficient to
+  wait for it to actually be ready, no custom polling needed.
 - `rddbmgr --create --generate-audio`'s fresh-install seeding left every
   `AUDIO_CARDS` row's `DRIVER` at its schema default (`None`) --
   `debian/postinst` carried a literal `# FIXME: Configure ALSA Here!`
-  placeholder for the entire life of this step, and nothing ever set a
-  card's driver. Card 0 now defaults to JACK (`utils/rddbmgr/create.cpp`)
-  on every fresh install -- no hardware probing needed, since `caed`'s
-  JACK driver is backed by `pipewire-jack` regardless of whether real
-  audio hardware exists. Removes the FIXME placeholder from `postinst`.
-  A station that wants ALSA-driven physical hardware instead can switch
-  via RDAlsaConfig's new PipeWire/JACK option (below).
+  placeholder for the entire life of this step. Card 0 now defaults to
+  JACK directly (`utils/rddbmgr/create.cpp`), removing the FIXME
+  placeholder. **Cosmetic only, not a functional fix**: `caed` itself
+  unconditionally rewrites this column on every startup regardless of
+  what it finds there (see `ARCHITECTURE.md`'s "caed audio driver
+  layer"), so this only affects what's displayed in the brief window
+  before `caed`'s first successful start -- it was never what actually
+  determined whether a fresh install ends up JACK-driven.
 - Removed every remaining `liquidsoap`/`liq_*` reference from active
   code and shipped config -- the dead pre-ffmpeg-swap Liquidsoap
   architecture, replaced 2026-07-09, still left real traces: `rivapi`'s
@@ -44,20 +56,22 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   Save & Deploy already ran) now self-heals within one interval
   instead of requiring a manual redeploy.
 - RDAlsaConfig's device list gained an explicit "PipeWire/JACK" entry,
-  selectable the same way as any real ALSA device -- previously, no GUI
-  anywhere could actually write `AUDIO_CARDS.DRIVER` at all
-  (`RDStation::setCardDriver()` had zero callers in the whole codebase);
-  every working box got it set via a raw SQL edit, and "select JACK"
-  meant deselecting every listed device with nothing in the dialog
-  actually saying so. Wires the new entry directly to that
-  previously-dead method, and enforces it mutually exclusive with any
-  selected ALSA device live in the list (not just by convention):
+  selectable the same way as any real ALSA device -- previously,
+  "select JACK" meant deselecting every listed device with nothing in
+  the dialog actually saying so. Enforces it mutually exclusive with
+  any selected ALSA device live in the list (not just by convention):
   selecting it deselects every device, selecting a device deselects it.
   Labeled "PipeWire/JACK," not bare "JACK," to signal the real
   mechanism and that it's a bridge, not the end state -- also updated
   in RDAdmin's Edit Audio Ports read-only display and
   `RDStation::audioDriverText()`, both of which previously said "JACK
-  Audio Connection Kit."
+  Audio Connection Kit." Also wires the new entry to
+  `RDStation::setCardDriver()` directly, though this turned out to be
+  redundant in the common case -- `caed` itself already rewrites this
+  column on every restart regardless (see `ARCHITECTURE.md`), and every
+  real `.desktop` launcher for this dialog already restarts it via
+  `--manage-daemons`. The real, standalone value here is the explicit,
+  visible UI choice, not the direct database write.
 
 ## 2026-07-20
 
