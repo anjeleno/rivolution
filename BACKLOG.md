@@ -591,6 +591,29 @@ gets a real planning pass — this may get superseded rather than fixed
 in place, depending what that redesign decides about audio-device
 selection generally.
 
+**Design refined 2026-07-21, not yet built:** Brandon's concrete shape
+for the fix above --
+- Label the explicit driver choice **"PipeWire/JACK"**, not bare
+  "JACK" — both in the new RDAlsaConfig control and in RDAdmin's Edit
+  Audio Ports read-only display (currently "JACK Audio Connection
+  Kit," `rdadmin/edit_audios.cpp:334`). Deliberately named to signal
+  the real mechanism (`caed`'s JACK driver, backed by `pipewire-jack`)
+  and that it's a bridge, not the end state — this label should change
+  again once `caed` gains a genuinely native PipeWire driver.
+- Selecting "PipeWire/JACK" in RDAlsaConfig must **automatically
+  deselect every currently-selected ALSA device** before `Save` runs —
+  not require the operator to separately uncheck them, which is the
+  exact awkwardness this whole entry is about. The two states
+  (PipeWire/JACK selected vs. one-or-more real ALSA devices selected)
+  should be mutually exclusive at the control level, not just by
+  convention.
+- Implementation hook: `RDAlsaConfig::saveData()`/`SaveConfig()`
+  (`utils/rdalsaconfig/rdalsaconfig.cpp`) already runs once, right
+  place to also call `RDStation::setDriver()` — writing `Jack` when
+  "PipeWire/JACK" is selected, `Alsa` when a real device is selected
+  instead. No new plumbing needed on the database side; this genuinely
+  is just wiring up an existing, currently-dead method.
+
 ## Groups and Carts nav links hidden — not yet meaningful in the new dashboard
 
 `/groups` and `/carts` (from the original `rivapi` Phase 1 work) are
