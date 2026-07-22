@@ -690,6 +690,17 @@ auto-attaches to the release. This is a manual step with nothing
 enforcing it, and is worth automating once a decision is made either
 way.
 
+`acid-mart` (a second real x64 box, `acid-rack`'s backup, kept out of
+production) is now the dedicated machine for this manual step --
+confirmed 2026-07-21 that it needs no `apt` pinning at all: its own
+archive doesn't offer an `amd64v3` component in the first place, so a
+completely unmodified `rebuild-deb.sh` already produces an
+`x86-64-baseline`-only build there, verified via `readelf -n` across
+several binaries. That's evidence the `amd64v3` split is specific to
+whatever mirror/image GitHub Actions' runner uses, not a universal
+property of a real Ubuntu 26.04 install -- worth keeping in mind if the
+CI-level pinning idea above is ever picked up.
+
 ## No Debian-built `.deb` release target
 
 `build-deb.yml`'s x64 leg only ever runs on Ubuntu runners (26.04
