@@ -13,6 +13,7 @@
 - [[Deb Package Install|Deb-Package-Install]]
 - [[Build From Source|Build-From-Source]]
 - [[Unified Installer|Unified-Installer]]
+- [[Web Dashboard|Web-Dashboard]]
 - [[Segue Back-Timing|Segue-Back-Timing]]
 
 ## Reference

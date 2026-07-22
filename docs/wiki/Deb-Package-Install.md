@@ -40,6 +40,8 @@ dpkg -l rivolution
 
 The `rivapi` dashboard is reachable at `http://<this-box's-address>:8080`
 once the install finishes — that's where the remaining steps happen.
+See [[Web Dashboard|Web-Dashboard]] for a full walkthrough of every
+page, including how to log in.
 
 > [!TIP]
 > RDAdmin's Help → System Information dialog shows the full installed
