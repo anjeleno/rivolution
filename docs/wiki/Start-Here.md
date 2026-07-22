@@ -9,6 +9,8 @@ This walk-through assumes you have already installed virgin Ubuntu
 > [!TIP]
 > Also verified on Ubuntu 26.04 arm64 (UTM guest on Apple Silicon) — same ~15 minute build, no changes needed to the steps below. Rivolution builds natively on either x86_64 or arm64; nothing in the build needs cross-compilation or an architecture-specific step.
 
+---
+
 ## 0. Before you start: OS and desktop setup
 
 Start by installing updates, setting your hostname and timezone.
@@ -27,18 +29,23 @@ hostnamectl set-hostname [hostname]
 ```bash
 sudo sed -i "s/^127\.0\.1\.1[[:space:]].*/127.0.1.1\t$(hostname)/" /etc/hosts
 ```
+
 > [!TIP]
 > This opens the debconf timezone chooser — an interactive menu to pick your region and city instead of setting the zone by name.
 
 ```bash
 sudo dpkg-reconfigure tzdata
 ```
+
 ```bash
 sudo timedatectl set-ntp yes
 ```
+
 ```bash
 timedatectl
 ```
+
+---
 
 ## Set a root password and create a normal user
 
@@ -49,14 +56,17 @@ passwd root
 ```bash
 adduser rd
 ```
+
 ```bash
 usermod -aG sudo rd
 ```
 
+---
+
 Then, you'll need to install a desktop. After **extensive testing** on physical hardware, local UTM and Cloud VPS installs, we recommend minimal MATE (no bloat). SSH into your machine and install as root with:
 
 ```bash
-apt update && apt install -y --no-install-recommends ubuntu-mate-core mate-system-monitor 
+apt update && apt install -y --no-install-recommends ubuntu-mate-core mate-system-monitor
 ```
 
 If this is a Cloud install, add xRDP for easy remote desktop access:
@@ -64,6 +74,8 @@ If this is a Cloud install, add xRDP for easy remote desktop access:
 ```bash
 apt install -y xrdp dbus-x11
 ```
+
+---
 
 There's a bug in the current version of xRDP that causes the default
 session with running GUI applications to crash and then become
@@ -76,12 +88,16 @@ check):
 ```bash
 sudo mv /usr/libexec/mate-session-check-accelerated /usr/libexec/mate-session-check-accelerated.disabled
 ```
+
 ```bash
 sudo mv /usr/libexec/mate-session-check-accelerated-gl-helper /usr/libexec/mate-session-check-accelerated-gl-helper.disabled
 ```
+
 ```bash
 sudo mv /usr/libexec/mate-session-check-accelerated-gles-helper /usr/libexec/mate-session-check-accelerated-gles-helper.disabled
 ```
+
+---
 
 > [!WARNING]
 > A separate, unrelated xRDP problem on a fresh Ubuntu 26.04 install
@@ -139,6 +155,8 @@ echo "allowed_users=anybody" | sudo tee /etc/X11/Xwrapper.config
 ```bash
 sudo systemctl restart xrdp
 ```
+
+---
 
 > [!TIP]
 > If this is a VM/Cloud install running xRDP remote desktop, run the following command to fix Qt/XCB errors for root-run Rivendell tools under xRDP — as of `v6.0.0-rc1-4`, `postinst` does this automatically for a `.deb` install, so this is only needed for a from-source build or an older install predating that fix.

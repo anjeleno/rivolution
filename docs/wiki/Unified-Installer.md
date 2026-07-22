@@ -34,6 +34,8 @@ same way from an identical `apt install` step.
 > nothing you type (including any password/key field) ever leaves the
 > page.
 
+---
+
 ## Quick start
 
 `./configure.sh` is the interactive front end. It asks once for install
@@ -62,6 +64,7 @@ runs unattended, every answer is already baked in.
 ```bash
 git clone https://github.com/anjeleno/rivolution-unified-installer.git
 ```
+
 ```bash
 cd rivolution-unified-installer && ./configure.sh
 ```
@@ -75,6 +78,8 @@ source-method install), pass the install method directly:
 
 If you'd rather skip the prompts, all three usage methods below also
 work by hand.
+
+---
 
 ## Method 1: control node pushes to a target over SSH
 
@@ -95,6 +100,8 @@ ansible-galaxy install -r requirements.yml
 ```bash
 ansible-playbook site.yml
 ```
+
+---
 
 ## Method 2: run directly on the target, no SSH
 
@@ -128,6 +135,8 @@ override) to skip the `deb` default without going through
 ansible-playbook -i "localhost," -c local site.yml -e rivolution_install_method=source
 ```
 
+---
+
 ## Method 3: paste into a Droplet's startup script (no SSH needed)
 
 `bootstrap.sh` is meant to be pasted directly into DigitalOcean's
@@ -141,6 +150,8 @@ first, then paste the whole script in.
 
 By default this builds the public `anjeleno/rivolution` repo on
 `main` — no access or key needed to use the defaults as-is.
+
+---
 
 ## Install method: `deb` (default) or `source`
 
@@ -157,6 +168,8 @@ By default this builds the public `anjeleno/rivolution` repo on
   or a target with no published release asset — currently, that means
   Debian Trixie.
 
+---
+
 ## Install modes
 
 `rivolution_install_mode` (default `standalone`) picks one of three
@@ -170,6 +183,8 @@ once Rivolution is installed and its dashboard is up:
   remote MySQL/MariaDB host and a remote NFS-mounted audio store
   instead of provisioning either locally.
 
+---
+
 ## Setting the install user's password
 
 Optional, and only ever applied at account-creation time — re-running
@@ -179,6 +194,8 @@ account exactly as it was before (locked, login only via SSH key or an
 already-authenticated `sudo` session). `configure.sh` prompts for it
 securely; `bootstrap.sh` has a matching `RIVOLUTION_USER_PASSWORD`
 variable.
+
+---
 
 ## Tailscale
 
@@ -193,6 +210,8 @@ provisioning. The key must be a real Tailscale **auth key** (always
 admin console's Settings → Keys page) — not the full `tailscale up
 --auth-key=...` command, and not an OAuth client secret.
 
+---
+
 ## Security hardening
 
 `rivolution_harden_security` (default `false`), independent of
@@ -204,6 +223,8 @@ skipped with a warning instead of risking a lockout. Deliberately does
 **not** open the dashboard (`rivapi`, port 8080) or Stereo Tool's web UI
 (port 8079) to the public — Tailscale, above, is the intended way to
 reach those remotely.
+
+---
 
 ## What's intentionally not automated
 
@@ -221,6 +242,8 @@ reach those remotely.
   the end of every install: opening the dashboard's `/patchbay` page
   and connecting/saving the `caed` → Stereo Tool → stream audio chain.
   Deliberately left as a real operator action, not scripted around.
+
+---
 
 ## Re-running this playbook later
 

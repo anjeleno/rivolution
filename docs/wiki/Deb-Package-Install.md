@@ -2,10 +2,11 @@
 
 For installing a pre-built release .deb package instead of building from
 source. See [[Build From Source|Build-From-Source]] if you want to
-build from a checkout instead — that page's "Before you start: OS and
-desktop setup" section still applies here too (OS/hostname setup,
-creating the `rd` user, installing a desktop, xRDP if this is a cloud
-box); it isn't repeated on this page.
+build your own `.deb` from a checkout instead — everything from "Verify
+it installed" onward on this page applies there too, once it's
+installed. Either way, [[Start Here|Start-Here]]'s OS/desktop setup
+(OS/hostname setup, creating the `rd` user, installing a desktop, xRDP
+if this is a cloud box) is a prerequisite not repeated on this page.
 
 > [!TIP]
 > This walk-through assumes you have already installed virgin Ubuntu 26.04 or 24.04 server, either on physical hardware, a local VM, or on a cloud VPS.
@@ -46,6 +47,8 @@ once the install finishes — that's where the remaining steps happen.
 > `6.0.0~rc1`) — useful for confirming exactly which build is on a box
 > without dropping to a terminal.
 
+---
+
 ## 2. Set the audio driver to JACK — required, every install
 
 Launch **RDAlsaConfig** — Applications menu → Rivolution → Configuration
@@ -80,6 +83,8 @@ station. Card 0's **Card Driver** should read **PipeWire/JACK**.
 > step. If you're on an older install predating this fix, run
 > `sudo ln -s /home/rd/.Xauthority /root/.Xauthority` once yourself.
 
+---
+
 ## 3. Set Program Source, then Save & Deploy once
 
 Rivolution's audio routing has two separate controls that both need to
@@ -111,6 +116,8 @@ stream(s).
 > shouldn't need to repeat steps 1–2 above after the first time unless
 > you're deliberately changing Program Source.
 
+---
+
 ## 4. Routing VLC into Rivolution's input (optional)
 
 VLC (Applications menu → Sound & Video → VLC media player) is already
@@ -128,6 +135,8 @@ and check `/patchbay` for the live connection. If you want it routed
 somewhere other than the first input bus, just redraw the connection
 on `/patchbay` and save — your own choice is remembered and won't be
 overwritten by the automatic default.
+
+---
 
 ## Troubleshooting
 
