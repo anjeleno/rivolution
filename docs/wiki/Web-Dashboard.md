@@ -162,6 +162,14 @@ disaster recovery.
 > Tool license for full features. Available directly from
 > [Thimeo's own site](https://www.thimeo.com/).
 
+### Installing Stereo Tool
+
+A required manual step, not automatic:
+
+1. On the System page, find **Stereo Tool Binary**.
+2. Click **Install Latest**, or enter a specific version number in the
+   box and click **Install Version** instead.
+
 ---
 
 > [!NOTE]
