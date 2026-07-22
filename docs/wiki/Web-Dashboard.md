@@ -164,6 +164,12 @@ disaster recovery.
 
 ---
 
+> [!NOTE]
+> Visiting Stereo Tool's web interface Processing Page 
+> (`http://<this-box's-address>:8079`) from a machine whose IP isn't in
+> that whitelist box, you'll get an "Access denied — not whitelisted"
+> page instead of the interface — it shows the exact IP to add.
+
 ### Enabling Stereo Tool's own web interface
 
 Needed for `/broadcast`'s Stereo Tool integration to actually reach
@@ -176,12 +182,6 @@ dashboard:
 4. Change the port to **8079**.
 5. If there's already an IP in the whitelist box, add a space after it,
    then enter your own IP to whitelist yourself too.
-
-> [!NOTE]
-> Visiting Stereo Tool's web interface Processing Page 
-> (`http://<this-box's-address>:8079`) from a machine whose IP isn't in
-> that whitelist box, you'll get an "Access denied — not whitelisted"
-> page instead of the interface — it shows the exact IP to add.
 
 ---
 
