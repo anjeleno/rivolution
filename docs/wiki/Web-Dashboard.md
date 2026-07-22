@@ -180,8 +180,7 @@ dashboard:
 2. In the Stereo Tool GUI, go to **Configure → Configure**.
 3. Scroll down to **Web Interface** and tap the power icon to enable it.
 4. Change the port to **8079**.
-5. If there's already an IP in the whitelist box, add a space after it,
-   then enter your own IP to whitelist yourself too.
+5. If there's already a system IP in the whitelist box, add a space after it, then enter your own IP to whitelist yourself too.
 
 ---
 
