@@ -124,67 +124,6 @@ of thing this project needs testers for. Stations without AudioScience
 hardware aren't affected at all either way — `./configure
 --disable-hpi` builds the rest of Rivendell normally.
 
-## Binaries fail with "cannot open shared object file" after a fresh install
-
-**Symptom:** right after `sudo make install`, every Rivendell binary
-(`rdadmin`, `rdairplay`, etc.) fails immediately:
-```
-error while loading shared libraries: librd-6.0.0int0.so: cannot open shared object file: No such file or directory
-```
-even though the file genuinely exists at `/usr/local/lib/librd-*.so`.
-
-**Cause:** `/usr/local/lib` is in the linker's configured search path
-(`/etc/ld.so.conf.d/libc.conf`), but `make install` doesn't refresh the
-linker's *cache* (`ldconfig`) after installing a new shared library
-there — unlike `/usr/lib`, which most package-manager-driven installs
-keep refreshed automatically. See [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md) for the install-prefix
-question this is one concrete symptom of.
-
-**Workaround:** run `sudo ldconfig` once after every `make install`.
-Not yet automated as part of the install target itself.
-
-## A stale `/usr/local`-prefix install can silently shadow a working `/usr` one
-
-**Symptom:** after a clean `sudo make install` to the correct prefix
-(`/usr`, via `configure_build.sh`), things still behave like an older
-build — `which rdimport` (or any other Rivendell binary) resolves to
-`/usr/local/bin/rdimport` instead of `/usr/bin/rdimport`; freshly
-swapped launcher icons don't show up; a real code fix doesn't seem to
-take effect at all even though the build succeeded.
-
-**Cause:** if `./configure` was ever run directly at some earlier
-point — bypassing `configure_build.sh`'s `--prefix=/usr` — that build
-installed a complete, parallel copy of every Rivendell binary, library,
-and icon at the autotools default prefix, `/usr/local` (see
-[`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md)). Every later `make install` done correctly via
-`configure_build.sh` only adds/updates files at `/usr`; it never
-touches or removes that old `/usr/local` tree, since `make install`/
-`uninstall-local` only manage whichever prefix the build is currently
-configured for. Both `$PATH` (`/usr/local/bin` before `/usr/bin` by
-default on Debian/Ubuntu) and the XDG icon theme search order
-(`/usr/local/share/icons` checked before `/usr/share/icons`) prefer the
-stale copies, so the old build silently keeps winning.
-
-**Workaround:** check directly — `which rdimport` should print
-`/usr/bin/rdimport`; if it prints `/usr/local/bin/rdimport` instead, a
-shadow install exists. Confirm with `stat -c "%y %n" /usr/bin/rdimport
-/usr/local/bin/rdimport` (the `/usr/local` copy will have a visibly
-older mtime). There's no `make uninstall` that can clean this up after
-the fact, since the build is now configured for a different prefix
-than the stale install used — remove it by hand. A full stale install
-spans: `/usr/local/{bin,sbin}/{rd*,rivendell_filter}`,
-`/usr/local/lib/{librd*,librdalsa*}`, `/usr/local/libexec/` (entirely
-Rivendell's, safe to remove as a whole directory),
-`/usr/local/share/{pixmaps/rivendell,rivendell}/` (also entirely
-Rivendell's), `/usr/local/share/icons/hicolor/*/apps/{rivendell,rdadmin,
-rdairplay,rdcartslots,rdcastmanager,rdcatch,rdlibrary,rdlogedit,
-rdlogmanager,rdpanel}.png` (only the specific Rivendell-named files —
-this directory is shared with other locally-installed software),
-`/usr/local/share/X11/fvwm2/pixmaps/{rivendell,mini.rivendell}.xpm`,
-and `/usr/local/etc/rd-bin.conf`. Run `sudo ldconfig` afterward to drop
-the removed `librd*.so` entries from the linker cache. Not yet
-automated — see [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md).
-
 ## Submitted mixes must be encoded at the system's sample rate
 
 **Symptom:** an imported MP3 plays back pitch-shifted ("helium"
@@ -259,26 +198,6 @@ present on disk. Not yet investigated in detail — see [`BACKLOG.md`](https://g
 file, check `/var/snd` against its cut record manually before it's
 scheduled into a live log.
 
-## Manually added carts may lose their audio even after clicking OK on Edit Cart
-
-**Symptom:** a cart added via RDLibrary's "Add" button, with audio
-successfully imported, can have both its database row and its audio
-file in `/var/snd` disappear after the Edit Cart dialog closes —
-including cases where OK was the button actually clicked, not Cancel,
-Escape, or the window's X.
-
-**Cause:** not confirmed. A related issue was found and fixed —
-closing the dialog any way *other* than OK could delete an
-already-imported cart's audio — but that fix doesn't account for loss
-following a confirmed OK click, and no mechanism for that has been
-identified yet. Suspected to be a Qt6-migration regression, not yet
-bisected to confirm. See [`BACKLOG.md`](https://github.com/anjeleno/rivolution/blob/main/BACKLOG.md) for what's been ruled out
-so far.
-
-**Workaround:** none yet. After using "Add," confirm the new cart's
-audio actually persisted (waveform visible in "Edit Markers," or the
-cart plays) before relying on it.
-
 ## Clicking Cancel on Edit Cart after importing audio doesn't actually cancel
 
 **Symptom:** if you import audio into a newly-added cart via "Add,"
@@ -313,21 +232,3 @@ for the technical detail and what a real fix would require.
 
 **Workaround:** none currently; place markers with the understanding
 that sub-26ms accuracy isn't achievable in the waveform display yet.
-
-## Stereo Tool's web UI shows "Access denied" on first visit
-
-**Symptom:** browsing to Stereo Tool's own web UI (port 8079 by
-default) for the first time returns an "Access denied... your IP
-address is not whitelisted" page instead of the tool's interface.
-
-**Cause:** this is Stereo Tool's own upstream default behavior, not
-something this project's install or configuration touches — its
-device/routing settings, including this whitelist, are entirely
-self-managed in its own persisted config file, separate from anything
-this project ships.
-
-**Workaround:** open Stereo Tool's GUI directly on the machine it's
-running on (not over the network) and whitelist your IP from its own
-settings — the access-denied page itself shows the exact IP to add and
-the accepted formats. This only needs to be done once per machine.
-

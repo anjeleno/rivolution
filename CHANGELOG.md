@@ -7,6 +7,22 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-22
+
+- Removed four `KNOWN_ISSUES.md` entries confirmed no longer accurate
+  against the current build/install paths and RDLibrary code: the
+  post-`make install` `ldconfig` gap and the `/usr/local`-prefix shadow
+  install (both already avoided by every real install path today --
+  the unified installer and `.deb` installs never do a raw
+  `make install`, and `INSTALL.md`'s own from-source instructions
+  already require `ldconfig` and `configure_build.sh`'s `--prefix=/usr`
+  as standard steps, not reactive fixes), and a reported case of Edit
+  Cart deleting a newly-added cart's audio after a confirmed OK click
+  (no code path exists for this in the current `okData()`/Add-cart
+  flow). Left the related "Cancel doesn't actually cancel" entry in
+  place -- traced against `rdlibrary.cpp`'s current Add-cart flow and
+  confirmed it's still exactly today's behavior, by design.
+
 ## 2026-07-21
 
 - RDAdmin's System Information dialog showed only the upstream package
