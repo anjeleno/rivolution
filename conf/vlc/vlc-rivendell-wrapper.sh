@@ -16,5 +16,15 @@
 # valid across every VLC restart instead of going stale the moment the
 # PID changes (see rivapi/store/patchbay.go's own handling of this same
 # problem for Stereo Tool).
+#
+# --no-jack-auto-connect turns off VLC's own JACK output module default
+# (--jack-auto-connect, "default enabled" per its own --help -- connects
+# to "the first writable JACK clients found," which in practice means
+# real hardware playback ports). Confirmed live 2026-07-21: this is
+# VLC's own behavior, not a PipeWire/WirePlumber default -- disabling it
+# here means VLC's ports start completely unconnected, and only
+# EnsureVLCDefaultLink/ReconcileLinks (rivapi/store/patchbay.go) ever
+# connect them, so there's no window where audio briefly reaches
+# monitor speakers before the reconciler catches up.
 export XDG_RUNTIME_DIR=/run/pipewire-system
-exec /usr/bin/vlc --started-from-file --aout=jack --jack-name=vlc-rivendell "$@"
+exec /usr/bin/vlc --started-from-file --aout=jack --jack-name=vlc-rivendell --no-jack-auto-connect "$@"
