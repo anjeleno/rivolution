@@ -100,8 +100,8 @@ sudo mv /usr/libexec/mate-session-check-accelerated-gles-helper /usr/libexec/mat
 ---
 
 > [!WARNING]
-> A separate, unrelated xRDP problem on a fresh Ubuntu 26.04 install
-> specifically: 26.04 defaults to a Wayland session, which xRDP can't
+> A separate, unrelated xRDP problem on some (not all) Ubuntu 26.04
+> installs: defaulting Wayland session, which xRDP can't
 > drive at all — connecting over RDP gets a black screen or an
 > immediately-crashing session, even with the accelerated-graphics
 > workaround above already applied. Confirmed on a real fresh 26.04
