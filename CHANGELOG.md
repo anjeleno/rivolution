@@ -40,6 +40,15 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   connection by hand in `/patchbay` first -- an operator who later
   removes it on purpose stays removed (a marker file distinguishes
   "never offered" from "offered, then explicitly undone").
+- VLC's own JACK output module connects to real hardware output by
+  default (`--jack-auto-connect`, "default enabled" per its own
+  `--help-verbose` output -- a VLC behavior, not a PipeWire/
+  WirePlumber one), which meant audio could still reach monitor
+  speakers briefly before the reconciler above corrected it.
+  `vlc-rivendell-wrapper.sh` now also passes
+  `--no-jack-auto-connect`, so VLC's ports start completely
+  unconnected and only the reconciler ever connects them -- no leak
+  window at all.
 - Stereo Tool never appeared as a JACK output on a genuinely fresh
   install, even with `/patchbay`'s Program Source correctly set to it --
   `~/.stereo_tool.rc`'s `[Soundcard - Normal output]` section's own
