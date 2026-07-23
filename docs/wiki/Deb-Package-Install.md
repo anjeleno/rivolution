@@ -123,14 +123,10 @@ stream(s).
 ## 4. Routing VLC into Rivolution's input (optional)
 
 VLC (Applications menu → Sound & Video → VLC media player) is already
-wired to feed Rivolution's system-scope JACK graph directly — useful
-for ad-hoc live audio capture (a phone call, a remote feed, anything
-not already coming in through Stereo Tool). A normal desktop-launched
-VLC would otherwise land in a completely separate, per-session audio
-graph that never reaches Rivolution at all; this install's VLC shortcut
-already points at a wrapper that avoids that, and a default connection
-into Rivolution's first input bus is seeded automatically the first
-time the dashboard starts.
+wired to feed Rivolution's system-scope JACK graph directly — this is
+for remote broadcast via an Icecast relay, replacing a rack of outboard
+RPU/codec gear: a remote encoder (e.g. BUTT) streams to an Icecast
+source (like an AzuraCast relay in the middle), and VLC at the studio end plays that stream with its output patched persistently into Rivendell's input. A normal desktop-launched VLC would otherwise land in a completely separate, per-session audio graph that never reaches Rivolution at all; this install's VLC shortcut already points at a wrapper that avoids that, and a default connection into Rivolution's first input bus is seeded automatically the first time the dashboard starts.
 
 Nothing to configure for the default case — open VLC, play a stream,
 and check `/patchbay` for the live connection. If you want it routed

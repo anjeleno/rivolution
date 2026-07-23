@@ -512,7 +512,9 @@ sequence for subsequent source changes.
 
 #### VLC
 
-Used for ad-hoc live audio capture into Rivolution (see spec 0010's
+Used for remote broadcast via an Icecast relay: a remote encoder
+streams to an Icecast source, and VLC at the studio end plays that
+stream with its output patched into Rivendell's input (see spec 0010's
 Background section) — not a systemd-managed service, launched manually
 as needed, but required to be present:
 

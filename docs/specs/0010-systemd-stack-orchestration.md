@@ -809,3 +809,18 @@ existing autotools `build:` recipe, installing the resulting binary to
   also needs manually changing to "jack (ALSA)" through its web UI —
   its own persisted setting, not something any package can
   preconfigure — see the `postinst` additions list above.
+- **2026-07-22:** The "VLC audio routing" entries above (2026-07-01,
+  2026-07-01 "later the same day") describe VLC's *purpose* as generic
+  ad-hoc live audio capture (a phone call, an arbitrary remote feed).
+  That was never the actual use case and was wrong from the point this
+  spec was first written — VLC's real purpose is a remote-broadcast
+  relay: a remote encoder (e.g. BUTT) streams to an Icecast source, and
+  VLC at the studio end plays that stream with its output patched
+  persistently into Rivendell's input, replacing a rack of outboard
+  RPU/codec gear. The routing *mechanism* described in those entries
+  (and corrected in the 2026-07-01 "later the same day" entry to
+  `/patchbay`'s reconciler rather than WirePlumber policy) was and
+  remains accurate — only the description of what VLC is actually for
+  was wrong. This wrong framing was copied from here into `INSTALL.md`
+  and the wiki's `Deb-Package-Install.md`; both corrected the same day
+  this was caught.

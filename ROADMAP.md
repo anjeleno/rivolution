@@ -211,9 +211,12 @@ real future work with a locked-in architectural shape.
   itself (see [`docs/specs/0015-ffmpeg-broadcast-output.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0015-ffmpeg-broadcast-output.md));
   persistent patch connections via `/patchbay` and a continuously-running
   reconciler are live. See [`docs/specs/0008-broadcast-tool-suite-integration.md`](https://github.com/anjeleno/rivolution/blob/main/docs/specs/0008-broadcast-tool-suite-integration.md)
-  for the original design and its supersession note. **Still open:**
-  VLC (remote-audio capture into the JACK graph, `vlc-plugin-jack`) was
-  part of the original scope and was never built.
+  for the original design and its supersession note. VLC routing
+  (`vlc-plugin-jack`) is also live: a remote encoder streams to an
+  Icecast source, and VLC at the studio end plays that stream with its
+  output patched persistently into Rivendell's input via `/patchbay`'s
+  reconciler — a remote-broadcast relay replacing a rack of outboard
+  RPU/codec gear.
 
 **Decided, with a real spec, not yet built:**
 - **Native PipeWire support in `caed`, for AES67 and real cross-driver

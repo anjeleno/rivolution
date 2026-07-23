@@ -9,6 +9,15 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
 
 ## 2026-07-22
 
+- Corrected VLC's documented purpose in `INSTALL.md`, the wiki's
+  `Deb-Package-Install.md`, and `ROADMAP.md` (which also still listed
+  it as unbuilt). VLC's real use case is a remote-broadcast relay -- a
+  remote encoder streams to an Icecast source, and VLC at the studio
+  end plays that stream with its output patched persistently into
+  Rivendell's input, replacing outboard RPU/codec gear -- not generic
+  ad-hoc audio capture as originally described in `docs/specs/0010`'s
+  Background section. The routing mechanism these docs described was
+  already correct; only the description of what VLC is for was wrong.
 - Removed four `KNOWN_ISSUES.md` entries confirmed no longer accurate
   against the current build/install paths and RDLibrary code: the
   post-`make install` `ldconfig` gap and the `/usr/local`-prefix shadow
