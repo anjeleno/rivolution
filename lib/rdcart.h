@@ -185,6 +185,8 @@ class RDCart
 			      unsigned length,bool *time_ok) const;
   QString VerifyTitle(const QString &title) const;
   int GetPointerRange(int start_point,int end_point) const;
+  int GetPreTransitionLength(int segue_start_point,int segue_end_point,
+			      int start_point,unsigned length) const;
   void SetRow(const QString &param,const QString &value) const;
   void SetRow(const QString &param,unsigned value) const;
   void SetRow(const QString &param,const QDateTime &value) const;

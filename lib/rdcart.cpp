@@ -1169,9 +1169,10 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
     if(q->value(0).toUInt()>0) {
       if(q->value(20).toString()=="Y") {  // Evergreen?
 	evergreen_found=true;
-	evergreen_segue_len=
-	  GetPointerRange(q->value(1).toInt(),q->value(2).toInt());
-	evergreen_hook_len=
+	evergreen_segue_len+=
+	  GetPreTransitionLength(q->value(1).toInt(),q->value(2).toInt(),
+				  q->value(3).toInt(),q->value(0).toUInt());
+	evergreen_hook_len+=
 	  GetPointerRange(q->value(13).toInt(),q->value(14).toInt());
 	evergreen_len+=q->value(0).toUInt();
 	evergreen_cuts++;
@@ -1203,9 +1204,10 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
 	      }
 	    }
 	    if(q->value(16).isNull()||(q->value(16).toDateTime()<=now)) {
-	      active_segue_len=
-		GetPointerRange(q->value(1).toInt(),q->value(2).toInt());
-	      active_hook_len=
+	      active_segue_len+=
+		GetPreTransitionLength(q->value(1).toInt(),q->value(2).toInt(),
+					q->value(3).toInt(),q->value(0).toUInt());
+	      active_hook_len+=
 		GetPointerRange(q->value(13).toInt(),q->value(14).toInt());
 	      active_len+=q->value(0).toUInt();
 	      active_cuts++;
@@ -2472,6 +2474,25 @@ int RDCart::GetPointerRange(int start_point,int end_point) const
     return end_point-start_point;
   }
   return 0;
+}
+
+
+//
+// RDLogModel::blockLength()/blockStartTime() use AVERAGE_SEGUE_LENGTH as
+// "how much of this cut plays before the segue fires" -- not the segue
+// marker's own span. That's the pre-4.4.1 semantic; commit ec0ba539
+// (2025-03-18, upstream) silently switched the write side to
+// GetPointerRange(segue_start,segue_end) (the span) while refactoring
+// evergreen-cut handling, an unrelated change. Restored here. See
+// CHANGELOG.md 2026-07-26 for the full trace.
+//
+int RDCart::GetPreTransitionLength(int segue_start_point,int segue_end_point,
+				    int start_point,unsigned length) const
+{
+  if((segue_start_point<0)||(segue_end_point<0)) {
+    return length;
+  }
+  return segue_start_point-start_point;
 }
 
 
