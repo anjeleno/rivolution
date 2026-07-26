@@ -260,15 +260,50 @@ instead of moving on. Reported as a regression: previous behavior was
 to skip a cart with missing audio automatically and start the next log
 element immediately, with no dead air.
 
-Not yet investigated — no file/line citations yet for where
-`RDAirplay`'s playout logic decides "does this cart have audio" (likely
-checking cut-record existence rather than file existence).
+**Root cause found:** `RDPlayDeck::setCart()` (`lib/rdplay_deck.cpp:127-141`)
+checks `play_cart->exists()` and `play_cut->exists()` — both database-record
+checks against the `CART`/`CUTS` tables — and returns `true` as soon as both
+pass. Nothing in the function, or anywhere upstream of it, checks whether the
+actual audio file under `RD_AUDIO_ROOT` (`/var/snd`, `lib/rd.h:55`) is present
+on disk. Playback then proceeds on the strength of the database record alone.
+
+This is compounded by a protocol-level gap: `RDCae`'s signal surface
+(`lib/rdcae.h:96-111`) has no failure/error signal at all — only
+`playLoaded(serial)` and `playing(serial)` on success. Even if `caed` itself
+detects a missing file when asked to load it, there's no signal path for that
+failure to reach `RDPlayDeck`/`RDLogPlay`. This second gap is architectural
+and larger in scope than this one bug — worth its own future investigation,
+but not required to fix the immediate symptom (see below).
+
+**Why a fix here should fully resolve the reported symptom:** `StartEvent()`
+(`lib/rdlogplay.cpp:2110-2121`) already has a complete, working "no audio, so
+fake it" path for the case where `setCart()` returns `false` (e.g. the cut
+record itself doesn't exist) — it immediately cycles the line through
+`Playing`→`Finished` and moves on, with no dead air. That's exactly the
+"skip automatically" behavior described as the pre-regression behavior above.
+The fix is narrowly scoped to `setCart()` itself: add a file-existence check
+(`QFile::exists()`, matching the existing pattern already used elsewhere for
+exactly this purpose — `lib/rdimport_audio.cpp:557`, `lib/rdmpeggainpatch.cpp:76,131,164`)
+and return `false` when the backing file is missing, the same as the
+already-existing "cut doesn't exist" case a few lines above it. Once
+`setCart()` returns `false` for this case too, the existing downstream
+fake/skip path handles the rest — no changes needed there. Not yet branched
+or implemented; this is root-cause documentation only.
+
+**Related, found alongside this investigation:** `RDPlayDeck::setCart()`
+(same function, `lib/rdplay_deck.cpp:~146`) carries a pre-existing
+`// FIXME: We need to handle the 'cut no longer valid' case better!`
+inherited unchanged from upstream. Distinct from the missing-file issue above
+(this one concerns a cut whose validity window has lapsed, not one whose file
+is absent) — flagged here since it was never previously logged in this
+document, per this project's own standing rule that a discovered `FIXME` gets
+surfaced, not left silently in source. Not investigated further yet.
 
 **Current mitigation:** none. See [`KNOWN_ISSUES.md`](https://github.com/anjeleno/rivolution/blob/main/KNOWN_ISSUES.md) for the user-facing
 version.
 
-**Deferred for now** — not investigated yet, but tracked here given the
-priority (dead air on a live broadcast). See [`ROADMAP.md`](https://github.com/anjeleno/rivolution/blob/main/ROADMAP.md) for the
+**Deferred for now** — root cause identified and documented above, but not
+yet fixed or branched. See [`ROADMAP.md`](https://github.com/anjeleno/rivolution/blob/main/ROADMAP.md) for the
 related feature request (a library-wide missing-audio audit tool) that
 came up alongside this report — distinct from this bug fix itself.
 
