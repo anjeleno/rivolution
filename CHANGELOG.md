@@ -7,6 +7,34 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-26
+
+- Fixed `RDCart::updateLength()` writing the wrong value into
+  `CART.AVERAGE_SEGUE_LENGTH`, which made RDLogEdit's "Est. Time" column
+  wrong for SEGUE-transition lines whose segue point isn't already
+  frozen into the log. `RDLogModel::blockLength()`/`blockStartTime()`
+  treat the field as "how much of this cut plays before the segue
+  fires" (falling back to the cut's full length when no segue is
+  configured), but `updateLength()` was writing the segue marker's own
+  span (`SEGUE_END_POINT - SEGUE_START_POINT`, or zero when unset)
+  instead -- a write/read mismatch traced to upstream commit `ec0ba539`
+  (2025-03-18), which changed the formula as an unrelated side effect
+  of a legitimate evergreen-cut refactor. Restored the original
+  semantic via a new `RDCart::GetPreTransitionLength()` helper. Present
+  unchanged in this fork since the v4.4.1 baseline; not previously
+  reported against this repo.
+- Fixed a second, independent bug in the same function and the same
+  four lines: `active_segue_len`/`active_hook_len` (and their evergreen
+  equivalents) were overwritten (`=`) instead of accumulated (`+=`)
+  across a cart's qualifying cuts, while still being divided by the cut
+  count at write time as if they were running totals. For any cart
+  with more than one qualifying cut, `AVERAGE_SEGUE_LENGTH` and
+  `AVERAGE_HOOK_LENGTH` ended up storing the last-iterated cut's raw
+  value divided by the cut count -- a number with no real meaning --
+  rather than an actual average. Single-cut carts never exposed this;
+  multi-cut rotation carts always did, independent of the semantic bug
+  above.
+
 ## 2026-07-22
 
 - Corrected VLC's documented purpose in `INSTALL.md`, the wiki's
