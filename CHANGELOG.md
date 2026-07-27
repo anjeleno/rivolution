@@ -7,6 +7,20 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-26
+
+- Fixed `RDCart::updateLength()` never writing `CART.FORCED_LENGTH` --
+  the field RDLibrary's browse grid actually displays as a cart's
+  "Length" -- so every automated recompute (import, `rddbmgr --check`,
+  marker-set tools, schema migrations) left a freshly-imported cart
+  showing zero length until someone manually opened it in RDLibrary and
+  pressed OK. `enforce_length`/`length`, the function's own parameters,
+  had become entirely unused. Restored a `!enforce_length`-guarded
+  `setForcedLength()` call in each write branch (active cuts, evergreen
+  cuts, and the "nothing playable" case), matching the value already
+  being written to `AVERAGE_LENGTH` in that branch. See `docs/specs/
+  0017-forced-length-not-updated.md`.
+
 ## 2026-07-22
 
 - Corrected VLC's documented purpose in `INSTALL.md`, the wiki's

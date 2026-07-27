@@ -1253,6 +1253,9 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
       "`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
       QString::asprintf(" where `NUMBER`=%u",cart_number);
     RDSqlQuery::apply(sql);
+    if(!enforce_length) {
+      setForcedLength(active_len/active_cuts);
+    }
   }
   else {
     if(evergreen_found) {
@@ -1270,6 +1273,9 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
 	"`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
 	QString::asprintf(" where `NUMBER`=%u",cart_number);
       RDSqlQuery::apply(sql);
+      if(!enforce_length) {
+	setForcedLength(evergreen_len/evergreen_cuts);
+      }
     }
     else {  // Nothing playable!
       RDCart::Validity validity=RDCart::NeverValid;
@@ -1289,6 +1295,9 @@ void RDCart::updateLength(bool enforce_length,unsigned length)
 	"`CART`.`MAXIMUM_TALK_LENGTH`=0 "+
 	QString::asprintf(" where `NUMBER`=%u",cart_number);
       RDSqlQuery::apply(sql);
+      if(!enforce_length) {
+	setForcedLength(0);
+      }
     }
   }
 }
