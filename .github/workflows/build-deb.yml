@@ -10,49 +10,33 @@ on:
       # x64 build itself without any tag at all.
       - '!*-test'
   workflow_dispatch:
-    inputs:
-      target:
-        description: 'Which OS target(s) to build'
-        required: false
-        default: both
-        type: choice
-        options:
-          - both
-          - "26.04"
-          - "24.04"
 
 permissions:
   contents: write
 
 jobs:
   build:
-    # NOTE: the target-selection condition below (aliased as
-    # &target_selected) cannot live at the job level -- GitHub Actions
-    # confirmed at runtime that `matrix` isn't a recognized named-value
-    # in a job-level `if:` (the job's own `if:` is evaluated before the
-    # matrix expands into per-leg instances). So instead every step
-    # below carries it individually: the unwanted leg's job still
-    # "starts", but every step inside it is skipped in seconds rather
-    # than running the real ~39-minute build. Any *new* step added to
-    # this job must also carry `if: *target_selected` (or fold it into
-    # that step's own condition, as the last two steps below do) --
-    # forgetting it would let a step for the unwanted leg actually run.
+    # Builds only the Ubuntu 24.04 ("noble") x64 leg. Ubuntu 26.04 x64
+    # packages are built manually on real hardware (acid-mart) instead --
+    # see ARCHITECTURE.md's "x86-64 ISA baseline" section: a cloud CI
+    # runner's own toolchain silently produces x86-64-v3-tier binaries
+    # that crash outright on genuine pre-Haswell hardware, and no flag
+    # this repo's own build config can set works around it (the runner's
+    # own apt archive is itself ISA-tiered, upstream of anything this
+    # repo's build controls). Real hardware sidesteps the problem
+    # entirely rather than working around it.
+    #
+    # This job used to also build the 26.04 leg via a two-entry matrix,
+    # with its own target-selection machinery (a workflow_dispatch
+    # `target` input, a per-step `if:` condition keyed off it). Removed
+    # 2026-07-27 once acid-mart took over the 26.04 leg -- leftover
+    # selection logic for a leg that no longer exists would silently
+    # do nothing if picked, which is exactly the kind of inert-but-still-
+    # offered trap this project has already been burned by once (see
+    # ARCHITECTURE.md's "decommissioning a component" entry).
     strategy:
-      # max-parallel: 1 -- the release-notes step below does a
-      # read-modify-write (fetch current body, append a section, write
-      # back) against the *same* release for both matrix legs. Running
-      # them in parallel risks one leg's edit clobbering the other's
-      # just-appended section. Serializing costs real wall-clock time
-      # (~2x a single build), but avoiding that race isn't worth solving
-      # with a more complex retry/lock mechanism for a workflow that only
-      # runs on an actual version tag push.
-      max-parallel: 1
       matrix:
         include:
-          - os: ubuntu-26.04
-            suffix: ""
-            header: "## x64 build"
-            caveat: ""
           - os: ubuntu-24.04
             suffix: "-noble"
             header: "## x64 build (Ubuntu 24.04 -- best-effort)"
@@ -60,15 +44,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
-        if: &target_selected >-
-          github.event_name != 'workflow_dispatch' ||
-          inputs.target == 'both' ||
-          (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
-          (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04')
         uses: actions/checkout@v4
 
       - name: Install build dependencies
-        if: *target_selected
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -89,31 +67,23 @@ jobs:
             golang-go
 
       - name: Verify Go toolchain version
-        if: *target_selected
         run: go version
 
       - name: Build .deb packages
-        if: *target_selected
         run: scripts/rebuild-deb.sh --no-bump
 
       - name: Collect build artifacts
-        if: *target_selected
         run: |
           mkdir -p dist
           mv ../rivolution*.deb ../rivolution*.buildinfo ../rivolution*.changes dist/
           ls -la dist/
 
       - name: Rename secondary-target artifacts
-        if: >-
-          matrix.suffix != '' && (github.event_name != 'workflow_dispatch' ||
-          inputs.target == 'both' ||
-          (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
-          (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04'))
         run: |
           # arch:all packages (opsguide) are identical regardless of which
-          # Ubuntu release built them -- the primary (26.04) leg's copy
-          # already covers this, so don't re-upload a second, differently
-          # -suffixed copy of the same content.
+          # Ubuntu release built them -- the arm64/26.04 assets already
+          # cover this, so don't upload a second, differently-suffixed
+          # copy of the same content.
           rm -f dist/*_all.deb
           for f in dist/*; do
             mv "$f" "$(echo "$f" | sed "s/_amd64/_amd64${{ matrix.suffix }}/")"
@@ -121,18 +91,13 @@ jobs:
           ls -la dist/
 
       - name: Upload workflow artifact
-        if: *target_selected
         uses: actions/upload-artifact@v4
         with:
           name: rivolution-x64-debs${{ matrix.suffix }}
           path: dist/*
 
       - name: Attach to GitHub Release
-        if: >-
-          startsWith(github.ref, 'refs/tags/') && (github.event_name != 'workflow_dispatch' ||
-          inputs.target == 'both' ||
-          (inputs.target == '26.04' && matrix.os == 'ubuntu-26.04') ||
-          (inputs.target == '24.04' && matrix.os == 'ubuntu-24.04'))
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

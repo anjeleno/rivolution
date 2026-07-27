@@ -7,6 +7,19 @@ entries first.
 Pre-fork history (through 2026-06-15) is preserved unchanged in
 `ChangeLog.upstream-v4`, which is no longer appended to.
 
+## 2026-07-27
+
+- `build-deb.yml` now builds only the Ubuntu 24.04 ("noble") x64 leg.
+  Ubuntu 26.04 x64 packages are now built manually on real hardware
+  (`acid-mart`) instead -- a cloud CI runner's own toolchain silently
+  produces x86-64-v3-tier binaries that crash outright on genuine
+  pre-Haswell hardware, with no workaround available from this repo's
+  own build config (see `ARCHITECTURE.md`'s "x86-64 ISA baseline"
+  section). Removed the now-dead two-leg target-selection machinery
+  (a `workflow_dispatch` input, a per-step `if:` condition) along with
+  the 26.04 matrix entry, rather than leave a selector that would
+  silently do nothing if picked.
+
 ## 2026-07-26
 
 - Fixed `RDCart::updateLength()` writing the wrong value into
