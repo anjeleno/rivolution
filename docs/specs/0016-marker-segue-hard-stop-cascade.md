@@ -94,12 +94,20 @@ A later fix (2026-07-07, see `CHANGELOG.md`) gated both of those exact
 call sites on `segueGain()`, but never touched `254b9bdc`'s coercion or
 `FinishEvent()`'s hardcoded `Play`.
 
-**A second, separate mechanism reaching the same class of symptom
-through a completely different call path was found during this same
-bisection and is deliberately out of scope here** — see
-`BACKLOG.md`'s "'Degenerate segue transitions' coercion..." entry.
-Fixing this spec does nothing for that one, and vice versa; they share
-a root cause category but not a code path.
+**A second, separate mechanism was suspected during this same bisection
+to reach the same class of symptom through a completely different call
+path, and was deliberately out of scope here pending its own
+investigation.** That investigation is now complete (2026-07-26,
+same day): the coercion this second concern depended on
+(`254b9bdc`'s `Segue`→`Play` conversion) does not exist in current
+code at all -- it was deleted by upstream's own `17b6048a` five days
+after being added, and this fork inherited both commits. The real
+replacement (`RDPlayDeck::StartTimers()`'s "Setup Full Segue" vs. "Play
+Style Segue" branching) already handles degenerate/absent markers
+correctly, confirmed via live testing. No fix was needed there; see
+`ARCHITECTURE.md`'s "Segue/Marker/Timed-event playout mechanism"
+section for the full trace. Unrelated to this spec's own fix either
+way -- they shared a root cause category but never a code path.
 
 ## Implementation plan
 
@@ -146,9 +154,10 @@ reported symptom.
 
 ## Confirmed out of scope
 
-- `254b9bdc`'s degenerate-segue-transition coercion — see `BACKLOG.md`,
-  needs its own investigation into `RDPlayDeck::stop()`'s zero-length
-  semantics before any fix is designed there.
+- `254b9bdc`'s degenerate-segue-transition coercion — investigated
+  separately and closed 2026-07-26, no fix needed (see
+  `ARCHITECTURE.md`); it doesn't exist in current code and the real
+  replacement mechanism already handles this correctly.
 - "Start Immediately" (`graceTime()==0`) behavior — confirmed
   structurally unaffected; that path calls `StartEvent()` directly from
   `transTimerData()`, never through `FinishEvent()`.
