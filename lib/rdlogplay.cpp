@@ -2502,8 +2502,14 @@ void RDLogPlay::FinishEvent(int line)
       if((play_op_mode==RDAirPlayConf::Auto)&&
 	 (logline->id()!=-1)&&(play_next_line<lineCount())) {
 	if(logline->transType()!=RDLogLine::Stop) {
-	  StartEvent(play_next_line,RDLogLine::Play,0,RDLogLine::StartPlay);
-	  SetTransTimer(QTime(),prev_next_line==play_trans_line);
+	  if(runningEvents(NULL)==0) {
+	    StartEvent(play_next_line,RDLogLine::Play,0,RDLogLine::StartPlay);
+	    SetTransTimer(QTime(),prev_next_line==play_trans_line);
+	  }
+	  // else: something is still legitimately running (a segue tail, an
+	  // in-progress fade). Defer the hard-start -- that line's own
+	  // natural completion will call Finished() -> FinishEvent() again,
+	  // and this check will pass then.
 	}
       }
     }
