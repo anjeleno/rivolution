@@ -1,8 +1,9 @@
 # 0016 — Marker-cascade hard-stop can kill a still-legitimately-playing element
 
 **Date:** 2026-07-26
-**Status:** Design locked. Not yet implemented — branch
-`fix-marker-segue-hard-stop-cascade` not yet created.
+**Status:** Implemented on branch `fix-marker-segue-hard-stop-cascade`.
+Builds clean; not yet run, tested against the verification plan below,
+or merged.
 
 ## Goal
 
@@ -187,9 +188,14 @@ reported symptom.
 5. Ordinary back-to-back Auto playback with nothing overlapping at any
    transition: confirm zero behavior change.
 
-## Open items for implementation time
+## Implementation notes
 
-- Re-confirm `FinishEvent()`'s exact current form immediately before
-  implementing, in case anything has changed since this spec was
-  written.
-- Once implemented, update `CHANGELOG.md` and this spec's Status line.
+- `FinishEvent()`'s current form matched this spec's Background section
+  exactly at implementation time -- no drift to reconcile.
+- Implemented with `runningEvents(NULL)` (the `lines` array is optional
+  per its own signature, `lib/rdlogplay.h:105`, and this call site never
+  needs the populated array) rather than declaring an unused
+  `int lines[TRANSPORT_QUANTITY]`, matching the existing precedent at
+  `lib/rdlogplay.cpp:337`.
+- Still open: the verification plan below (items 2-5) needs a real build
+  and real on-air/test-log listening -- not yet run.

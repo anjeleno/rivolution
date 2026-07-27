@@ -34,6 +34,20 @@ Pre-fork history (through 2026-06-15) is preserved unchanged in
   rather than an actual average. Single-cut carts never exposed this;
   multi-cut rotation carts always did, independent of the semantic bug
   above.
+- Fixed `RDLogPlay::FinishEvent()` force-starting the next log line with
+  an unconditional `Play`-transition even when something was still
+  legitimately running (a song mid-fade, or an imaging element
+  deliberately left running via "no fade on segue out"). Most commonly
+  triggered by a `Marker`-type log line configured "Timed, Make Next"
+  reached via a Segue transition from the preceding element -- that path
+  self-finishes synchronously and never consults either the Marker's own
+  Hard-time setting or the outgoing element's fade/segue configuration,
+  hard-cutting whatever's still playing. `FinishEvent()` now checks
+  `runningEvents()` before forcing the next line; if anything is still
+  running, it defers, and that line's own natural completion re-triggers
+  the advance once it's actually done. See `docs/specs/
+  0016-marker-segue-hard-stop-cascade.md` for the full mechanism and
+  verification plan.
 
 ## 2026-07-22
 
